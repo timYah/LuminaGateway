@@ -39,3 +39,26 @@ export interface AnthropicMessagesResponse {
   stop_reason?: string | null;
   usage?: AnthropicUsage;
 }
+
+export interface AnthropicMessageStartEvent {
+  type: "message_start";
+  message: AnthropicMessagesResponse;
+}
+
+export interface AnthropicContentBlockDeltaEvent {
+  type: "content_block_delta";
+  index: number;
+  delta: {
+    type: "text_delta";
+    text: string;
+  };
+}
+
+export interface AnthropicMessageStopEvent {
+  type: "message_stop";
+}
+
+export type AnthropicStreamEvent =
+  | AnthropicMessageStartEvent
+  | AnthropicContentBlockDeltaEvent
+  | AnthropicMessageStopEvent;
