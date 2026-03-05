@@ -100,7 +100,7 @@
 
 - [x] **T-09.1** 安装依赖：`zod`
 - [x] **T-09.2** 创建 `src/types/validators.ts` — 定义 OpenAI 请求体 Zod schema
-- [ ] **T-09.3** 在 `src/types/validators.ts` 中定义 Anthropic 请求体 Zod schema
+- [x] **T-09.3** 在 `src/types/validators.ts` 中定义 Anthropic 请求体 Zod schema
 - [ ] **T-09.4** ✅ **验证**：编写 `src/types/__tests__/validators.test.ts`，测试合法/非法请求体的校验结果，运行 `npm run test -- validators && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
