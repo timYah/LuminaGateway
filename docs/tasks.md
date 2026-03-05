@@ -145,7 +145,7 @@
 ## Phase 14 — Upstream 调用服务（非流式）
 
 - [x] **T-14.1** 创建 `src/services/upstreamService.ts` — 实现 `callUpstreamNonStreaming(provider, model, params)` 函数，使用 AI SDK 的 `generateText` 调用上游
-- [ ] **T-14.2** 从 `generateText` 返回值中提取 `usage`（promptTokens、completionTokens）并返回
+- [x] **T-14.2** 从 `generateText` 返回值中提取 `usage`（promptTokens、completionTokens）并返回
 - [ ] **T-14.3** 实现错误分类函数 `classifyUpstreamError(error)` — 区分 402/429/401/5xx/unknown
 - [ ] **T-14.4** ✅ **验证**：编写 `src/services/__tests__/upstreamService.test.ts`（使用 mock），测试正常响应和错误分类，运行 `npm run test -- upstreamService && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
