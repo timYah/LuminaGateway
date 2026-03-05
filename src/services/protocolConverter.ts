@@ -68,3 +68,22 @@ export function convertAnthropicToUniversal(
     tools: request.tools as unknown as UpstreamRequestParams["tools"],
   };
 }
+
+export function convertUniversalToAnthropicResponse(
+  result: UniversalResponse
+): AnthropicMessagesResponse {
+  return {
+    id: `msg_${Date.now()}`,
+    type: "message",
+    role: "assistant",
+    content: [{ type: "text", text: result.text }],
+    model: result.model,
+    stop_reason: result.finishReason ?? null,
+    usage: result.usage
+      ? {
+          input_tokens: result.usage.promptTokens,
+          output_tokens: result.usage.completionTokens,
+        }
+      : undefined,
+  };
+}

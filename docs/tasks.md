@@ -233,7 +233,7 @@
 ## Phase 24 — 协议转换（Anthropic 方向）
 
 - [x] **T-24.1** 在 `src/services/protocolConverter.ts` 中实现 `convertAnthropicToUniversal(anthropicRequest)` 函数 — 处理 `system` 字段的位置映射
-- [ ] **T-24.2** 实现 `convertUniversalToAnthropicResponse(aiSdkResult)` 函数 — 将 AI SDK 结果包装为 Anthropic 响应格式
+- [x] **T-24.2** 实现 `convertUniversalToAnthropicResponse(aiSdkResult)` 函数 — 将 AI SDK 结果包装为 Anthropic 响应格式
 - [ ] **T-24.3** ✅ **验证**：编写 `src/services/__tests__/protocolConverter.anthropic.test.ts`，用 fixture 数据测试双向转换，运行 `npm run test -- protocolConverter && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
