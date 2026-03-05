@@ -1,6 +1,13 @@
 import { CircuitBreaker } from "./circuitBreaker";
 import { getActiveProvidersByModel } from "./modelService";
 
+export class NoProviderAvailableError extends Error {
+  constructor(modelSlug: string) {
+    super(`No provider available for model: ${modelSlug}`);
+    this.name = "NoProviderAvailableError";
+  }
+}
+
 export class RouterService {
   constructor(private readonly breaker: CircuitBreaker) {}
 
@@ -11,6 +18,9 @@ export class RouterService {
 
   async selectProvider(modelSlug: string) {
     const candidates = await this.getAllCandidates(modelSlug);
-    return candidates[0] ?? null;
+    if (candidates.length === 0) {
+      throw new NoProviderAvailableError(modelSlug);
+    }
+    return candidates[0];
   }
 }
