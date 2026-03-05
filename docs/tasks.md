@@ -11,7 +11,7 @@
 - [x] **T-01.2** 安装核心依赖：`hono`、`@hono/node-server`
 - [x] **T-01.3** 安装开发依赖：`typescript`、`vitest`、`eslint`、`tsx`
 - [x] **T-01.4** 创建 `tsconfig.json`，启用 `strict: true`、`ESNext` 模块
-- [ ] **T-01.5** 创建 ESLint 配置文件（flat config）
+- [x] **T-01.5** 创建 ESLint 配置文件（flat config）
 - [ ] **T-01.6** 在 `package.json` 中添加 scripts：`dev`、`build`、`lint`、`typecheck`、`test`
 - [ ] **T-01.7** 创建目录结构：`src/`、`src/db/`、`src/routes/`、`src/services/`、`src/middleware/`、`src/types/`、`src/utils/`
 - [ ] **T-01.8** 创建 `src/app.ts` — Hono app 工厂函数，注册 `GET /health` 返回 `{ status: "ok" }`
