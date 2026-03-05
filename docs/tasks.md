@@ -349,11 +349,11 @@
 
 ---
 
-## Phase 37 — 管理后台（Nuxt UI）
+## Phase 37 — 管理后台（Vue + Nuxt UI）
 
 - [x] **T-37.0** 更新文档：补充管理后台说明（`docs/documentation.md`、`README.md`、`docs/plans.md`）
-- [x] **T-37.1** 初始化 `apps/admin`（Nuxt 4 + nuxt-ui），提供基础布局和主题样式
-- [x] **T-37.2** 添加 API 代理路由 `apps/admin/server/api/[...path].ts`，转发到网关
+- [x] **T-37.1** 初始化 `apps/admin`（Vue 3 + Nuxt UI），提供基础布局和主题样式
+- [x] **T-37.2** 配置 Vite dev 代理，将 `/api` 转发到网关
 - [x] **T-37.3** 实现 API Key 输入与本地存储，并在请求中注入 `Authorization: Bearer ...`
 - [x] **T-37.4** Providers 页面：列表、创建、更新（余额、启用状态、优先级）
 - [x] **T-37.5** Usage 页面：过滤条件与分页
@@ -383,6 +383,16 @@
 - [x] **T-40.1** 修复 admin 运行时错误，确保页面可加载
 - [x] **T-40.2** ✅ **验证**：使用 agent-browser 验证 Providers / Usage 页面与 API Key 流程
 - [ ] **T-40.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`。持续修复直到全部通过。
+
+---
+
+## Phase 41 — 管理后台 UI 优化
+
+- [x] **T-41.0** 更新文档：补充 Admin UI 优化方案（`docs/documentation.md`）
+- [ ] **T-41.1** 圆角体系收敛：引入 4–8px 半径层级并替换页面与组件圆角
+- [ ] **T-41.2** 布局优化：标题外置、减少卡片叠加、使用分隔线组织层级
+- [ ] **T-41.3** 密度调整：收紧间距与表格行高，保持平衡密度
+- [ ] **T-41.4** ✅ **验证**：运行 `npm run dev` 并使用 agent-browser 截图验证 Providers / Usage
 
 ---
 

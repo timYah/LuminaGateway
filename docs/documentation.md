@@ -8,7 +8,7 @@ The gateway exposes two client-facing APIs: an OpenAI-compatible chat completion
 
 ## Status
 
-Core gateway milestones are complete. The Nuxt UI admin dashboard described below is planned and not implemented yet.
+Core gateway milestones are complete. The Vue + Nuxt UI admin dashboard described below is implemented.
 
 ## Local setup
 
@@ -126,17 +126,17 @@ GET    /admin/usage              — query usage logs
 
 `GET /admin/usage` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `limit`, and `offset`. The response includes `{ usage, limit, offset }` sorted by `createdAt` descending.
 
-### Admin dashboard (planned)
+### Admin dashboard
 
-The admin dashboard provides a web UI for provider management and usage visibility. It is designed as a standalone Nuxt 4 + nuxt-ui app that talks to the existing `/admin/*` APIs.
+The admin dashboard provides a web UI for provider management and usage visibility. It is a standalone Vue + Nuxt UI app powered by Vite that talks to the existing `/admin/*` APIs.
 
-**Planned capabilities**
+**Capabilities**
 
 - Providers list with create and update flows.
 - Usage log querying with filters and pagination.
 - API key input stored in the browser and sent as `Authorization: Bearer ...` on every request.
 
-**Planned setup**
+**Setup**
 
 ```bash [Terminal]
 cd apps/admin
@@ -146,7 +146,14 @@ npm run dev
 
 The dashboard will run on `http://localhost:3001` and connect to the gateway at `http://localhost:3000` by default.
 
-Set `NUXT_PUBLIC_API_BASE_URL` before starting the dashboard to target a different gateway URL.
+Set `VITE_API_BASE_URL` before starting the dashboard to target a different gateway URL.
+
+**UI optimization plan**
+
+- Radius system: target 4–8px (panel 8px, control 6px, soft states 4px). Keep pill elements but tighten padding.
+- Layout: move section titles out of cards, reduce card stacking, use borders/dividers with whitespace for hierarchy.
+- Density: tighten `space-y`, `gap`, and table row height to a balanced density (clear, not crowded).
+- Sidebar: lighten the intro block and tighten navigation spacing.
 
 ## Provider selection and failover
 
