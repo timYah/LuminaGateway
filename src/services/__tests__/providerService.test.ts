@@ -21,8 +21,8 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  db.delete(models);
-  db.delete(providers);
+  db.delete(models).run();
+  db.delete(providers).run();
 });
 
 const baseProvider = {
