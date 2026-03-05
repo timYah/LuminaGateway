@@ -4,7 +4,7 @@ export const authMiddleware = (): MiddlewareHandler => {
   return async (c, next) => {
     const authHeader = c.req.header("Authorization");
     if (!authHeader) {
-      return c.json({ error: "Missing Authorization header" }, 400);
+      return c.json({ error: { message: "Unauthorized" } }, 401);
     }
 
     const token = authHeader.startsWith("Bearer ")
