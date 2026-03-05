@@ -8,7 +8,7 @@ The gateway exposes two client-facing APIs: an OpenAI-compatible chat completion
 
 ## Status
 
-All milestones in the execution plan are complete. The gateway supports OpenAI and Anthropic request formats, streaming SSE responses, admin management routes, and end-to-end integration tests.
+Core gateway milestones are complete. The Nuxt UI admin dashboard described below is planned and not implemented yet.
 
 ## Local setup
 
@@ -121,6 +121,28 @@ GET    /admin/usage              — query usage logs
 `POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, and optional `balance`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, and `google`.
 
 `GET /admin/usage` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `limit`, and `offset`. The response includes `{ usage, limit, offset }` sorted by `createdAt` descending.
+
+### Admin dashboard (planned)
+
+The admin dashboard provides a web UI for provider management and usage visibility. It is designed as a standalone Nuxt 4 + nuxt-ui app that talks to the existing `/admin/*` APIs.
+
+**Planned capabilities**
+
+- Providers list with create and update flows.
+- Usage log querying with filters and pagination.
+- API key input stored in the browser and sent as `Authorization: Bearer ...` on every request.
+
+**Planned setup**
+
+```bash [Terminal]
+cd apps/admin
+npm install
+npm run dev
+```
+
+The dashboard will run on `http://localhost:3001` and connect to the gateway at `http://localhost:3000` by default.
+
+Set `NUXT_PUBLIC_API_BASE_URL` before starting the dashboard to target a different gateway URL.
 
 ## Provider selection and failover
 
