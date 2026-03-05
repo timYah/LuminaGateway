@@ -356,7 +356,7 @@
 - [x] **T-37.2** 添加 API 代理路由 `apps/admin/server/api/[...path].ts`，转发到网关
 - [x] **T-37.3** 实现 API Key 输入与本地存储，并在请求中注入 `Authorization: Bearer ...`
 - [x] **T-37.4** Providers 页面：列表、创建、更新（余额、启用状态、优先级）
-- [ ] **T-37.5** Usage 页面：过滤条件与分页
+- [x] **T-37.5** Usage 页面：过滤条件与分页
 - [ ] **T-37.6** ✅ **验证**：运行 `cd apps/admin && npm run dev`，手动验证 Providers 与 Usage 流程
 
 ---
