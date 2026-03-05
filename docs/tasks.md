@@ -69,7 +69,7 @@
 ## Phase 06 — Model 服务层
 
 - [x] **T-06.1** 创建 `src/services/modelService.ts` — 实现 `getModelsBySlug(slug)` 方法，返回匹配 slug 的所有模型记录（含关联 Provider 信息）
-- [ ] **T-06.2** 实现 `getActiveProvidersByModel(slug)` 方法 — 返回服务该模型的活跃 Provider 列表，按 `balance DESC, priority ASC` 排序
+- [x] **T-06.2** 实现 `getActiveProvidersByModel(slug)` 方法 — 返回服务该模型的活跃 Provider 列表，按 `balance DESC, priority ASC` 排序
 - [ ] **T-06.3** 实现 `getModelByProviderAndSlug(providerId, slug)` 方法 — 获取特定 Provider 的模型定价信息
 - [ ] **T-06.4** ✅ **验证**：编写 `src/services/__tests__/modelService.test.ts`，覆盖排序确定性和边界情况，运行 `npm run test -- modelService && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
