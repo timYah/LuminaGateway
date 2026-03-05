@@ -118,4 +118,39 @@ describe("integration failover", () => {
     expect(updatedA?.balance).toBe(0);
     expect(updatedB?.balance).toBeGreaterThan(0);
   });
+
+  it("returns error when all providers fail", async () => {
+    await seedProviders();
+
+    callUpstreamMock
+      .mockRejectedValueOnce(
+        new APICallError({
+          message: "auth",
+          url: "https://example.com",
+          requestBodyValues: {},
+          statusCode: 401,
+        })
+      )
+      .mockRejectedValueOnce(
+        new APICallError({
+          message: "auth",
+          url: "https://example.com",
+          requestBodyValues: {},
+          statusCode: 401,
+        })
+      );
+
+    const res = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error?.message).toBeDefined();
+  });
 });
