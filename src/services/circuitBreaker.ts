@@ -6,7 +6,13 @@ export class CircuitBreaker {
   }
 
   isOpen(providerId: number) {
-    return this.openUntil.has(providerId);
+    const until = this.openUntil.get(providerId);
+    if (!until) return false;
+    if (Date.now() >= until) {
+      this.openUntil.delete(providerId);
+      return false;
+    }
+    return true;
   }
 
   reset(providerId: number) {
