@@ -1,4 +1,5 @@
-import { $fetch, useFetch } from "#app";
+/* global $fetch */
+import { useFetch } from "#app";
 import type { UseFetchOptions } from "nuxt/app";
 import { computed, watch } from "vue";
 
