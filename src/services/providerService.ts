@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { type NewProvider, providers } from "../db/schema";
 
@@ -16,5 +16,17 @@ export async function getProviderById(id: number) {
 export async function createProvider(data: NewProvider) {
   const db = getDb();
   const rows = await db.insert(providers).values(data).returning();
+  return rows[0] ?? null;
+}
+
+export type ProviderUpdate = Partial<NewProvider>;
+
+export async function updateProvider(id: number, data: ProviderUpdate) {
+  const db = getDb();
+  const rows = await db
+    .update(providers)
+    .set({ ...data, updatedAt: sql`(unixepoch())` })
+    .where(eq(providers.id, id))
+    .returning();
   return rows[0] ?? null;
 }
