@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { anthropicMessagesSchema } from "../types/validators";
 import { handleRequest } from "../services/gatewayService";
+import type { UpstreamRequestParams } from "../services/upstreamService";
 
 export const anthropicRoutes = new Hono();
 
@@ -18,7 +19,8 @@ anthropicRoutes.post("/v1/messages", async (c) => {
   const response = await handleRequest(
     {
       model: parsed.data.model,
-      messages: parsed.data.messages,
+      messages:
+        parsed.data.messages as unknown as UpstreamRequestParams["messages"],
       system: parsed.data.system,
       maxOutputTokens: parsed.data.max_tokens,
     },

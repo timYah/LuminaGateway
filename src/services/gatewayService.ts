@@ -11,11 +11,30 @@ import { deactivateProvider, updateProvider } from "./providerService";
 import { billUsage } from "./billingService";
 import type { OpenAIChatCompletionResponse } from "../types/openai";
 import type { AnthropicMessagesResponse } from "../types/anthropic";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 export type ClientFormat = "openai" | "anthropic";
 
 export type GatewayRequestParams = UpstreamRequestParams & {
   model: string;
+};
+
+type OpenAIErrorResponse = {
+  error: { message: string; type: string; code: string };
+};
+
+type AnthropicErrorResponse = {
+  type: "error";
+  error: { type: string; message: string };
+};
+
+export type GatewayResponse = {
+  status: ContentfulStatusCode;
+  body:
+    | OpenAIChatCompletionResponse
+    | AnthropicMessagesResponse
+    | OpenAIErrorResponse
+    | AnthropicErrorResponse;
 };
 
 const RATE_LIMIT_COOLDOWN_MS = 60_000;
@@ -71,17 +90,27 @@ function formatAnthropicResponse(
   };
 }
 
-function formatErrorResponse(clientFormat: ClientFormat, message: string) {
+function formatErrorResponse(
+  clientFormat: ClientFormat,
+  message: string
+): OpenAIErrorResponse | AnthropicErrorResponse {
   if (clientFormat === "openai") {
-    return { error: { message, type: "gateway_error", code: "gateway_error" } };
+    const body: OpenAIErrorResponse = {
+      error: { message, type: "gateway_error", code: "gateway_error" },
+    };
+    return body;
   }
-  return { type: "error", error: { type: "gateway_error", message } };
+  const body: AnthropicErrorResponse = {
+    type: "error",
+    error: { type: "gateway_error", message },
+  };
+  return body;
 }
 
 export async function handleRequest(
   requestParams: GatewayRequestParams,
   clientFormat: ClientFormat
-) {
+): Promise<GatewayResponse> {
   const { model: modelSlug, ...params } = requestParams;
   const candidates = await gatewayRouter.getAllCandidates(modelSlug);
   if (candidates.length === 0) {

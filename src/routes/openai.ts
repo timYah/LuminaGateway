@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { openaiChatCompletionSchema } from "../types/validators";
 import { handleRequest } from "../services/gatewayService";
+import type { UpstreamRequestParams } from "../services/upstreamService";
 
 export const openaiRoutes = new Hono();
 
@@ -18,7 +19,8 @@ openaiRoutes.post("/v1/chat/completions", async (c) => {
   const response = await handleRequest(
     {
       model: parsed.data.model,
-      messages: parsed.data.messages,
+      messages:
+        parsed.data.messages as unknown as UpstreamRequestParams["messages"],
       temperature: parsed.data.temperature,
       maxOutputTokens: parsed.data.max_tokens,
     },

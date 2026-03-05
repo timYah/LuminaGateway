@@ -1,4 +1,29 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+vi.mock("../../services/gatewayService", () => ({
+  handleRequest: vi.fn().mockImplementation(
+    (_params: unknown, clientFormat: "openai" | "anthropic") => {
+      if (clientFormat === "openai") {
+        return Promise.resolve({
+          status: 503,
+          body: {
+            error: {
+              message: "No provider available",
+              type: "gateway_error",
+              code: "gateway_error",
+            },
+          },
+        });
+      }
+      return Promise.resolve({
+        status: 503,
+        body: {
+          type: "error",
+          error: { type: "gateway_error", message: "No provider available" },
+        },
+      });
+    }
+  ),
+}));
 import { createApp } from "../../app";
 
 process.env.GATEWAY_API_KEY = "test-key";
@@ -25,7 +50,7 @@ describe("route stubs", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns stub OpenAI response", async () => {
+  it("returns OpenAI error when no providers are available", async () => {
     const res = await app.request("/v1/chat/completions", {
       method: "POST",
       headers: authHeader,
@@ -34,12 +59,12 @@ describe("route stubs", () => {
         messages: [{ role: "user", content: "hi" }],
       }),
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(503);
     const body = await res.json();
-    expect(body.object).toBe("chat.completion");
+    expect(body.error?.message).toBeDefined();
   });
 
-  it("returns stub Anthropic response", async () => {
+  it("returns Anthropic error when no providers are available", async () => {
     const res = await app.request("/v1/messages", {
       method: "POST",
       headers: authHeader,
@@ -48,8 +73,8 @@ describe("route stubs", () => {
         messages: [{ role: "user", content: "hi" }],
       }),
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(503);
     const body = await res.json();
-    expect(body.type).toBe("message");
+    expect(body.type).toBe("error");
   });
 });

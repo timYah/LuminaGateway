@@ -184,7 +184,7 @@
 
 - [x] **T-18.1** 在 `src/routes/openai.ts` 中替换 stub 响应，接入 `gatewayService.handleRequest()`（非流式路径）
 - [x] **T-18.2** 在 `src/routes/anthropic.ts` 中替换 stub 响应，接入 `gatewayService.handleRequest()`（非流式路径）
-- [ ] **T-18.3** ✅ **验证**：编写端到端测试 `src/routes/__tests__/e2e.nonstream.test.ts`（mock upstream），测试 OpenAI 和 Anthropic 两种格式的完整请求-响应，运行 `npm run test && npm run lint && npm run typecheck`。持续修复直到全部通过。
+- [x] **T-18.3** ✅ **验证**：编写端到端测试 `src/routes/__tests__/e2e.nonstream.test.ts`（mock upstream），测试 OpenAI 和 Anthropic 两种格式的完整请求-响应，运行 `npm run test && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
 
