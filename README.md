@@ -9,21 +9,24 @@ Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI 
 - Streaming SSE relay for both formats.
 - Balance-aware routing with automatic failover.
 - Admin routes for provider management and usage queries.
-- Planned Nuxt UI admin dashboard for providers and usage.
+- Vue + Nuxt UI admin dashboard for providers and usage.
 
 ## Quick start
 
-Set `GATEWAY_API_KEY` before you start the server because `/v1/*` and `/admin/*` require Bearer auth.
+Set `GATEWAY_API_KEY` before you start the server because `/v1/*` and `/admin/*` require Bearer auth. The gateway auto-loads `.env` at startup.
 
 ```bash
 npm install
 npm run db:migrate
 npm run db:seed
-export GATEWAY_API_KEY="dev-token"
+cp .env.example .env
+# edit .env and set GATEWAY_API_KEY
 npm run dev
 ```
 
 Verify the server is up:
+
+Alternatively, export `GATEWAY_API_KEY` in your shell instead of using `.env`.
 
 ```bash
 curl http://localhost:3000/health
@@ -40,9 +43,9 @@ curl http://localhost:3000/v1/chat/completions \
   -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-## Admin dashboard (planned)
+## Admin dashboard
 
-The admin dashboard is planned as a standalone Nuxt 4 + nuxt-ui app. It will provide provider management and usage querying in a web UI.
+The admin dashboard is a standalone Vue + Nuxt UI app powered by Vite. It provides provider management and usage querying in a web UI.
 
 ```bash [Terminal]
 cd apps/admin
@@ -50,7 +53,7 @@ npm install
 npm run dev
 ```
 
-The dashboard will run on `http://localhost:3001` and connect to the gateway at `http://localhost:3000` by default. Set `NUXT_PUBLIC_API_BASE_URL` to point at a different gateway URL.
+The dashboard will run on `http://localhost:3001` and connect to the gateway at `http://localhost:3000` by default. Set `VITE_API_BASE_URL` to point at a different gateway URL.
 
 ## Deployment and usage
 
