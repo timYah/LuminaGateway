@@ -154,16 +154,23 @@ export function convertToolChoice(
   if (fromFormat === "openai" && toFormat === "anthropic") {
     if (toolChoice === "auto") return { type: "auto" };
     if (toolChoice === "none") return { type: "none" };
-    if (typeof toolChoice === "object" && toolChoice.type === "function") {
-      return { type: "tool", name: toolChoice.function.name };
+    if (typeof toolChoice === "object" && "type" in toolChoice) {
+      const choice = toolChoice as {
+        type: "function";
+        function: { name: string };
+      };
+      if (choice.type === "function") {
+        return { type: "tool", name: choice.function.name };
+      }
     }
   }
 
   if (fromFormat === "anthropic" && toFormat === "openai") {
-    if (toolChoice.type === "auto") return "auto";
-    if (toolChoice.type === "none") return "none";
-    if (toolChoice.type === "tool") {
-      return { type: "function", function: { name: toolChoice.name } };
+    const choice = toolChoice as AnthropicToolChoice;
+    if (choice.type === "auto") return "auto";
+    if (choice.type === "none") return "none";
+    if (choice.type === "tool") {
+      return { type: "function", function: { name: choice.name } };
     }
   }
 
