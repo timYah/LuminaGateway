@@ -71,13 +71,25 @@ function formatAnthropicResponse(
   };
 }
 
+function formatErrorResponse(clientFormat: ClientFormat, message: string) {
+  if (clientFormat === "openai") {
+    return { error: { message, type: "gateway_error", code: "gateway_error" } };
+  }
+  return { type: "error", error: { type: "gateway_error", message } };
+}
+
 export async function handleRequest(
   requestParams: GatewayRequestParams,
   clientFormat: ClientFormat
 ) {
   const { model: modelSlug, ...params } = requestParams;
   const candidates = await gatewayRouter.getAllCandidates(modelSlug);
-  let lastError: unknown = null;
+  if (candidates.length === 0) {
+    return {
+      status: 503,
+      body: formatErrorResponse(clientFormat, "No provider available"),
+    };
+  }
 
   for (const provider of candidates) {
     const model = await getModelByProviderAndSlug(provider.id, modelSlug);
@@ -100,7 +112,6 @@ export async function handleRequest(
         body,
       };
     } catch (error) {
-      lastError = error;
       const errorType = classifyUpstreamError(error);
       if (errorType === "quota") {
         await updateProvider(provider.id, { balance: 0 });
@@ -118,12 +129,18 @@ export async function handleRequest(
         gatewayCircuitBreaker.open(provider.id, SERVER_COOLDOWN_MS);
         continue;
       }
-      throw error;
+      return {
+        status: 500,
+        body: formatErrorResponse(
+          clientFormat,
+          error instanceof Error ? error.message : "Upstream error"
+        ),
+      };
     }
   }
 
-  if (lastError) {
-    throw lastError;
-  }
-  throw new Error(`No provider available for model: ${modelSlug}`);
+  return {
+    status: 503,
+    body: formatErrorResponse(clientFormat, "No provider available"),
+  };
 }
