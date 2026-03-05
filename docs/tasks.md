@@ -216,7 +216,7 @@
 ## Phase 22 — 连通路由（流式完整流程）
 
 - [x] **T-22.1** 在 `src/routes/openai.ts` 中添加流式路径：当 `stream: true` 时调用 `handleStreamingRequest()` 并返回 SSE Response
-- [ ] **T-22.2** 在 `src/routes/anthropic.ts` 中添加流式路径：当 `stream: true` 时调用 `handleStreamingRequest()` 并返回 SSE Response
+- [x] **T-22.2** 在 `src/routes/anthropic.ts` 中添加流式路径：当 `stream: true` 时调用 `handleStreamingRequest()` 并返回 SSE Response
 - [ ] **T-22.3** 设置正确的 SSE 响应头（`Content-Type: text/event-stream`、`Cache-Control: no-cache`、`Connection: keep-alive`）
 - [ ] **T-22.4** ✅ **验证**：编写端到端流式测试 `src/routes/__tests__/e2e.stream.test.ts`（mock upstream），测试两种格式的完整流式流程，运行 `npm run test && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
