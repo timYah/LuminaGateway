@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 
 import { gatewayFetch, useGatewayFetch } from "~/composables/useGatewayFetch";
+import { useApiKey } from "~/composables/useApiKey";
 
 type Provider = {
   id: number;
@@ -70,6 +71,7 @@ const { data, pending, error, execute } = useGatewayFetch<UsageResponse>(
 
 const rows = computed(() => data.value?.usage ?? []);
 const empty = computed(() => !pending.value && rows.value.length === 0);
+const { authHeader } = useApiKey();
 
 const fetchProviders = async () => {
   try {
@@ -113,10 +115,15 @@ const formatDate = (value: string) => {
   }).format(parsed);
 };
 
-onMounted(async () => {
-  await fetchProviders();
-  await execute();
-});
+watch(
+  authHeader,
+  async (value) => {
+    if (!value) return;
+    await fetchProviders();
+    await execute();
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
