@@ -364,7 +364,7 @@
 ## Phase 38 — 部署与使用文档
 
 - [x] **T-38.1** 创建 `docs/deployment.md` — 写明部署步骤、环境变量、管理后台运行方式
-- [ ] **T-38.2** 更新 `docs/documentation.md` — 补充部署与使用文档入口
+- [x] **T-38.2** 更新 `docs/documentation.md` — 补充部署与使用文档入口
 
 ---
 

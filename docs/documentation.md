@@ -20,6 +20,10 @@ The gateway runs on Node.js LTS and uses SQLite by default. Follow these steps t
 - Start the dev server: `npm run dev`
 - Health check: `GET http://localhost:3000/health`
 
+## Deployment and usage
+
+See `docs/deployment.md` for production deployment steps, admin dashboard setup, and request examples.
+
 ## Environment variables
 
 | Variable | Default | Description |
