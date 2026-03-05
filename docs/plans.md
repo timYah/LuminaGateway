@@ -498,23 +498,23 @@ npm run test
 
 ## Verification checklist (kept up to date)
 
-- [ ] `npm install` succeeds
-- [ ] `npm run dev` starts server
-- [ ] `npm run build` compiles without errors
-- [ ] `npm run lint` passes
-- [ ] `npm run typecheck` passes
-- [ ] `npm run test` passes
-- [ ] `npm run db:migrate` creates tables
-- [ ] `npm run db:seed` populates demo data
-- [ ] `GET /health` returns 200
-- [ ] OpenAI-format non-streaming request works
-- [ ] OpenAI-format streaming request works
-- [ ] Anthropic-format non-streaming request works
-- [ ] Anthropic-format streaming request works
-- [ ] Failover works when primary provider returns 402
-- [ ] Billing correctly deducts balance
-- [ ] Usage logs are written
-- [ ] Admin routes return correct data
+- [x] `npm install` succeeds
+- [x] `npm run dev` starts server
+- [x] `npm run build` compiles without errors
+- [x] `npm run lint` passes
+- [x] `npm run typecheck` passes
+- [x] `npm run test` passes
+- [x] `npm run db:migrate` creates tables
+- [x] `npm run db:seed` populates demo data
+- [x] `GET /health` returns 200
+- [x] OpenAI-format non-streaming request works
+- [x] OpenAI-format streaming request works
+- [x] Anthropic-format non-streaming request works
+- [x] Anthropic-format streaming request works
+- [x] Failover works when primary provider returns 402
+- [x] Billing correctly deducts balance
+- [x] Usage logs are written
+- [x] Admin routes return correct data
 
 ---
 
