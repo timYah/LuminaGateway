@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import { APICallError, generateText } from "ai";
 import type { Provider } from "../db/schema/providers";
 import type { Model } from "../db/schema/models";
 import { createAIProvider } from "./aiSdkFactory";
@@ -43,4 +43,22 @@ export async function callUpstreamNonStreaming(
     result,
     usage: normalizeUsage(result.usage),
   };
+}
+
+export type UpstreamErrorType =
+  | "quota"
+  | "rate_limit"
+  | "auth"
+  | "server"
+  | "unknown";
+
+export function classifyUpstreamError(error: unknown): UpstreamErrorType {
+  if (APICallError.isInstance(error)) {
+    const status = error.statusCode;
+    if (status === 402) return "quota";
+    if (status === 429) return "rate_limit";
+    if (status === 401) return "auth";
+    if (status && status >= 500 && status < 600) return "server";
+  }
+  return "unknown";
 }
