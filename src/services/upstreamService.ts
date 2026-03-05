@@ -11,6 +11,11 @@ export type UpstreamRequestParams = Omit<
 type GenerateTextResult = Awaited<ReturnType<typeof generateText>>;
 type StreamTextResult = Awaited<ReturnType<typeof streamText>>;
 
+export type UpstreamStreamingResponse = {
+  stream: StreamTextResult["fullStream"];
+  usagePromise: Promise<UpstreamUsage>;
+};
+
 export type UpstreamUsage = {
   promptTokens: number;
   completionTokens: number;
@@ -50,18 +55,30 @@ export function callUpstreamStreaming(
   provider: Provider,
   model: Model,
   params: UpstreamRequestParams
-): StreamTextResult {
+): UpstreamStreamingResponse {
   const aiProvider = createAIProvider(provider);
   const languageModel = aiProvider.languageModel(model.upstreamName);
-  let capturedUsage: UpstreamUsage | null = null;
+  let resolveUsage!: (usage: UpstreamUsage) => void;
+  let rejectUsage!: (error: unknown) => void;
+  const usagePromise = new Promise<UpstreamUsage>((resolve, reject) => {
+    resolveUsage = resolve;
+    rejectUsage = reject;
+  });
   const fullParams = {
     ...(params as Record<string, unknown>),
     model: languageModel,
     onFinish: (event: { totalUsage: GenerateTextResult["usage"] }) => {
-      capturedUsage = normalizeUsage(event.totalUsage);
+      resolveUsage(normalizeUsage(event.totalUsage));
+    },
+    onError: (error: unknown) => {
+      rejectUsage(error);
     },
   } as Parameters<typeof streamText>[0];
-  return streamText(fullParams);
+  const streamResult = streamText(fullParams);
+  return {
+    stream: streamResult.fullStream,
+    usagePromise,
+  };
 }
 
 export type UpstreamErrorType =
