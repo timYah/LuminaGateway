@@ -109,7 +109,7 @@
 
 - [x] **T-10.1** 创建 `src/routes/openai.ts` — 注册 `POST /v1/chat/completions` 路由，使用 Zod schema 校验请求体，返回 stub 响应
 - [x] **T-10.2** 创建 `src/routes/anthropic.ts` — 注册 `POST /v1/messages` 路由，使用 Zod schema 校验请求体，返回 stub 响应
-- [ ] **T-10.3** 在 `src/app.ts` 中挂载 auth 中间件和两个路由模块
+- [x] **T-10.3** 在 `src/app.ts` 中挂载 auth 中间件和两个路由模块
 - [ ] **T-10.4** ✅ **验证**：编写 `src/routes/__tests__/routes.stub.test.ts`，测试鉴权、校验、stub 响应，运行 `npm run test -- routes && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
