@@ -56,7 +56,7 @@
 
 ## Phase 05 — Provider 服务层
 
-- [ ] **T-05.1** 创建 `src/services/providerService.ts` — 实现 `getAllProviders()` 方法
+- [x] **T-05.1** 创建 `src/services/providerService.ts` — 实现 `getAllProviders()` 方法
 - [ ] **T-05.2** 实现 `getProviderById(id)` 方法
 - [ ] **T-05.3** 实现 `createProvider(data)` 方法
 - [ ] **T-05.4** 实现 `updateProvider(id, data)` 方法（支持余额充值、启停切换）
