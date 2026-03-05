@@ -128,7 +128,7 @@ watch(
 </script>
 
 <template>
-  <section class="space-y-6">
+  <section class="space-y-5">
     <header
       class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
     >
@@ -154,11 +154,11 @@ watch(
     <div class="border-b border-slate-200/70"></div>
 
     <div class="surface radius-panel divide-y divide-slate-200/60">
-      <div class="px-6 py-6 md:px-8 md:py-8">
+      <div class="px-6 py-5 md:px-8 md:py-6">
         <div class="text-sm font-medium text-slate-900">Filters</div>
       </div>
-      <div class="px-6 py-6 md:px-8 md:py-8">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="px-6 py-5 md:px-8 md:py-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           <UFormGroup label="Provider" help="Filter by provider ID.">
             <USelect v-model="filters.providerId" :options="providerOptions" />
           </UFormGroup>
@@ -179,7 +179,7 @@ watch(
           </UFormGroup>
         </div>
       </div>
-      <div class="flex items-center justify-between px-6 py-6 md:px-8 md:py-8">
+      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
         <UButton class="action-press" color="primary" @click="applyFilters">
           Apply filters
         </UButton>
@@ -190,7 +190,7 @@ watch(
     </div>
 
     <div class="surface radius-panel divide-y divide-slate-200/60">
-      <div class="flex items-center justify-between px-6 py-6 md:px-8 md:py-8">
+      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
         <div>
           <div class="text-sm font-medium text-slate-900">Usage log</div>
           <p class="text-sm text-slate-500">
@@ -219,11 +219,11 @@ watch(
         </div>
       </div>
 
-      <div class="px-6 py-6 md:px-8 md:py-8">
-        <div v-if="pending" class="space-y-3">
-          <div class="h-10 radius-soft skeleton"></div>
-          <div class="h-10 radius-soft skeleton"></div>
-          <div class="h-10 radius-soft skeleton"></div>
+      <div class="px-6 py-5 md:px-8 md:py-6">
+        <div v-if="pending" class="space-y-2">
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
         </div>
 
         <div
@@ -240,7 +240,7 @@ watch(
 
         <div
           v-else-if="empty"
-          class="radius-card border border-slate-200/60 p-6"
+          class="radius-card border border-slate-200/60 p-5"
         >
           <div class="text-sm font-medium text-slate-800">
             No usage records match the current filters.
@@ -254,33 +254,33 @@ watch(
           <table class="min-w-[900px] w-full text-sm">
             <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
               <tr class="border-b border-slate-200/60">
-                <th class="py-3 text-left font-medium">Time</th>
-                <th class="py-3 text-left font-medium">Provider</th>
-                <th class="py-3 text-left font-medium">Model</th>
-                <th class="py-3 text-left font-medium">Input</th>
-                <th class="py-3 text-left font-medium">Output</th>
-                <th class="py-3 text-left font-medium">Cost</th>
-              </tr>
-            </thead>
-            <tbody>
+              <th class="py-2.5 text-left font-medium">Time</th>
+              <th class="py-2.5 text-left font-medium">Provider</th>
+              <th class="py-2.5 text-left font-medium">Model</th>
+              <th class="py-2.5 text-left font-medium">Input</th>
+              <th class="py-2.5 text-left font-medium">Output</th>
+              <th class="py-2.5 text-left font-medium">Cost</th>
+            </tr>
+          </thead>
+          <tbody>
               <tr
                 v-for="(row, index) in rows"
                 :key="row.id"
                 class="border-b border-slate-200/50 staggered"
                 :style="{ '--index': index }"
               >
-                <td class="py-4 text-slate-700">
+                <td class="py-3 text-slate-700">
                   {{ formatDate(row.createdAt) }}
                 </td>
-                <td class="py-4 text-slate-700">{{ row.providerId }}</td>
-                <td class="py-4 text-slate-900">{{ row.modelSlug }}</td>
-                <td class="py-4 mono-numbers text-slate-900">
+                <td class="py-3 text-slate-700">{{ row.providerId }}</td>
+                <td class="py-3 text-slate-900">{{ row.modelSlug }}</td>
+                <td class="py-3 mono-numbers text-slate-900">
                   {{ row.inputTokens }}
                 </td>
-                <td class="py-4 mono-numbers text-slate-900">
+                <td class="py-3 mono-numbers text-slate-900">
                   {{ row.outputTokens }}
                 </td>
-                <td class="py-4 mono-numbers text-slate-900">
+                <td class="py-3 mono-numbers text-slate-900">
                   {{ row.cost.toFixed(4) }}
                 </td>
               </tr>

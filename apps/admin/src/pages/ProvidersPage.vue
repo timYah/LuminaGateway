@@ -147,7 +147,7 @@ const submitEdit = async () => {
 </script>
 
 <template>
-  <section class="space-y-6">
+  <section class="space-y-5">
     <header
       class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
     >
@@ -173,7 +173,7 @@ const submitEdit = async () => {
     <div class="border-b border-slate-200/70"></div>
 
     <div class="surface radius-panel divide-y divide-slate-200/60">
-      <div class="flex items-center justify-between px-6 py-6 md:px-8 md:py-8">
+      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
         <div>
           <div class="text-sm font-medium text-slate-900">Provider roster</div>
           <p class="text-sm text-slate-500">
@@ -185,11 +185,11 @@ const submitEdit = async () => {
         </UButton>
       </div>
 
-      <div class="px-6 py-6 md:px-8 md:py-8">
-        <div v-if="pending" class="space-y-3">
-          <div class="h-10 radius-soft skeleton"></div>
-          <div class="h-10 radius-soft skeleton"></div>
-          <div class="h-10 radius-soft skeleton"></div>
+      <div class="px-6 py-5 md:px-8 md:py-6">
+        <div v-if="pending" class="space-y-2">
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
         </div>
 
         <div
@@ -206,7 +206,7 @@ const submitEdit = async () => {
 
         <div
           v-else-if="empty"
-          class="radius-card border border-slate-200/60 p-6"
+          class="radius-card border border-slate-200/60 p-5"
         >
           <div class="text-sm font-medium text-slate-800">
             No providers configured yet.
@@ -220,22 +220,22 @@ const submitEdit = async () => {
           <table class="min-w-[860px] w-full text-sm">
             <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
               <tr class="border-b border-slate-200/60">
-                <th class="py-3 text-left font-medium">Name</th>
-                <th class="py-3 text-left font-medium">Protocol</th>
-                <th class="py-3 text-left font-medium">Balance</th>
-                <th class="py-3 text-left font-medium">Priority</th>
-                <th class="py-3 text-left font-medium">Status</th>
-                <th class="py-3 text-left font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+              <th class="py-2.5 text-left font-medium">Name</th>
+              <th class="py-2.5 text-left font-medium">Protocol</th>
+              <th class="py-2.5 text-left font-medium">Balance</th>
+              <th class="py-2.5 text-left font-medium">Priority</th>
+              <th class="py-2.5 text-left font-medium">Status</th>
+              <th class="py-2.5 text-left font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
               <tr
                 v-for="(provider, index) in providers"
                 :key="provider.id"
                 class="border-b border-slate-200/50 staggered"
                 :style="{ '--index': index }"
               >
-                <td class="py-4">
+                <td class="py-3">
                   <div class="font-medium text-slate-900">
                     {{ provider.name }}
                   </div>
@@ -243,16 +243,16 @@ const submitEdit = async () => {
                     {{ provider.baseUrl }}
                   </div>
                 </td>
-                <td class="py-4 text-slate-600 capitalize">
+                <td class="py-3 text-slate-600 capitalize">
                   {{ provider.protocol }}
                 </td>
-                <td class="py-4 mono-numbers text-slate-900">
+                <td class="py-3 mono-numbers text-slate-900">
                   {{ provider.balance.toFixed(4) }}
                 </td>
-                <td class="py-4 mono-numbers text-slate-900">
+                <td class="py-3 mono-numbers text-slate-900">
                   {{ provider.priority }}
                 </td>
-                <td class="py-4">
+                <td class="py-3">
                   <span
                     class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
                     :class="
@@ -264,7 +264,7 @@ const submitEdit = async () => {
                     {{ provider.isActive ? "Active" : "Paused" }}
                   </span>
                 </td>
-                <td class="py-4">
+                <td class="py-3">
                   <UButton
                     class="action-press"
                     size="sm"
@@ -283,7 +283,7 @@ const submitEdit = async () => {
 
     <UModal v-model:open="createOpen">
       <template #content>
-        <div class="surface radius-panel p-6 md:p-8 space-y-6">
+        <div class="surface radius-panel p-6 md:p-7 space-y-5">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
               New provider
@@ -293,7 +293,7 @@ const submitEdit = async () => {
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <UFormGroup label="Name" help="Short label used in the routing list.">
               <UInput v-model="createForm.name" placeholder="Lumen Arc" />
             </UFormGroup>
@@ -340,7 +340,7 @@ const submitEdit = async () => {
 
     <UModal v-model:open="editOpen">
       <template #content>
-        <div class="surface radius-panel p-6 md:p-8 space-y-6">
+        <div class="surface radius-panel p-6 md:p-7 space-y-5">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
               Provider update
@@ -350,7 +350,7 @@ const submitEdit = async () => {
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <UFormGroup label="Name" help="Short label used in the routing list.">
               <UInput v-model="editForm.name" placeholder="Lumen Arc" />
             </UFormGroup>

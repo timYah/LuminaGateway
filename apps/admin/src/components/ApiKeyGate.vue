@@ -29,10 +29,10 @@ const saveKey = () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-4">
     <div
       v-if="hasKey"
-      class="glass-panel radius-card px-5 py-4 flex items-center justify-between"
+      class="glass-panel radius-card px-4 py-3 flex items-center justify-between"
     >
       <div>
         <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
@@ -74,7 +74,7 @@ const saveKey = () => {
         v-else-if="!hasKey"
         class="absolute inset-0 flex items-center justify-center"
       >
-        <div class="max-w-[560px] surface radius-panel p-8 space-y-6">
+        <div class="max-w-[560px] surface radius-panel p-6 md:p-7 space-y-5">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
               Secure Access
@@ -88,7 +88,7 @@ const saveKey = () => {
             </p>
           </div>
 
-          <div class="space-y-4">
+          <div class="space-y-3">
             <UFormGroup
               label="Gateway API key"
               help="Paste the value of GATEWAY_API_KEY from the backend environment."
