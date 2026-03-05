@@ -36,3 +36,23 @@ export const openaiChatCompletionSchema = z.object({
   tools: z.array(openaiToolSchema).optional(),
   tool_choice: openaiToolChoiceSchema.optional(),
 });
+
+const anthropicMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string(),
+});
+
+const anthropicToolSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  input_schema: z.record(z.unknown()).optional(),
+});
+
+export const anthropicMessagesSchema = z.object({
+  model: z.string(),
+  messages: z.array(anthropicMessageSchema),
+  system: z.string().optional(),
+  stream: z.boolean().optional(),
+  max_tokens: z.number().int().optional(),
+  tools: z.array(anthropicToolSchema).optional(),
+});
