@@ -190,7 +190,7 @@
 
 ## Phase 19 — SSE 流式中继（OpenAI 格式）
 
-- [ ] **T-19.1** 创建 `src/services/streamRelay.ts` — 实现 `relayAsOpenAIStream(aiSdkStream)` 函数，将 AI SDK 的 stream 转为 `data: {...}\n\n` 格式的 ReadableStream
+- [x] **T-19.1** 创建 `src/services/streamRelay.ts` — 实现 `relayAsOpenAIStream(aiSdkStream)` 函数，将 AI SDK 的 stream 转为 `data: {...}\n\n` 格式的 ReadableStream
 - [ ] **T-19.2** 在流结束时追加 `data: [DONE]\n\n` 终止标记
 - [ ] **T-19.3** ✅ **验证**：编写 `src/services/__tests__/streamRelay.openai.test.ts`，测试 chunk 格式和终止标记，运行 `npm run test -- streamRelay && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
