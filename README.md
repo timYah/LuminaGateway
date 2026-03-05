@@ -50,6 +50,10 @@ npm run dev
 
 The dashboard will run on `http://localhost:3001` and connect to the gateway at `http://localhost:3000` by default. Set `NUXT_PUBLIC_API_BASE_URL` to point at a different gateway URL.
 
+## Deployment and usage
+
+See `docs/deployment.md` for deployment steps, environment variables, and usage examples.
+
 ## Scripts
 
 - `npm run dev` — start the dev server
