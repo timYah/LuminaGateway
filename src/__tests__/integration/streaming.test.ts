@@ -17,6 +17,7 @@ import { getDb, type SqliteDatabase } from "../../db";
 import { models, providers, usageLogs } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { createProvider } from "../../services/providerService";
+import { APICallError } from "ai";
 import { callUpstreamStreaming } from "../../services/upstreamService";
 
 process.env.DATABASE_TYPE = "sqlite";
@@ -48,6 +49,46 @@ async function seedProvider() {
   });
 
   return provider;
+}
+
+async function seedProviders() {
+  const providerA = await createProvider({
+    name: "Stream Provider A",
+    protocol: "openai",
+    baseUrl: "https://example.com",
+    apiKey: "sk-a",
+    balance: 10,
+    isActive: true,
+    priority: 1,
+  });
+  const providerB = await createProvider({
+    name: "Stream Provider B",
+    protocol: "openai",
+    baseUrl: "https://example.com",
+    apiKey: "sk-b",
+    balance: 5,
+    isActive: true,
+    priority: 2,
+  });
+
+  await db.insert(models).values([
+    {
+      providerId: providerA!.id,
+      slug: "gpt-4o",
+      upstreamName: "gpt-4o",
+      inputPrice: 1,
+      outputPrice: 1,
+    },
+    {
+      providerId: providerB!.id,
+      slug: "gpt-4o",
+      upstreamName: "gpt-4o",
+      inputPrice: 1,
+      outputPrice: 1,
+    },
+  ]);
+
+  return { providerA, providerB };
 }
 
 beforeAll(() => {
@@ -123,5 +164,41 @@ describe("integration streaming", () => {
     const usageRows = await db.select().from(usageLogs);
     expect(usageRows).toHaveLength(1);
     expect(providerRow[0].balance).toBeLessThan(10);
+  });
+
+  it("fails over when upstream errors before stream starts", async () => {
+    const { providerA, providerB } = await seedProviders();
+    const stream =
+      (async function* () {
+        yield { type: "text-delta", id: "1", text: "Hi" };
+      })() as unknown as AsyncIterableStream<TextStreamPart<ToolSet>>;
+
+    callUpstreamMock
+      .mockRejectedValueOnce(
+        new APICallError({
+          message: "rate limit",
+          url: "https://example.com",
+          requestBodyValues: {},
+          statusCode: 429,
+        })
+      )
+      .mockReturnValueOnce({
+        stream,
+        usagePromise: Promise.resolve({ promptTokens: 1, completionTokens: 1 }),
+      });
+
+    const res = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "hi" }],
+        stream: true,
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(callUpstreamMock.mock.calls[0][0].id).toBe(providerA!.id);
+    expect(callUpstreamMock.mock.calls[1][0].id).toBe(providerB!.id);
   });
 });
