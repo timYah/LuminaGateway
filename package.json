@@ -15,5 +15,11 @@
   "dependencies": {
     "@hono/node-server": "^1.19.11",
     "hono": "^4.12.5"
+  },
+  "devDependencies": {
+    "eslint": "^10.0.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }
