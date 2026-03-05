@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { APICallError, generateText } from "ai";
+import { APICallError, generateText, streamText } from "ai";
 import type { ProviderV3 } from "@ai-sdk/provider";
-import { callUpstreamNonStreaming, classifyUpstreamError } from "../upstreamService";
+import {
+  callUpstreamNonStreaming,
+  callUpstreamStreaming,
+  classifyUpstreamError,
+} from "../upstreamService";
 
 vi.mock("ai", async () => {
   const actual = await vi.importActual<typeof import("ai")>("ai");
   return {
     ...actual,
     generateText: vi.fn(),
+    streamText: vi.fn(),
   };
 });
 
@@ -17,8 +22,10 @@ vi.mock("../aiSdkFactory", () => ({
 }));
 
 const generateTextMock = vi.mocked(generateText);
+const streamTextMock = vi.mocked(streamText);
 
 type GenerateTextResult = Awaited<ReturnType<typeof generateText>>;
+type StreamTextResult = Awaited<ReturnType<typeof streamText>>;
 
 const baseProvider = {
   id: 1,
@@ -45,6 +52,7 @@ const baseModel = {
 describe("upstreamService", () => {
   beforeEach(() => {
     generateTextMock.mockReset();
+    streamTextMock.mockReset();
     createAIProvider.mockReset();
   });
 
@@ -124,5 +132,61 @@ describe("upstreamService", () => {
     expect(classifyUpstreamError(auth)).toBe("auth");
     expect(classifyUpstreamError(server)).toBe("server");
     expect(classifyUpstreamError(new Error("other"))).toBe("unknown");
+  });
+
+  it("callUpstreamStreaming returns stream and usagePromise", async () => {
+    const languageModel = { id: "mock-model" };
+    const mockProvider = {
+      languageModel: vi.fn().mockReturnValue(languageModel),
+      specificationVersion: "v3",
+    } as unknown as ProviderV3;
+    createAIProvider.mockReturnValue(mockProvider);
+
+    const usage = {
+      inputTokens: 5,
+      outputTokens: 7,
+      inputTokenDetails: {
+        noCacheTokens: undefined,
+        cacheReadTokens: undefined,
+        cacheWriteTokens: undefined,
+      },
+      outputTokenDetails: {
+        textTokens: undefined,
+        reasoningTokens: undefined,
+      },
+      totalTokens: 12,
+    };
+
+    const fakeStream = (async function* () {
+      yield { type: "text-delta", id: "1", text: "hello" };
+      yield { type: "text-delta", id: "1", text: " world" };
+    })();
+
+    streamTextMock.mockImplementation((options) => {
+      options.onFinish?.({ totalUsage: usage } as unknown as Parameters<
+        NonNullable<typeof options.onFinish>
+      >[0]);
+      return { fullStream: fakeStream } as unknown as StreamTextResult;
+    });
+
+    const response = callUpstreamStreaming(baseProvider, baseModel, {
+      messages: [],
+    });
+
+    const chunks: unknown[] = [];
+    for await (const chunk of response.stream) {
+      chunks.push(chunk);
+    }
+
+    expect(createAIProvider).toHaveBeenCalledWith(baseProvider);
+    expect(mockProvider.languageModel).toHaveBeenCalledWith(baseModel.upstreamName);
+    expect(streamTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({ model: languageModel, messages: [] })
+    );
+    expect(chunks).toHaveLength(2);
+    await expect(response.usagePromise).resolves.toEqual({
+      promptTokens: 5,
+      completionTokens: 7,
+    });
   });
 });

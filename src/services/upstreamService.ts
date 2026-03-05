@@ -73,7 +73,7 @@ export function callUpstreamStreaming(
     onError: (error: unknown) => {
       rejectUsage(error);
     },
-  } as Parameters<typeof streamText>[0];
+  } as unknown as Parameters<typeof streamText>[0];
   const streamResult = streamText(fullParams);
   return {
     stream: streamResult.fullStream,
