@@ -8,7 +8,7 @@
 ## Phase 01 — 项目脚手架
 
 - [x] **T-01.1** 初始化 `package.json`（`npm init`，设置 `name`、`version`、`type: "module"`）
-- [ ] **T-01.2** 安装核心依赖：`hono`、`@hono/node-server`
+- [x] **T-01.2** 安装核心依赖：`hono`、`@hono/node-server`
 - [ ] **T-01.3** 安装开发依赖：`typescript`、`vitest`、`eslint`、`tsx`
 - [ ] **T-01.4** 创建 `tsconfig.json`，启用 `strict: true`、`ESNext` 模块
 - [ ] **T-01.5** 创建 ESLint 配置文件（flat config）
