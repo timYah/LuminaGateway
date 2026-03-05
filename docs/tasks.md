@@ -225,7 +225,7 @@
 ## Phase 23 — 协议转换（OpenAI 方向）
 
 - [x] **T-23.1** 创建 `src/services/protocolConverter.ts` — 实现 `convertOpenAIToUniversal(openaiRequest)` 函数，将 OpenAI 请求体转为 AI SDK 通用参数
-- [ ] **T-23.2** 实现 `convertUniversalToOpenAIResponse(aiSdkResult)` 函数 — 将 AI SDK 结果包装为 OpenAI 响应格式
+- [x] **T-23.2** 实现 `convertUniversalToOpenAIResponse(aiSdkResult)` 函数 — 将 AI SDK 结果包装为 OpenAI 响应格式
 - [ ] **T-23.3** ✅ **验证**：编写 `src/services/__tests__/protocolConverter.openai.test.ts`，用 fixture 数据测试请求转换和响应包装，运行 `npm run test -- protocolConverter && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
