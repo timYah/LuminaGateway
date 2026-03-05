@@ -26,12 +26,12 @@ npm run db:migrate
 npm run db:seed
 ```
 
-## Run the gateway
+## Run the stack
 
-Use `npm run dev` for local development. In production, run the TypeScript entrypoint directly with `tsx` or `node --import tsx` and keep it supervised by your process manager.
+Use `npm run dev` for local development to start both the gateway and the admin dashboard together. In production, run each service under your process manager.
 
 ```bash [Terminal]
-# Development
+# Development (gateway + admin)
 npm run dev
 ```
 
@@ -44,6 +44,13 @@ Verify the service:
 
 ```bash [Terminal]
 curl http://localhost:3000/health
+```
+
+Start only the gateway or admin if needed:
+
+```bash [Terminal]
+npm run dev:gateway
+npm run dev:admin
 ```
 
 ## Admin dashboard

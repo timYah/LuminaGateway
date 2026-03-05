@@ -29,6 +29,8 @@ Verify the server is up:
 curl http://localhost:3000/health
 ```
 
+`npm run dev` starts both the gateway and the admin dashboard. Use `npm run dev:gateway` or `npm run dev:admin` to start them separately.
+
 Send a request:
 
 ```bash

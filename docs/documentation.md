@@ -17,7 +17,7 @@ The gateway runs on Node.js LTS and uses SQLite by default. Follow these steps t
 - Install dependencies: `npm install`
 - Run migrations: `npm run db:migrate`
 - Seed demo data: `npm run db:seed`
-- Start the dev server: `npm run dev`
+- Start the dev server: `npm run dev` (starts gateway + admin)
 - Health check: `GET http://localhost:3000/health`
 
 ## Deployment and usage
