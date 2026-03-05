@@ -53,9 +53,13 @@ export function callUpstreamStreaming(
 ): StreamTextResult {
   const aiProvider = createAIProvider(provider);
   const languageModel = aiProvider.languageModel(model.upstreamName);
+  let capturedUsage: UpstreamUsage | null = null;
   const fullParams = {
     ...(params as Record<string, unknown>),
     model: languageModel,
+    onFinish: (event: { totalUsage: GenerateTextResult["usage"] }) => {
+      capturedUsage = normalizeUsage(event.totalUsage);
+    },
   } as Parameters<typeof streamText>[0];
   return streamText(fullParams);
 }
