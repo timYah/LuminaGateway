@@ -248,7 +248,7 @@
 
 ## Phase 26 — Request ID 生成
 
-- [ ] **T-26.1** 创建 `src/utils/requestId.ts` — 实现 `generateRequestId()` 函数（返回唯一 ID，如 `req_` 前缀 + nanoid）
+- [x] **T-26.1** 创建 `src/utils/requestId.ts` — 实现 `generateRequestId()` 函数（返回唯一 ID，如 `req_` 前缀 + nanoid）
 - [ ] **T-26.2** ✅ **验证**：运行 `npm run typecheck && npm run lint`。持续修复直到通过。
 
 ---
