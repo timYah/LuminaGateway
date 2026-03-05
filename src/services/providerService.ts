@@ -30,3 +30,13 @@ export async function updateProvider(id: number, data: ProviderUpdate) {
     .returning();
   return rows[0] ?? null;
 }
+
+export async function deactivateProvider(id: number) {
+  const db = getDb();
+  const rows = await db
+    .update(providers)
+    .set({ isActive: false, updatedAt: sql`(unixepoch())` })
+    .where(eq(providers.id, id))
+    .returning();
+  return rows[0] ?? null;
+}
