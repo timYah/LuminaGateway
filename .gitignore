@@ -6,6 +6,10 @@ node_modules/
 # Build output
 /dist/
 /build/
+.nuxt/
+.output/
+apps/**/.nuxt/
+apps/**/.output/
 
 # Logs
 npm-debug.log*

@@ -5,7 +5,16 @@ import tsParser from "@typescript-eslint/parser";
 
 export default [
   {
-    ignores: ["dist", "node_modules", "drizzle"],
+    ignores: [
+      "dist",
+      "node_modules",
+      "drizzle",
+      ".nuxt",
+      ".output",
+      "apps/**/.nuxt",
+      "apps/**/.output",
+      "apps/**/node_modules",
+    ],
   },
   {
     languageOptions: {
