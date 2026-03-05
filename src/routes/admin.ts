@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { createProvider, getAllProviders } from "../services/providerService";
+import {
+  createProvider,
+  getAllProviders,
+  updateProvider,
+} from "../services/providerService";
 
 const providerSchema = z.object({
   name: z.string().min(1),
@@ -27,4 +31,11 @@ adminRoutes.post("/admin/providers", async (c) => {
   }
   const provider = await createProvider(parsed.data);
   return c.json({ provider }, 201);
+});
+
+adminRoutes.patch("/admin/providers/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const body = await c.req.json();
+  const provider = await updateProvider(id, body);
+  return c.json({ provider });
 });

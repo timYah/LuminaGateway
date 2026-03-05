@@ -289,7 +289,7 @@
 
 ## Phase 31 — Admin 路由：更新 Provider
 
-- [ ] **T-31.1** 在 `src/routes/admin.ts` 中实现 `PATCH /admin/providers/:id` 路由（支持余额充值、启停切换、修改优先级）
+- [x] **T-31.1** 在 `src/routes/admin.ts` 中实现 `PATCH /admin/providers/:id` 路由（支持余额充值、启停切换、修改优先级）
 - [ ] **T-31.2** 不存在的 Provider ID 返回 `404`
 - [ ] **T-31.3** ✅ **验证**：编写 `src/routes/__tests__/admin.update.test.ts`，测试更新成功、404、部分字段更新，运行 `npm run test -- admin && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
