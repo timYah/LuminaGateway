@@ -129,51 +129,57 @@ watch(
 
 <template>
   <section class="space-y-6">
-    <div class="glass-panel radius-panel p-6 md:p-8">
-      <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-        <div>
-          <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-            Usage
-          </div>
-          <h1 class="mt-3 text-3xl font-semibold text-slate-900">
-            Token flow and cost clarity
-          </h1>
-          <p class="mt-3 text-base text-slate-600 leading-relaxed max-w-[65ch]">
-            Filter usage logs by provider, model, or time window to reconcile
-            spend across the gateway.
-          </p>
+    <header
+      class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+    >
+      <div>
+        <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
+          Usage
         </div>
-        <div class="flex items-start justify-end">
-          <UButton class="action-press" variant="outline" @click="execute">
-            Refresh usage
-          </UButton>
-        </div>
+        <h1 class="mt-3 text-3xl font-semibold text-slate-900">
+          Token flow and cost clarity
+        </h1>
+        <p class="mt-3 text-base text-slate-600 leading-relaxed max-w-[65ch]">
+          Filter usage logs by provider, model, or time window to reconcile
+          spend across the gateway.
+        </p>
       </div>
-    </div>
+      <div class="flex items-center gap-3">
+        <UButton class="action-press" variant="outline" @click="execute">
+          Refresh usage
+        </UButton>
+      </div>
+    </header>
 
-    <div class="surface radius-panel p-6 md:p-8 space-y-6">
-      <div class="text-sm font-medium text-slate-900">Filters</div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <UFormGroup label="Provider" help="Filter by provider ID.">
-          <USelect v-model="filters.providerId" :options="providerOptions" />
-        </UFormGroup>
-        <UFormGroup label="Model slug" help="Exact model slug value.">
-          <UInput v-model="filters.modelSlug" placeholder="gpt-4o" />
-        </UFormGroup>
-        <UFormGroup label="Start date" help="Inclusive, local time.">
-          <UInput v-model="filters.startDate" type="date" />
-        </UFormGroup>
-        <UFormGroup label="End date" help="Inclusive, local time.">
-          <UInput v-model="filters.endDate" type="date" />
-        </UFormGroup>
-        <UFormGroup label="Limit" help="Rows per request.">
-          <UInput v-model="filters.limit" type="number" min="1" step="1" />
-        </UFormGroup>
-        <UFormGroup label="Offset" help="Zero-based row offset.">
-          <UInput v-model="filters.offset" type="number" min="0" step="1" />
-        </UFormGroup>
+    <div class="border-b border-slate-200/70"></div>
+
+    <div class="surface radius-panel divide-y divide-slate-200/60">
+      <div class="px-6 py-6 md:px-8 md:py-8">
+        <div class="text-sm font-medium text-slate-900">Filters</div>
       </div>
-      <div class="flex items-center justify-between">
+      <div class="px-6 py-6 md:px-8 md:py-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <UFormGroup label="Provider" help="Filter by provider ID.">
+            <USelect v-model="filters.providerId" :options="providerOptions" />
+          </UFormGroup>
+          <UFormGroup label="Model slug" help="Exact model slug value.">
+            <UInput v-model="filters.modelSlug" placeholder="gpt-4o" />
+          </UFormGroup>
+          <UFormGroup label="Start date" help="Inclusive, local time.">
+            <UInput v-model="filters.startDate" type="date" />
+          </UFormGroup>
+          <UFormGroup label="End date" help="Inclusive, local time.">
+            <UInput v-model="filters.endDate" type="date" />
+          </UFormGroup>
+          <UFormGroup label="Limit" help="Rows per request.">
+            <UInput v-model="filters.limit" type="number" min="1" step="1" />
+          </UFormGroup>
+          <UFormGroup label="Offset" help="Zero-based row offset.">
+            <UInput v-model="filters.offset" type="number" min="0" step="1" />
+          </UFormGroup>
+        </div>
+      </div>
+      <div class="flex items-center justify-between px-6 py-6 md:px-8 md:py-8">
         <UButton class="action-press" color="primary" @click="applyFilters">
           Apply filters
         </UButton>
@@ -183,8 +189,8 @@ watch(
       </div>
     </div>
 
-    <div class="surface radius-panel p-6 md:p-8 space-y-6">
-      <div class="flex items-center justify-between">
+    <div class="surface radius-panel divide-y divide-slate-200/60">
+      <div class="flex items-center justify-between px-6 py-6 md:px-8 md:py-8">
         <div>
           <div class="text-sm font-medium text-slate-900">Usage log</div>
           <p class="text-sm text-slate-500">
@@ -213,72 +219,74 @@ watch(
         </div>
       </div>
 
-      <div v-if="pending" class="space-y-3">
-        <div class="h-10 radius-soft skeleton"></div>
-        <div class="h-10 radius-soft skeleton"></div>
-        <div class="h-10 radius-soft skeleton"></div>
-      </div>
-
-      <div
-        v-else-if="error"
-        class="radius-card border border-rose-200 bg-rose-50 p-4"
-      >
-        <div class="text-sm font-medium text-rose-700">
-          Usage data failed to load.
+      <div class="px-6 py-6 md:px-8 md:py-8">
+        <div v-if="pending" class="space-y-3">
+          <div class="h-10 radius-soft skeleton"></div>
+          <div class="h-10 radius-soft skeleton"></div>
+          <div class="h-10 radius-soft skeleton"></div>
         </div>
-        <p class="text-sm text-rose-600">
-          Verify the API key and filters, then refresh.
-        </p>
-      </div>
 
-      <div
-        v-else-if="empty"
-        class="radius-card border border-slate-200/60 p-6"
-      >
-        <div class="text-sm font-medium text-slate-800">
-          No usage records match the current filters.
+        <div
+          v-else-if="error"
+          class="radius-card border border-rose-200 bg-rose-50 p-4"
+        >
+          <div class="text-sm font-medium text-rose-700">
+            Usage data failed to load.
+          </div>
+          <p class="text-sm text-rose-600">
+            Verify the API key and filters, then refresh.
+          </p>
         </div>
-        <p class="text-sm text-slate-500 mt-2">
-          Adjust the filters or check again after new requests.
-        </p>
-      </div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="min-w-[900px] w-full text-sm">
-          <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
-            <tr class="border-b border-slate-200/60">
-              <th class="py-3 text-left font-medium">Time</th>
-              <th class="py-3 text-left font-medium">Provider</th>
-              <th class="py-3 text-left font-medium">Model</th>
-              <th class="py-3 text-left font-medium">Input</th>
-              <th class="py-3 text-left font-medium">Output</th>
-              <th class="py-3 text-left font-medium">Cost</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(row, index) in rows"
-              :key="row.id"
-              class="border-b border-slate-200/50 staggered"
-              :style="{ '--index': index }"
-            >
-              <td class="py-4 text-slate-700">
-                {{ formatDate(row.createdAt) }}
-              </td>
-              <td class="py-4 text-slate-700">{{ row.providerId }}</td>
-              <td class="py-4 text-slate-900">{{ row.modelSlug }}</td>
-              <td class="py-4 mono-numbers text-slate-900">
-                {{ row.inputTokens }}
-              </td>
-              <td class="py-4 mono-numbers text-slate-900">
-                {{ row.outputTokens }}
-              </td>
-              <td class="py-4 mono-numbers text-slate-900">
-                {{ row.cost.toFixed(4) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div
+          v-else-if="empty"
+          class="radius-card border border-slate-200/60 p-6"
+        >
+          <div class="text-sm font-medium text-slate-800">
+            No usage records match the current filters.
+          </div>
+          <p class="text-sm text-slate-500 mt-2">
+            Adjust the filters or check again after new requests.
+          </p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-[900px] w-full text-sm">
+            <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
+              <tr class="border-b border-slate-200/60">
+                <th class="py-3 text-left font-medium">Time</th>
+                <th class="py-3 text-left font-medium">Provider</th>
+                <th class="py-3 text-left font-medium">Model</th>
+                <th class="py-3 text-left font-medium">Input</th>
+                <th class="py-3 text-left font-medium">Output</th>
+                <th class="py-3 text-left font-medium">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(row, index) in rows"
+                :key="row.id"
+                class="border-b border-slate-200/50 staggered"
+                :style="{ '--index': index }"
+              >
+                <td class="py-4 text-slate-700">
+                  {{ formatDate(row.createdAt) }}
+                </td>
+                <td class="py-4 text-slate-700">{{ row.providerId }}</td>
+                <td class="py-4 text-slate-900">{{ row.modelSlug }}</td>
+                <td class="py-4 mono-numbers text-slate-900">
+                  {{ row.inputTokens }}
+                </td>
+                <td class="py-4 mono-numbers text-slate-900">
+                  {{ row.outputTokens }}
+                </td>
+                <td class="py-4 mono-numbers text-slate-900">
+                  {{ row.cost.toFixed(4) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </section>

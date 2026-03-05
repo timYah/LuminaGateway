@@ -148,30 +148,32 @@ const submitEdit = async () => {
 
 <template>
   <section class="space-y-6">
-    <div class="glass-panel radius-panel p-6 md:p-8">
-      <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-        <div>
-          <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-            Providers
-          </div>
-          <h1 class="mt-3 text-3xl font-semibold text-slate-900">
-            Balance-aware routing control
-          </h1>
-          <p class="mt-3 text-base text-slate-600 leading-relaxed max-w-[65ch]">
-            Review provider health, update balances, and keep routing priorities
-            aligned with your account strategy.
-          </p>
+    <header
+      class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+    >
+      <div>
+        <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
+          Providers
         </div>
-        <div class="flex items-start justify-end">
-          <UButton class="action-press" color="primary" @click="createOpen = true">
-            Add provider
-          </UButton>
-        </div>
+        <h1 class="mt-3 text-3xl font-semibold text-slate-900">
+          Balance-aware routing control
+        </h1>
+        <p class="mt-3 text-base text-slate-600 leading-relaxed max-w-[65ch]">
+          Review provider health, update balances, and keep routing priorities
+          aligned with your account strategy.
+        </p>
       </div>
-    </div>
+      <div class="flex items-center gap-3">
+        <UButton class="action-press" color="primary" @click="createOpen = true">
+          Add provider
+        </UButton>
+      </div>
+    </header>
 
-    <div class="surface radius-panel p-6 md:p-8 space-y-6">
-      <div class="flex items-center justify-between">
+    <div class="border-b border-slate-200/70"></div>
+
+    <div class="surface radius-panel divide-y divide-slate-200/60">
+      <div class="flex items-center justify-between px-6 py-6 md:px-8 md:py-8">
         <div>
           <div class="text-sm font-medium text-slate-900">Provider roster</div>
           <p class="text-sm text-slate-500">
@@ -183,95 +185,99 @@ const submitEdit = async () => {
         </UButton>
       </div>
 
-      <div v-if="pending" class="space-y-3">
-        <div class="h-10 radius-soft skeleton"></div>
-        <div class="h-10 radius-soft skeleton"></div>
-        <div class="h-10 radius-soft skeleton"></div>
-      </div>
-
-      <div
-        v-else-if="error"
-        class="radius-card border border-rose-200 bg-rose-50 p-4"
-      >
-        <div class="text-sm font-medium text-rose-700">
-          Provider list failed to load.
+      <div class="px-6 py-6 md:px-8 md:py-8">
+        <div v-if="pending" class="space-y-3">
+          <div class="h-10 radius-soft skeleton"></div>
+          <div class="h-10 radius-soft skeleton"></div>
+          <div class="h-10 radius-soft skeleton"></div>
         </div>
-        <p class="text-sm text-rose-600">
-          Verify the API key and gateway URL, then refresh.
-        </p>
-      </div>
 
-      <div
-        v-else-if="empty"
-        class="radius-card border border-slate-200/60 p-6"
-      >
-        <div class="text-sm font-medium text-slate-800">
-          No providers configured yet.
+        <div
+          v-else-if="error"
+          class="radius-card border border-rose-200 bg-rose-50 p-4"
+        >
+          <div class="text-sm font-medium text-rose-700">
+            Provider list failed to load.
+          </div>
+          <p class="text-sm text-rose-600">
+            Verify the API key and gateway URL, then refresh.
+          </p>
         </div>
-        <p class="text-sm text-slate-500 mt-2">
-          Add a provider to start routing traffic through the gateway.
-        </p>
-      </div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="min-w-[860px] w-full text-sm">
-          <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
-            <tr class="border-b border-slate-200/60">
-              <th class="py-3 text-left font-medium">Name</th>
-              <th class="py-3 text-left font-medium">Protocol</th>
-              <th class="py-3 text-left font-medium">Balance</th>
-              <th class="py-3 text-left font-medium">Priority</th>
-              <th class="py-3 text-left font-medium">Status</th>
-              <th class="py-3 text-left font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(provider, index) in providers"
-              :key="provider.id"
-              class="border-b border-slate-200/50 staggered"
-              :style="{ '--index': index }"
-            >
-              <td class="py-4">
-                <div class="font-medium text-slate-900">
-                  {{ provider.name }}
-                </div>
-                <div class="text-xs text-slate-500">{{ provider.baseUrl }}</div>
-              </td>
-              <td class="py-4 text-slate-600 capitalize">
-                {{ provider.protocol }}
-              </td>
-              <td class="py-4 mono-numbers text-slate-900">
-                {{ provider.balance.toFixed(4) }}
-              </td>
-              <td class="py-4 mono-numbers text-slate-900">
-                {{ provider.priority }}
-              </td>
-              <td class="py-4">
-                <span
-                  class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
-                  :class="
-                    provider.isActive
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-slate-200 text-slate-600'
-                  "
-                >
-                  {{ provider.isActive ? "Active" : "Paused" }}
-                </span>
-              </td>
-              <td class="py-4">
-                <UButton
-                  class="action-press"
-                  size="sm"
-                  variant="outline"
-                  @click="openEdit(provider)"
-                >
-                  Edit
-                </UButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div
+          v-else-if="empty"
+          class="radius-card border border-slate-200/60 p-6"
+        >
+          <div class="text-sm font-medium text-slate-800">
+            No providers configured yet.
+          </div>
+          <p class="text-sm text-slate-500 mt-2">
+            Add a provider to start routing traffic through the gateway.
+          </p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-[860px] w-full text-sm">
+            <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
+              <tr class="border-b border-slate-200/60">
+                <th class="py-3 text-left font-medium">Name</th>
+                <th class="py-3 text-left font-medium">Protocol</th>
+                <th class="py-3 text-left font-medium">Balance</th>
+                <th class="py-3 text-left font-medium">Priority</th>
+                <th class="py-3 text-left font-medium">Status</th>
+                <th class="py-3 text-left font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(provider, index) in providers"
+                :key="provider.id"
+                class="border-b border-slate-200/50 staggered"
+                :style="{ '--index': index }"
+              >
+                <td class="py-4">
+                  <div class="font-medium text-slate-900">
+                    {{ provider.name }}
+                  </div>
+                  <div class="text-xs text-slate-500">
+                    {{ provider.baseUrl }}
+                  </div>
+                </td>
+                <td class="py-4 text-slate-600 capitalize">
+                  {{ provider.protocol }}
+                </td>
+                <td class="py-4 mono-numbers text-slate-900">
+                  {{ provider.balance.toFixed(4) }}
+                </td>
+                <td class="py-4 mono-numbers text-slate-900">
+                  {{ provider.priority }}
+                </td>
+                <td class="py-4">
+                  <span
+                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
+                    :class="
+                      provider.isActive
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-slate-200 text-slate-600'
+                    "
+                  >
+                    {{ provider.isActive ? "Active" : "Paused" }}
+                  </span>
+                </td>
+                <td class="py-4">
+                  <UButton
+                    class="action-press"
+                    size="sm"
+                    variant="outline"
+                    @click="openEdit(provider)"
+                  >
+                    Edit
+                  </UButton>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
