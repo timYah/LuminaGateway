@@ -130,7 +130,7 @@
 - [x] **T-12.2** 在 `selectProvider` 中过滤掉熔断器已开启的 Provider
 - [x] **T-12.3** 实现 `getAllCandidates(modelSlug)` 方法 — 返回完整排序后的候选列表（用于降级循环）
 - [x] **T-12.4** 所有 Provider 耗尽时抛出 `NoProviderAvailableError` 自定义错误
-- [ ] **T-12.5** ✅ **验证**：编写 `src/services/__tests__/routerService.test.ts`，测试确定性选择、熔断过滤、全部耗尽，运行 `npm run test -- routerService && npm run lint && npm run typecheck`。持续修复直到全部通过。
+- [x] **T-12.5** ✅ **验证**：编写 `src/services/__tests__/routerService.test.ts`，测试确定性选择、熔断过滤、全部耗尽，运行 `npm run test -- routerService && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
 
