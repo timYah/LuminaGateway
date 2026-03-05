@@ -88,7 +88,7 @@
 
 - [x] **T-08.1** 创建 `src/types/openai.ts` — 定义 OpenAI Chat Completion 请求体类型（model, messages, stream, temperature, max_tokens, tools, tool_choice）
 - [x] **T-08.2** 在 `src/types/openai.ts` 中定义 OpenAI Chat Completion 响应体类型（非流式）
-- [ ] **T-08.3** 在 `src/types/openai.ts` 中定义 OpenAI SSE chunk 类型（流式）
+- [x] **T-08.3** 在 `src/types/openai.ts` 中定义 OpenAI SSE chunk 类型（流式）
 - [ ] **T-08.4** 创建 `src/types/anthropic.ts` — 定义 Anthropic Messages 请求体类型（model, messages, system, stream, max_tokens, tools）
 - [ ] **T-08.5** 在 `src/types/anthropic.ts` 中定义 Anthropic Messages 响应体类型（非流式）
 - [ ] **T-08.6** 在 `src/types/anthropic.ts` 中定义 Anthropic SSE event 类型（流式）
