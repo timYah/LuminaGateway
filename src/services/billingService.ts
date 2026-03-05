@@ -22,9 +22,12 @@ export function calculateCost(
 export async function billUsage(
   providerId: number,
   modelSlug: string,
-  usage: UpstreamUsage,
+  usage: UpstreamUsage | null | undefined,
   model: Model
 ) {
+  if (!usage) {
+    return null;
+  }
   const inputTokens = usage.promptTokens;
   const outputTokens = usage.completionTokens;
   const cost = calculateCost(
@@ -34,8 +37,9 @@ export async function billUsage(
     model.outputPrice
   );
 
-  await deductBalance(providerId, cost);
-
+  if (cost > 0) {
+    await deductBalance(providerId, cost);
+  }
   const db = getClient();
   const rows = await db
     .insert(usageLogs)
