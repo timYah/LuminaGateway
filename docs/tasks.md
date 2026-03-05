@@ -171,7 +171,7 @@
 
 ## Phase 17 — Gateway 编排服务（非流式）
 
-- [ ] **T-17.1** 创建 `src/services/gatewayService.ts` — 实现 `handleRequest(requestParams, clientFormat)` 方法骨架
+- [x] **T-17.1** 创建 `src/services/gatewayService.ts` — 实现 `handleRequest(requestParams, clientFormat)` 方法骨架
 - [ ] **T-17.2** 在 `handleRequest` 中实现降级循环：遍历候选 Provider，调用 upstream，失败时按错误类型处理（熔断/停用/余额归零）并 continue
 - [ ] **T-17.3** 成功调用后调用 `billingService.billUsage()` 扣费
 - [ ] **T-17.4** 将 AI SDK 响应转换为客户端期望的格式（OpenAI 或 Anthropic）并返回
