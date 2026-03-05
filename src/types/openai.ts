@@ -35,3 +35,24 @@ export interface OpenAIChatCompletionRequest {
   tools?: OpenAIToolDefinition[];
   tool_choice?: OpenAIToolChoice;
 }
+
+export interface OpenAIChatCompletionChoice {
+  index: number;
+  message: OpenAIChatMessage;
+  finish_reason: string | null;
+}
+
+export interface OpenAIUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
+export interface OpenAIChatCompletionResponse {
+  id: string;
+  object: "chat.completion";
+  created: number;
+  model: string;
+  choices: OpenAIChatCompletionChoice[];
+  usage?: OpenAIUsage;
+}
