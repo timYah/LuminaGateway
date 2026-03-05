@@ -1,13 +1,13 @@
-import { getDb } from "./index";
+import { getDb, type SqliteDatabase } from "./index";
 import { models, providers } from "./schema";
 
 async function main() {
-  const db = getDb();
+  const client = getDb() as SqliteDatabase;
 
-  await db.delete(models);
-  await db.delete(providers);
+  await client.delete(models);
+  await client.delete(providers);
 
-  const insertedProviders = await db
+  const insertedProviders = await client
     .insert(providers)
     .values([
       {
@@ -42,7 +42,7 @@ async function main() {
 
   const providerMap = new Map(insertedProviders.map((p) => [p.name, p.id]));
 
-  await db.insert(models).values([
+  await client.insert(models).values([
     {
       providerId: providerMap.get("OpenAI Main")!,
       slug: "gpt-4o",
