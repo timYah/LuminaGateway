@@ -79,7 +79,7 @@
 
 - [x] **T-07.1** 创建 `src/middleware/auth.ts` — 实现 Bearer Token 中间件，从 `Authorization` 头提取 token 并与 `GATEWAY_API_KEY` 比对
 - [x] **T-07.2** 鉴权失败返回 `401` 状态码和标准错误体
-- [ ] **T-07.3** 缺少 `Authorization` 头时返回 `401`
+- [x] **T-07.3** 缺少 `Authorization` 头时返回 `401`
 - [ ] **T-07.4** ✅ **验证**：编写 `src/middleware/__tests__/auth.test.ts`，测试有效/无效/缺失 token 三种情况，运行 `npm run test -- auth && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
