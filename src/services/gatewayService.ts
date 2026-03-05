@@ -2,6 +2,7 @@ import { CircuitBreaker } from "./circuitBreaker";
 import { RouterService } from "./routerService";
 import {
   callUpstreamNonStreaming,
+  callUpstreamStreaming,
   classifyUpstreamError,
   type UpstreamUsage,
 } from "./upstreamService";
@@ -12,6 +13,7 @@ import { billUsage } from "./billingService";
 import type { OpenAIChatCompletionResponse } from "../types/openai";
 import type { AnthropicMessagesResponse } from "../types/anthropic";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { relayAsAnthropicStream, relayAsOpenAIStream } from "./streamRelay";
 
 export type ClientFormat = "openai" | "anthropic";
 
@@ -179,11 +181,58 @@ export async function handleRequest(
 }
 
 export async function handleStreamingRequest(
-  _requestParams: GatewayRequestParams,
-  _clientFormat: ClientFormat
+  requestParams: GatewayRequestParams,
+  clientFormat: ClientFormat
 ): Promise<GatewayStreamingResponse> {
+  const { model: modelSlug, ...params } = requestParams;
+  const candidates = await gatewayRouter.getAllCandidates(modelSlug);
+  if (candidates.length === 0) {
+    return {
+      status: 503,
+      body: formatErrorResponse(clientFormat, "No provider available"),
+    };
+  }
+
+  for (const provider of candidates) {
+    const model = await getModelByProviderAndSlug(provider.id, modelSlug);
+    if (!model) continue;
+    try {
+      const upstream = callUpstreamStreaming(provider, model, params);
+      const stream =
+        clientFormat === "openai"
+          ? relayAsOpenAIStream(upstream.stream)
+          : relayAsAnthropicStream(upstream.stream);
+      return { status: 200, stream };
+    } catch (error) {
+      const errorType = classifyUpstreamError(error);
+      if (errorType === "quota") {
+        await updateProvider(provider.id, { balance: 0 });
+        continue;
+      }
+      if (errorType === "rate_limit") {
+        gatewayCircuitBreaker.open(provider.id, RATE_LIMIT_COOLDOWN_MS);
+        continue;
+      }
+      if (errorType === "auth") {
+        await deactivateProvider(provider.id);
+        continue;
+      }
+      if (errorType === "server") {
+        gatewayCircuitBreaker.open(provider.id, SERVER_COOLDOWN_MS);
+        continue;
+      }
+      return {
+        status: 500,
+        body: formatErrorResponse(
+          clientFormat,
+          error instanceof Error ? error.message : "Upstream error"
+        ),
+      };
+    }
+  }
+
   return {
-    status: 501,
-    body: formatErrorResponse("openai", "Streaming not implemented"),
+    status: 503,
+    body: formatErrorResponse(clientFormat, "No provider available"),
   };
 }
