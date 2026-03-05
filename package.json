@@ -18,6 +18,9 @@
   "type": "module",
   "dependencies": {
     "@hono/node-server": "^1.19.11",
+    "better-sqlite3": "^12.6.2",
+    "drizzle-kit": "^0.31.9",
+    "drizzle-orm": "^0.45.1",
     "hono": "^4.12.5"
   },
   "devDependencies": {
