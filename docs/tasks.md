@@ -176,7 +176,7 @@
 - [x] **T-17.3** 成功调用后调用 `billingService.billUsage()` 扣费
 - [x] **T-17.4** 将 AI SDK 响应转换为客户端期望的格式（OpenAI 或 Anthropic）并返回
 - [x] **T-17.5** 所有 Provider 耗尽时返回格式化的错误响应
-- [ ] **T-17.6** ✅ **验证**：编写 `src/services/__tests__/gatewayService.test.ts`，测试正常流程、降级流程、全部耗尽，运行 `npm run test -- gatewayService && npm run lint && npm run typecheck`。持续修复直到全部通过。
+- [x] **T-17.6** ✅ **验证**：编写 `src/services/__tests__/gatewayService.test.ts`，测试正常流程、降级流程、全部耗尽，运行 `npm run test -- gatewayService && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
 
