@@ -13,7 +13,7 @@ export const authMiddleware = (): MiddlewareHandler => {
     const expected = process.env.GATEWAY_API_KEY ?? "";
 
     if (!token || token !== expected) {
-      return c.text("Unauthorized", 401);
+      return c.json({ error: { message: "Unauthorized" } }, 401);
     }
 
     await next();
