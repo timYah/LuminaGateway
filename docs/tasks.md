@@ -199,7 +199,7 @@
 ## Phase 20 — SSE 流式中继（Anthropic 格式）
 
 - [x] **T-20.1** 在 `src/services/streamRelay.ts` 中实现 `relayAsAnthropicStream(aiSdkStream)` 函数，将 AI SDK 的 stream 转为 `event: content_block_delta\ndata: {...}\n\n` 格式
-- [ ] **T-20.2** 在流结束时发送 `event: message_stop` 事件
+- [x] **T-20.2** 在流结束时发送 `event: message_stop` 事件
 - [ ] **T-20.3** ✅ **验证**：编写 `src/services/__tests__/streamRelay.anthropic.test.ts`，测试 event 格式和终止事件，运行 `npm run test -- streamRelay && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---

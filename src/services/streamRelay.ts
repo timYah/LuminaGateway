@@ -78,6 +78,12 @@ export function relayAsAnthropicStream(
         controller.error(error);
         return;
       }
+      const stopEvent = { type: "message_stop" };
+      controller.enqueue(
+        encoder.encode(
+          `event: message_stop\ndata: ${JSON.stringify(stopEvent)}\n\n`
+        )
+      );
       controller.close();
     },
   });
