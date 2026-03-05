@@ -264,7 +264,7 @@
 
 ## Phase 28 — 统一错误处理
 
-- [ ] **T-28.1** 创建 `src/middleware/errorHandler.ts` — 实现全局错误处理中间件
+- [x] **T-28.1** 创建 `src/middleware/errorHandler.ts` — 实现全局错误处理中间件
 - [ ] **T-28.2** 根据请求路径判断客户端格式，返回对应的错误体（OpenAI 格式 `{ error: { message, type, code } }` 或 Anthropic 格式 `{ type: "error", error: { type, message } }`）
 - [ ] **T-28.3** 在 `src/app.ts` 中注册 errorHandler 和 logger 中间件
 - [ ] **T-28.4** ✅ **验证**：编写 `src/middleware/__tests__/errorHandler.test.ts`，测试两种格式的错误响应，运行 `npm run test -- errorHandler && npm run lint && npm run typecheck`。持续修复直到全部通过。
