@@ -10,7 +10,8 @@ export type PostgresDatabase = NodePgDatabase<typeof schema>;
 export type DatabaseClient = SqliteDatabase | PostgresDatabase;
 
 let db: DatabaseClient | null = null;
-let sqliteInstance: Database | null = null;
+type SqliteInstance = InstanceType<typeof Database>;
+let sqliteInstance: SqliteInstance | null = null;
 let pgPool: Pool | null = null;
 
 function normalizeDatabaseType(value: string | undefined) {
