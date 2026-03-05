@@ -47,6 +47,7 @@ export function relayAsOpenAIStream(
         controller.error(error);
         return;
       }
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       controller.close();
     },
   });
