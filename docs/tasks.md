@@ -352,7 +352,7 @@
 ## Phase 37 — 管理后台（Nuxt UI）
 
 - [x] **T-37.0** 更新文档：补充管理后台说明（`docs/documentation.md`、`README.md`、`docs/plans.md`）
-- [ ] **T-37.1** 初始化 `apps/admin`（Nuxt 4 + nuxt-ui），提供基础布局和主题样式
+- [x] **T-37.1** 初始化 `apps/admin`（Nuxt 4 + nuxt-ui），提供基础布局和主题样式
 - [ ] **T-37.2** 添加 API 代理路由 `apps/admin/server/api/[...path].ts`，转发到网关
 - [ ] **T-37.3** 实现 API Key 输入与本地存储，并在请求中注入 `Authorization: Bearer ...`
 - [ ] **T-37.4** Providers 页面：列表、创建、更新（余额、启用状态、优先级）
