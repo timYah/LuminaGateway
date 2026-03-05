@@ -53,6 +53,10 @@ adminRoutes.patch("/admin/providers/:id", async (c) => {
 adminRoutes.get("/admin/usage", async (c) => {
   const db = getClient();
   const { providerId, modelSlug, startDate, endDate } = c.req.query();
+  const limit = Number(c.req.query("limit") ?? 50);
+  const offset = Number(c.req.query("offset") ?? 0);
+  const resolvedLimit = Number.isFinite(limit) ? limit : 50;
+  const resolvedOffset = Number.isFinite(offset) ? offset : 0;
   const conditions = [];
 
   if (providerId) {
@@ -78,6 +82,9 @@ adminRoutes.get("/admin/usage", async (c) => {
     conditions.length > 0
       ? db.select().from(usageLogs).where(and(...conditions))
       : db.select().from(usageLogs);
-  const rows = await query.orderBy(desc(usageLogs.createdAt));
-  return c.json({ usage: rows });
+  const rows = await query
+    .orderBy(desc(usageLogs.createdAt))
+    .limit(resolvedLimit)
+    .offset(resolvedOffset);
+  return c.json({ usage: rows, limit: resolvedLimit, offset: resolvedOffset });
 });

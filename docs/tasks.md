@@ -298,7 +298,7 @@
 ## Phase 32 — Admin 路由：查询 Usage
 
 - [x] **T-32.1** 在 `src/routes/admin.ts` 中实现 `GET /admin/usage` 路由，支持按 providerId、modelSlug、startDate、endDate 过滤
-- [ ] **T-32.2** 支持分页参数（`limit`、`offset`），默认 `limit=50`
+- [x] **T-32.2** 支持分页参数（`limit`、`offset`），默认 `limit=50`
 - [ ] **T-32.3** ✅ **验证**：编写 `src/routes/__tests__/admin.usage.test.ts`，测试过滤和分页，运行 `npm run test -- admin && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
