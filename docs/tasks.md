@@ -323,7 +323,7 @@
 
 ## Phase 35 — 集成测试：流式 + 计费
 
-- [ ] **T-35.1** 编写 `src/__tests__/integration/streaming.test.ts` — 测试完整流式请求的 SSE 格式正确性
+- [x] **T-35.1** 编写 `src/__tests__/integration/streaming.test.ts` — 测试完整流式请求的 SSE 格式正确性
 - [ ] **T-35.2** 测试流式请求完成后计费正确写入
 - [ ] **T-35.3** 测试流式请求的降级场景（upstream 连接前失败 → 切换 Provider）
 - [ ] **T-35.4** ✅ **验证**：运行 `npm run test -- integration && npm run lint && npm run typecheck`。持续修复直到全部通过。
