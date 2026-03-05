@@ -138,7 +138,7 @@
 
 - [x] **T-13.1** 安装依赖：`ai`、`@ai-sdk/openai`、`@ai-sdk/anthropic`、`@ai-sdk/google`
 - [x] **T-13.2** 创建 `src/services/aiSdkFactory.ts` — 实现 `createAIProvider(provider)` 函数，根据 `provider.protocol` 创建对应的 AI SDK provider 实例（设置 baseURL 和 apiKey）
-- [ ] **T-13.3** ✅ **验证**：运行 `npm run typecheck && npm run lint`，确认类型和导入无误。持续修复直到全部通过。
+- [x] **T-13.3** ✅ **验证**：运行 `npm run typecheck && npm run lint`，确认类型和导入无误。持续修复直到全部通过。
 
 ---
 
