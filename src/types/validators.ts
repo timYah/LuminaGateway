@@ -12,7 +12,7 @@ const openaiToolSchema = z.object({
   function: z.object({
     name: z.string(),
     description: z.string().optional(),
-    parameters: z.record(z.unknown()).optional(),
+    parameters: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 
@@ -45,7 +45,7 @@ const anthropicMessageSchema = z.object({
 const anthropicToolSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
-  input_schema: z.record(z.unknown()).optional(),
+  input_schema: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const anthropicMessagesSchema = z.object({
