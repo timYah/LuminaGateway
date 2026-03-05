@@ -4,6 +4,7 @@ import { callUpstreamNonStreaming, classifyUpstreamError } from "./upstreamServi
 import type { UpstreamRequestParams } from "./upstreamService";
 import { getModelByProviderAndSlug } from "./modelService";
 import { deactivateProvider, updateProvider } from "./providerService";
+import { billUsage } from "./billingService";
 
 export type ClientFormat = "openai" | "anthropic";
 
@@ -29,7 +30,12 @@ export async function handleRequest(
     const model = await getModelByProviderAndSlug(provider.id, modelSlug);
     if (!model) continue;
     try {
-      const result = await callUpstreamNonStreaming(provider, model, params);
+      const { result, usage } = await callUpstreamNonStreaming(
+        provider,
+        model,
+        params
+      );
+      await billUsage(provider.id, modelSlug, usage, model);
       return {
         status: 200,
         body: result,
