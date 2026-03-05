@@ -91,7 +91,7 @@
 - [x] **T-08.3** 在 `src/types/openai.ts` 中定义 OpenAI SSE chunk 类型（流式）
 - [x] **T-08.4** 创建 `src/types/anthropic.ts` — 定义 Anthropic Messages 请求体类型（model, messages, system, stream, max_tokens, tools）
 - [x] **T-08.5** 在 `src/types/anthropic.ts` 中定义 Anthropic Messages 响应体类型（非流式）
-- [ ] **T-08.6** 在 `src/types/anthropic.ts` 中定义 Anthropic SSE event 类型（流式）
+- [x] **T-08.6** 在 `src/types/anthropic.ts` 中定义 Anthropic SSE event 类型（流式）
 - [ ] **T-08.7** ✅ **验证**：运行 `npm run typecheck` 确认所有类型无误，运行 `npm run lint`。持续修复直到全部通过。
 
 ---
