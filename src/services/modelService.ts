@@ -31,3 +31,15 @@ export async function getActiveProvidersByModel(slug: string) {
     .orderBy(desc(providers.balance), asc(providers.priority));
   return rows.map((row) => row.provider);
 }
+
+export async function getModelByProviderAndSlug(
+  providerId: number,
+  slug: string
+) {
+  const db = getClient();
+  const rows = await db
+    .select()
+    .from(models)
+    .where(and(eq(models.providerId, providerId), eq(models.slug, slug)));
+  return rows[0] ?? null;
+}
