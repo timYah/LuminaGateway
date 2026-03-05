@@ -153,4 +153,49 @@ describe("integration failover", () => {
     const body = await res.json();
     expect(body.error?.message).toBeDefined();
   });
+
+  it("opens circuit breaker on 429 and skips provider on next request", async () => {
+    const { providerA, providerB } = await seedProviders();
+
+    callUpstreamMock
+      .mockRejectedValueOnce(
+        new APICallError({
+          message: "rate limit",
+          url: "https://example.com",
+          requestBodyValues: {},
+          statusCode: 429,
+        })
+      )
+      .mockResolvedValueOnce({
+        result: { text: "Ok", finishReason: "stop" },
+        usage: { promptTokens: 1, completionTokens: 1 },
+      } as unknown as Awaited<ReturnType<typeof callUpstreamNonStreaming>>)
+      .mockResolvedValueOnce({
+        result: { text: "Ok again", finishReason: "stop" },
+        usage: { promptTokens: 1, completionTokens: 1 },
+      } as unknown as Awaited<ReturnType<typeof callUpstreamNonStreaming>>);
+
+    const requestBody = JSON.stringify({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const first = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: requestBody,
+    });
+    expect(first.status).toBe(200);
+
+    const second = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: requestBody,
+    });
+    expect(second.status).toBe(200);
+
+    expect(callUpstreamMock.mock.calls[0][0].id).toBe(providerA!.id);
+    expect(callUpstreamMock.mock.calls[1][0].id).toBe(providerB!.id);
+    expect(callUpstreamMock.mock.calls[2][0].id).toBe(providerB!.id);
+  });
 });
