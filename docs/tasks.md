@@ -32,7 +32,7 @@
 - [x] **T-02.7** 创建 `drizzle.config.ts` — Drizzle Kit 配置文件
 - [x] **T-02.8** 在 `package.json` 中添加 `db:generate` 和 `db:migrate` scripts
 - [x] **T-02.9** 运行 `npm run db:generate` 生成初始迁移文件
-- [ ] **T-02.10** ✅ **验证**：运行 `npm run db:migrate` 确认表创建成功，运行 `npm run lint && npm run typecheck`。持续修复直到全部通过。
+- [x] **T-02.10** ✅ **验证**：运行 `npm run db:migrate` 确认表创建成功，运行 `npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
 
