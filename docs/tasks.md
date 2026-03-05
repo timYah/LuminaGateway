@@ -39,7 +39,7 @@
 ## Phase 03 — 数据库连接工厂
 
 - [x] **T-03.1** 创建 `src/db/index.ts` — 实现 `getDb()` 工厂函数，根据 `DATABASE_TYPE` 环境变量返回 SQLite 或 PostgreSQL 连接
-- [ ] **T-03.2** 在 `getDb()` 中为 SQLite 启用 WAL 模式（`pragma journal_mode = WAL`）
+- [x] **T-03.2** 在 `getDb()` 中为 SQLite 启用 WAL 模式（`pragma journal_mode = WAL`）
 - [ ] **T-03.3** 创建 `src/db/migrate.ts` — 迁移运行脚本，读取 drizzle 迁移文件并执行
 - [ ] **T-03.4** ✅ **验证**：运行 `npm run db:migrate` 确认迁移正常执行，运行 `npm run lint && npm run typecheck && npm run test`。持续修复直到全部通过。
 
