@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { APICallError } from "ai";
+import type { AsyncIterableStream, TextStreamPart, ToolSet } from "ai";
 
 vi.mock("../upstreamService", async () => {
   const actual = await vi.importActual<typeof import("../upstreamService")>(
@@ -8,6 +9,7 @@ vi.mock("../upstreamService", async () => {
   return {
     ...actual,
     callUpstreamNonStreaming: vi.fn(),
+    callUpstreamStreaming: vi.fn(),
   };
 });
 
@@ -24,11 +26,17 @@ vi.mock("../providerService", () => ({
   deactivateProvider: vi.fn(),
 }));
 
-import { handleRequest, gatewayRouter } from "../gatewayService";
-import { callUpstreamNonStreaming } from "../upstreamService";
+vi.mock("../streamRelay", () => ({
+  relayAsOpenAIStream: vi.fn(() => new ReadableStream()),
+  relayAsAnthropicStream: vi.fn(() => new ReadableStream()),
+}));
+
+import { handleRequest, handleStreamingRequest, gatewayRouter } from "../gatewayService";
+import { callUpstreamNonStreaming, callUpstreamStreaming } from "../upstreamService";
 import { getModelByProviderAndSlug } from "../modelService";
 import { billUsage } from "../billingService";
 import { updateProvider } from "../providerService";
+import { relayAsOpenAIStream } from "../streamRelay";
 
 const providerA = {
   id: 1,
@@ -66,19 +74,24 @@ const model = {
 };
 
 const callUpstreamMock = vi.mocked(callUpstreamNonStreaming);
+const callUpstreamStreamingMock = vi.mocked(callUpstreamStreaming);
 const getModelMock = vi.mocked(getModelByProviderAndSlug);
 const billUsageMock = vi.mocked(billUsage);
 const updateProviderMock = vi.mocked(updateProvider);
 const getAllCandidatesSpy = vi.spyOn(gatewayRouter, "getAllCandidates");
+const relayOpenAIMock = vi.mocked(relayAsOpenAIStream);
 
 describe("gatewayService", () => {
   beforeEach(() => {
     callUpstreamMock.mockReset();
+    callUpstreamStreamingMock.mockReset();
     getModelMock.mockReset();
     billUsageMock.mockReset();
     updateProviderMock.mockReset();
     getAllCandidatesSpy.mockReset();
     getAllCandidatesSpy.mockResolvedValue([providerA]);
+    relayOpenAIMock.mockClear();
+    getModelMock.mockResolvedValue(model);
   });
 
   it("handles a successful request", async () => {
@@ -150,5 +163,64 @@ describe("gatewayService", () => {
 
     expect(response.status).toBe(503);
     expect(response.body).toMatchObject({ type: "error" });
+  });
+
+  it("handles a streaming request and bills after completion", async () => {
+    const stream =
+      (async function* () {
+        yield { type: "text-delta", id: "1", text: "hi" };
+      })() as unknown as AsyncIterableStream<TextStreamPart<ToolSet>>;
+
+    callUpstreamStreamingMock.mockReturnValue({
+      stream,
+      usagePromise: Promise.resolve({ promptTokens: 1, completionTokens: 2 }),
+    });
+
+    const response = await handleStreamingRequest(
+      { model: "gpt-4o", messages: [] },
+      "openai"
+    );
+
+    expect(response.status).toBe(200);
+    expect("stream" in response).toBe(true);
+    expect(relayOpenAIMock).toHaveBeenCalledWith(stream);
+
+    await Promise.resolve();
+    expect(billUsageMock).toHaveBeenCalledWith(
+      providerA.id,
+      "gpt-4o",
+      { promptTokens: 1, completionTokens: 2 },
+      model
+    );
+  });
+
+  it("falls back on streaming error before start", async () => {
+    getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
+    callUpstreamStreamingMock
+      .mockRejectedValueOnce(
+        new APICallError({
+          message: "quota",
+          url: "https://example.com",
+          requestBodyValues: {},
+          statusCode: 402,
+        })
+      )
+      .mockReturnValueOnce({
+        stream:
+          (async function* () {
+            yield { type: "text-delta", id: "1", text: "ok" };
+          })() as unknown as AsyncIterableStream<TextStreamPart<ToolSet>>,
+        usagePromise: Promise.resolve({ promptTokens: 1, completionTokens: 1 }),
+      });
+
+    const response = await handleStreamingRequest(
+      { model: "gpt-4o", messages: [] },
+      "openai"
+    );
+
+    expect(response.status).toBe(200);
+    expect(updateProviderMock).toHaveBeenCalledWith(providerA.id, {
+      balance: 0,
+    });
   });
 });

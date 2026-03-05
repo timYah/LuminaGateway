@@ -197,7 +197,7 @@ export async function handleStreamingRequest(
     const model = await getModelByProviderAndSlug(provider.id, modelSlug);
     if (!model) continue;
     try {
-      const upstream = callUpstreamStreaming(provider, model, params);
+      const upstream = await callUpstreamStreaming(provider, model, params);
       void upstream.usagePromise
         .then((usage) => billUsage(provider.id, modelSlug, usage, model))
         .catch(() => undefined);
