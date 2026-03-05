@@ -42,6 +42,7 @@ export function getDb(): DatabaseClient {
   }
 
   sqliteInstance = new Database(resolveSqliteFilename(dbUrl));
+  sqliteInstance.pragma("journal_mode = WAL");
   db = drizzleSqlite(sqliteInstance, { schema });
   return db;
 }
