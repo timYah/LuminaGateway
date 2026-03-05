@@ -1,48 +1,34 @@
 # Lumina Gateway — Documentation
 
-This document is updated continuously as milestones land so it reflects reality.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI and Anthropic request formats, routes requests based on balance and health, and fails over when providers are rate limited or out of quota.
 
 ## What Lumina Gateway is
 
-A high-performance LLM aggregation gateway that unifies multiple AI provider accounts behind a single API endpoint. It supports both OpenAI and Anthropic request formats, routes requests based on provider balance and health, and automatically fails over to backup providers when quota or rate limits are hit.
+The gateway exposes two client-facing APIs: an OpenAI-compatible chat completions endpoint and an Anthropic-compatible messages endpoint. Each request is validated, converted to a universal AI SDK request format, and executed against the selected upstream provider.
 
 ## Status
 
-*(Updated as milestones are completed)*
-
-- Milestone 01: pending
-- Milestone 02: pending
-- Milestone 03: pending
-- Milestone 04: pending
-- Milestone 05: pending
-- Milestone 06: pending
-- Milestone 07: pending
-- Milestone 08: pending
-- Milestone 09: pending
-- Milestone 10: pending
-- Milestone 11: pending
-- Milestone 12: pending
-- Milestone 13: pending
+All milestones in the execution plan are complete. The gateway supports OpenAI and Anthropic request formats, streaming SSE responses, admin management routes, and end-to-end integration tests.
 
 ## Local setup
 
-- Requires: Node LTS on macOS
-- Install deps: `npm install`
-- Set up database: `npm run db:migrate`
+The gateway runs on Node.js LTS and uses SQLite by default. Follow these steps to get a local instance running.
+
+- Install dependencies: `npm install`
+- Run migrations: `npm run db:migrate`
 - Seed demo data: `npm run db:seed`
-- Start dev server: `npm run dev`
-- Server runs at: `http://localhost:3000`
+- Start the dev server: `npm run dev`
 - Health check: `GET http://localhost:3000/health`
 
 ## Environment variables
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres` |
-| `DATABASE_URL` | `file:./lumina.db` | Database connection string |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token for API authentication |
-| `PORT` | `3000` | Server listen port |
-| `LOG_LEVEL` | `info` | Logging verbosity: `debug`, `info`, `warn`, `error` |
+|---|---|---|
+| `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
+| `DATABASE_URL` | `file:./lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
+| `PORT` | `3000` | Server listen port. |
+| `LOG_LEVEL` | `info` | Logging threshold: `debug`, `info`, `warn`, `error`. |
 
 ## Verification commands
 
@@ -55,16 +41,20 @@ A high-performance LLM aggregation gateway that unifies multiple AI provider acc
 
 ## API reference
 
+### Authentication
+
+All `/v1/*` and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`.
+
 ### Health check
 
-```
+```http [Response]
 GET /health
-Response: { "status": "ok" }
+{ "status": "ok" }
 ```
 
 ### OpenAI-compatible endpoint
 
-```
+```http [Request]
 POST /v1/chat/completions
 Authorization: Bearer <GATEWAY_API_KEY>
 Content-Type: application/json
@@ -74,13 +64,17 @@ Content-Type: application/json
   "messages": [{"role": "user", "content": "Hello"}],
   "stream": false,
   "temperature": 0.7,
-  "max_tokens": 1000
+  "max_tokens": 1000,
+  "tools": [],
+  "tool_choice": "auto"
 }
 ```
 
+Supported fields match the OpenAI subset used by the validators: `model`, `messages`, `stream`, `temperature`, `max_tokens`, `tools`, and `tool_choice`.
+
 ### Anthropic-compatible endpoint
 
-```
+```http [Request]
 POST /v1/messages
 Authorization: Bearer <GATEWAY_API_KEY>
 Content-Type: application/json
@@ -90,65 +84,91 @@ Content-Type: application/json
   "messages": [{"role": "user", "content": "Hello"}],
   "system": "You are a helpful assistant.",
   "stream": false,
-  "max_tokens": 1000
+  "max_tokens": 1000,
+  "tools": []
 }
+```
+
+Supported fields match the Anthropic subset used by the validators: `model`, `messages`, `system`, `stream`, `max_tokens`, and `tools`.
+
+### Streaming responses
+
+OpenAI streaming returns `text/event-stream` with chat completion chunks followed by `[DONE]`.
+
+```text [SSE]
+data: {"id":"chatcmpl_...","object":"chat.completion.chunk","created":...,"model":"unknown","choices":[{"index":0,"delta":{"role":"assistant","content":"Hi"},"finish_reason":null}]}
+data: [DONE]
+```
+
+Anthropic streaming returns `text/event-stream` events for `content_block_delta` and a final `message_stop` event.
+
+```text [SSE]
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
+event: message_stop
+data: {"type":"message_stop"}
 ```
 
 ### Admin routes
 
 ```
-GET    /admin/providers          — list all providers with balances
-POST   /admin/providers          — add a new provider
-PATCH  /admin/providers/:id      — update provider (balance, active status)
-GET    /admin/usage              — query usage logs (filter by provider, model, date)
+GET    /admin/providers          — list all providers
+POST   /admin/providers          — create a provider
+PATCH  /admin/providers/:id      — update provider fields
+GET    /admin/usage              — query usage logs
 ```
 
-## Provider selection algorithm
+`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, and optional `balance`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, and `google`.
 
-1. Find all providers that serve the requested model slug.
-2. Filter: `isActive = true`, `balance > 0`, not circuit-broken.
-3. Sort by `balance` descending, then `priority` ascending.
-4. Select the first candidate.
-5. On failure (402/429/401/5xx): mark provider unhealthy, try next candidate.
-6. If all candidates exhausted: return error to client.
+`GET /admin/usage` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `limit`, and `offset`. The response includes `{ usage, limit, offset }` sorted by `createdAt` descending.
 
-## Billing calculation
+## Provider selection and failover
 
-```
+The gateway loads all providers that match the requested model slug, are active, and have a positive balance. It sorts by `balance` descending and `priority` ascending, then skips providers that are currently circuit-broken.
+
+On upstream failures, the gateway reacts to the classified error type. Quota exhaustion sets the provider balance to `0`, rate limits open a 60-second circuit breaker, and 5xx server errors open a 30-second circuit breaker before retrying the next provider. Authentication errors deactivate the provider immediately, while unknown errors return a `500` without failover.
+
+## Billing and usage
+
+Billing uses usage numbers from the Vercel AI SDK. Missing token counts are normalized to `0` before billing.
+
+```text [Formula]
 inputCost  = (promptTokens / 1,000,000) × inputPrice
 outputCost = (completionTokens / 1,000,000) × outputPrice
 totalCost  = inputCost + outputCost
 ```
 
-Prices are per-model and stored in the `models` table as USD per 1M tokens.
-
-Example: GPT-4o with inputPrice=$2.50, outputPrice=$10.00
-- 500 input tokens, 200 output tokens
-- Cost = (500/1M × $2.50) + (200/1M × $10.00) = $0.00125 + $0.002 = $0.00325
+Streaming requests bill after the stream finishes and usage is resolved. Non-streaming requests bill immediately after the provider response completes.
 
 ## Error response format
 
-**OpenAI format:**
-```json
+Gateway-level errors use `gateway_error` for both OpenAI and Anthropic shapes.
+
+```json [OpenAI Error]
 {
   "error": {
-    "message": "All providers exhausted for model gpt-4o",
-    "type": "server_error",
-    "code": "no_available_provider"
+    "message": "No provider available",
+    "type": "gateway_error",
+    "code": "gateway_error"
   }
 }
 ```
 
-**Anthropic format:**
-```json
+```json [Anthropic Error]
 {
   "type": "error",
   "error": {
-    "type": "overloaded_error",
-    "message": "All providers exhausted for model claude-sonnet-4-20250514"
+    "type": "gateway_error",
+    "message": "No provider available"
   }
 }
 ```
+
+Unhandled exceptions use `server_error` and return HTTP 500. Validation errors return HTTP 400 with `{ "error": { "message": "Invalid request" } }`.
+
+## Observability
+
+Every response includes `x-request-id`, and requests are logged with timing and status. `LOG_LEVEL` controls the minimum severity that is emitted.
 
 ## Repo structure overview
 
@@ -183,7 +203,7 @@ src/
 └── utils/
     └── requestId.ts         # unique request ID generation
 docs/
-├── prompt.md                # project specification (this is the target)
+├── prompt.md                # project specification (target)
 ├── plans.md                 # milestones + architecture + decisions
 ├── implement.md             # execution runbook
 └── documentation.md         # this file (living documentation)
@@ -193,11 +213,11 @@ drizzle/                     # generated migration files
 ## Troubleshooting
 
 - **Port 3000 already in use**: `lsof -i :3000 -t | xargs kill`
-- **Database locked**: ensure no other process holds `lumina.db`; SQLite uses WAL mode for better concurrency
-- **All providers exhausted**: check `GET /admin/providers` for balances and active status; top up via `PATCH /admin/providers/:id`
-- **401 on requests**: verify `GATEWAY_API_KEY` env var matches the Bearer token in your request
-- **Migration fails**: delete `lumina.db` and re-run `npm run db:migrate && npm run db:seed`
+- **Database locked**: ensure no other process holds `lumina.db`; SQLite uses WAL mode for concurrency
+- **No provider available**: check `GET /admin/providers` for balances and active status
+- **401 on requests**: verify `GATEWAY_API_KEY` matches the Bearer token
+- **Migration fails**: delete `lumina.db`, then run `npm run db:migrate && npm run db:seed`
 
 ## Known issues / follow-ups
 
-*(Tracked as they arise during implementation)*
+*(Tracked as they arise during implementation.)*
