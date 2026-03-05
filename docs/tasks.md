@@ -373,7 +373,7 @@
 - [x] **T-39.0** 更新任务列表：补充联合启动的实现与验证任务
 - [x] **T-39.1** 新增统一启动脚本：`npm run dev` 同时启动 gateway 与 admin
 - [x] **T-39.2** 更新文档：补充联合启动的部署与使用说明
-- [ ] **T-39.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`。持续修复直到全部通过。
+- [x] **T-39.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`。持续修复直到全部通过。
 
 ---
 
