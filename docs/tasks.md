@@ -377,6 +377,15 @@
 
 ---
 
+## Phase 40 — Admin 测试与修复
+
+- [x] **T-40.0** 更新任务列表：补充 admin 自动化验证任务
+- [ ] **T-40.1** 修复 admin 运行时错误，确保页面可加载
+- [ ] **T-40.2** ✅ **验证**：使用 agent-browser 验证 Providers / Usage 页面与 API Key 流程
+- [ ] **T-40.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`。持续修复直到全部通过。
+
+---
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
