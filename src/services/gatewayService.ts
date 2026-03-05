@@ -198,6 +198,9 @@ export async function handleStreamingRequest(
     if (!model) continue;
     try {
       const upstream = callUpstreamStreaming(provider, model, params);
+      void upstream.usagePromise
+        .then((usage) => billUsage(provider.id, modelSlug, usage, model))
+        .catch(() => undefined);
       const stream =
         clientFormat === "openai"
           ? relayAsOpenAIStream(upstream.stream)
