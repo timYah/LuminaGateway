@@ -17,7 +17,7 @@
 - [x] **T-01.8** 创建 `src/app.ts` — Hono app 工厂函数，注册 `GET /health` 返回 `{ status: "ok" }`
 - [x] **T-01.9** 创建 `src/index.ts` — 入口文件，读取 `PORT` 环境变量，启动 Hono server
 - [x] **T-01.10** 创建 `.env.example` 文件，列出所有环境变量及默认值
-- [ ] **T-01.11** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，启动 `npm run dev` 后 `curl http://localhost:3000/health` 返回 200。持续修复直到全部通过。
+- [x] **T-01.11** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，启动 `npm run dev` 后 `curl http://localhost:3000/health` 返回 200。持续修复直到全部通过。
 
 ---
 
