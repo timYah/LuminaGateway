@@ -118,7 +118,7 @@ throw new Error("All providers exhausted")
 
 ## Milestones
 
-### Milestone 01 — Repo scaffold + tooling foundation [ ]
+### Milestone 01 — Repo scaffold + tooling foundation [x]
 
 **Scope:**
 - Initialize TypeScript project with `tsconfig.json` (strict mode).
@@ -151,7 +151,7 @@ curl http://localhost:3000/health
 
 ---
 
-### Milestone 02 — Database schema + migrations [ ]
+### Milestone 02 — Database schema + migrations [x]
 
 **Scope:**
 - Define Drizzle schema for `providers`, `models`, `usageLogs` tables (SQLite).
@@ -181,7 +181,7 @@ npm run lint && npm run typecheck && npm run test
 
 ---
 
-### Milestone 03 — Seed script + provider CRUD service [ ]
+### Milestone 03 — Seed script + provider CRUD service [x]
 
 **Scope:**
 - Create seed script that populates demo providers and models.
@@ -208,7 +208,7 @@ npm run lint && npm run typecheck && npm run test
 
 ---
 
-### Milestone 04 — Auth middleware + route skeleton [ ]
+### Milestone 04 — Auth middleware + route skeleton [x]
 
 **Scope:**
 - Implement Bearer token auth middleware checking `GATEWAY_API_KEY`.
@@ -238,7 +238,7 @@ npm run lint && npm run typecheck && npm run test
 
 ---
 
-### Milestone 05 — Provider router + circuit breaker [ ]
+### Milestone 05 — Provider router + circuit breaker [x]
 
 **Scope:**
 - Implement `RouterService` that selects the best provider for a given model slug.
@@ -266,7 +266,7 @@ npm run lint && npm run typecheck && npm run test
 
 ---
 
-### Milestone 06 — Upstream caller + AI SDK integration [ ]
+### Milestone 06 — Upstream caller + AI SDK integration [x]
 
 **Scope:**
 - Implement `UpstreamService` that calls providers via Vercel AI SDK.
@@ -292,7 +292,7 @@ npm run lint && npm run typecheck && npm run test
 
 ---
 
-### Milestone 07 — Billing engine + usage logging [ ]
+### Milestone 07 — Billing engine + usage logging [x]
 
 **Scope:**
 - Implement `BillingService` that calculates cost and deducts balance.
@@ -317,7 +317,7 @@ npm run lint && npm run typecheck && npm run test
 
 ---
 
-### Milestone 08 — End-to-end request flow (non-streaming) [ ]
+### Milestone 08 — End-to-end request flow (non-streaming) [x]
 
 **Scope:**
 - Wire all components together: auth → route → router → upstream → billing → response.
@@ -344,7 +344,7 @@ npm run lint && npm run typecheck && npm run test
 
 ---
 
-### Milestone 09 — Streaming support (SSE relay) [ ]
+### Milestone 09 — Streaming support (SSE relay) [x]
 
 **Scope:**
 - Implement SSE streaming for both OpenAI and Anthropic response formats.
@@ -373,7 +373,7 @@ npm run lint && npm run typecheck && npm run test
 
 ---
 
-### Milestone 10 — Protocol conversion layer [ ]
+### Milestone 10 — Protocol conversion layer [x]
 
 **Scope:**
 - Implement bidirectional conversion between OpenAI and Anthropic request/response formats.
@@ -399,7 +399,7 @@ npm run lint && npm run typecheck && npm run test
 
 ---
 
-### Milestone 11 — Logging, error handling, and observability [ ]
+### Milestone 11 — Logging, error handling, and observability [x]
 
 **Scope:**
 - Add structured logging (request ID, provider, model, latency, status).
@@ -425,7 +425,7 @@ npm run lint && npm run typecheck
 
 ---
 
-### Milestone 12 — Admin / management routes [ ]
+### Milestone 12 — Admin / management routes [x]
 
 **Scope:**
 - Add internal API routes for provider and model management.
@@ -451,7 +451,7 @@ npm run lint && npm run typecheck && npm run test
 
 ---
 
-### Milestone 13 — Integration tests + final verification [ ]
+### Milestone 13 — Integration tests + final verification [x]
 
 **Scope:**
 - Add comprehensive integration tests with mocked upstreams.
@@ -520,4 +520,8 @@ npm run test
 
 ## Implementation notes and decision log (updated as we go)
 
-*(To be filled during implementation)*
+- Use the Vercel AI SDK as the unified upstream interface and convert client requests to a universal parameter shape before calling providers.
+- Relay streaming responses by re-framing `text-delta` parts into OpenAI or Anthropic SSE events, and bill after the usage promise resolves at stream end.
+- Apply circuit breaker cooldowns for rate limits (60s) and upstream 5xx errors (30s), set balance to `0` on quota exhaustion, and deactivate providers on auth failures.
+- Standardize gateway errors as `gateway_error` for both API formats, while unhandled exceptions return `server_error` via the global error handler.
+- Paginate admin usage queries with `limit` and `offset`, return results sorted by newest first, and include filters for provider, model, and date range.
