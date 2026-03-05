@@ -308,7 +308,7 @@
 - [x] **T-33.1** 创建 `src/__tests__/integration/` 目录
 - [x] **T-33.2** 编写 `src/__tests__/integration/happyPath.test.ts` — 测试完整非流式请求：auth → 路由 → mock upstream 响应 → 计费 → 正确格式返回
 - [x] **T-33.3** 验证 usageLogs 中有一条记录，Provider 余额已扣减
-- [ ] **T-33.4** ✅ **验证**：运行 `npm run test -- integration && npm run lint && npm run typecheck`。持续修复直到全部通过。
+- [x] **T-33.4** ✅ **验证**：运行 `npm run test -- integration && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
 
