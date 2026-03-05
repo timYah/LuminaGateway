@@ -5,6 +5,7 @@ export const loggerMiddleware = (): MiddlewareHandler => {
   return async (c, next) => {
     const requestId = generateRequestId();
     const start = Date.now();
+    c.header("x-request-id", requestId);
 
     await next();
 

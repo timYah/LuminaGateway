@@ -257,7 +257,7 @@
 
 - [x] **T-27.1** 创建 `src/middleware/logger.ts` — 实现结构化日志中间件，记录 request ID、method、path、状态码、耗时
 - [x] **T-27.2** 读取 `LOG_LEVEL` 环境变量控制日志级别（debug / info / warn / error）
-- [ ] **T-27.3** 在响应头中注入 `x-request-id`
+- [x] **T-27.3** 在响应头中注入 `x-request-id`
 - [ ] **T-27.4** ✅ **验证**：编写 `src/middleware/__tests__/logger.test.ts`，测试日志输出和响应头，运行 `npm run test -- logger && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
