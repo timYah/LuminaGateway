@@ -37,6 +37,10 @@ export type GatewayResponse = {
     | AnthropicErrorResponse;
 };
 
+export type GatewayStreamingResponse =
+  | { status: ContentfulStatusCode; stream: ReadableStream<Uint8Array> }
+  | { status: ContentfulStatusCode; body: OpenAIErrorResponse | AnthropicErrorResponse };
+
 const RATE_LIMIT_COOLDOWN_MS = 60_000;
 const SERVER_COOLDOWN_MS = 30_000;
 
@@ -171,5 +175,15 @@ export async function handleRequest(
   return {
     status: 503,
     body: formatErrorResponse(clientFormat, "No provider available"),
+  };
+}
+
+export async function handleStreamingRequest(
+  _requestParams: GatewayRequestParams,
+  _clientFormat: ClientFormat
+): Promise<GatewayStreamingResponse> {
+  return {
+    status: 501,
+    body: formatErrorResponse("openai", "Streaming not implemented"),
   };
 }

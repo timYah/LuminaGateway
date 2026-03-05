@@ -206,7 +206,7 @@
 
 ## Phase 21 — Gateway 编排服务（流式路径）
 
-- [ ] **T-21.1** 在 `src/services/gatewayService.ts` 中实现 `handleStreamingRequest(requestParams, clientFormat)` 方法
+- [x] **T-21.1** 在 `src/services/gatewayService.ts` 中实现 `handleStreamingRequest(requestParams, clientFormat)` 方法
 - [ ] **T-21.2** 实现流式降级逻辑：如果 upstream 在流开始前失败，切换下一个 Provider 重试
 - [ ] **T-21.3** 流完成后通过 usagePromise 获取 usage 并调用 `billingService.billUsage()` 扣费
 - [ ] **T-21.4** ✅ **验证**：编写流式 gateway 测试，测试正常流、降级流、计费时序，运行 `npm run test -- gatewayService && npm run lint && npm run typecheck`。持续修复直到全部通过。
