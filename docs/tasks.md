@@ -49,7 +49,7 @@
 
 - [x] **T-04.1** 创建 `src/db/seed.ts` — 填充至少 3 个 demo Provider（如 "OpenAI Main"、"Anthropic Backup"、"Third-Party Proxy"）
 - [x] **T-04.2** 在 seed 脚本中为每个 Provider 添加模型映射（至少 5 条，如 gpt-4o、gpt-4o-mini、claude-sonnet-4-20250514、claude-haiku 等）
-- [ ] **T-04.3** 在 `package.json` 中添加 `db:seed` script
+- [x] **T-04.3** 在 `package.json` 中添加 `db:seed` script
 - [ ] **T-04.4** ✅ **验证**：运行 `npm run db:seed` 确认数据写入成功，运行 `npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
