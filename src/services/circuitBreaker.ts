@@ -8,4 +8,8 @@ export class CircuitBreaker {
   isOpen(providerId: number) {
     return this.openUntil.has(providerId);
   }
+
+  reset(providerId: number) {
+    this.openUntil.delete(providerId);
+  }
 }
