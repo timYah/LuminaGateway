@@ -314,7 +314,7 @@
 
 ## Phase 34 — 集成测试：Failover
 
-- [ ] **T-34.1** 编写 `src/__tests__/integration/failover.test.ts` — 测试降级链：Provider A 返回 402 → 自动切换 Provider B → 成功响应
+- [x] **T-34.1** 编写 `src/__tests__/integration/failover.test.ts` — 测试降级链：Provider A 返回 402 → 自动切换 Provider B → 成功响应
 - [ ] **T-34.2** 测试所有 Provider 都失败时返回正确的错误格式
 - [ ] **T-34.3** 测试 429 触发熔断器后，下一次请求跳过该 Provider
 - [ ] **T-34.4** ✅ **验证**：运行 `npm run test -- integration && npm run lint && npm run typecheck`。持续修复直到全部通过。
