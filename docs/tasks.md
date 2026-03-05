@@ -62,7 +62,7 @@
 - [x] **T-05.4** 实现 `updateProvider(id, data)` 方法（支持余额充值、启停切换）
 - [x] **T-05.5** 实现 `deactivateProvider(id)` 方法（设置 `isActive = false`）
 - [x] **T-05.6** 实现 `deductBalance(id, amount)` 方法（原子操作：`balance = balance - amount`）
-- [ ] **T-05.7** ✅ **验证**：编写 `src/services/__tests__/providerService.test.ts`，覆盖所有方法，运行 `npm run test -- providerService && npm run lint && npm run typecheck`。持续修复直到全部通过。
+- [x] **T-05.7** ✅ **验证**：编写 `src/services/__tests__/providerService.test.ts`，覆盖所有方法，运行 `npm run test -- providerService && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
 
