@@ -275,7 +275,7 @@
 
 - [x] **T-29.1** 创建 `src/routes/admin.ts` — 实现 `GET /admin/providers` 路由，返回所有 Provider 列表（含余额、状态）
 - [x] **T-29.2** 在 `src/app.ts` 中挂载 admin 路由，复用 auth 中间件
-- [ ] **T-29.3** ✅ **验证**：编写 `src/routes/__tests__/admin.list.test.ts`，测试鉴权和返回数据，运行 `npm run test -- admin && npm run lint && npm run typecheck`。持续修复直到全部通过。
+- [x] **T-29.3** ✅ **验证**：编写 `src/routes/__tests__/admin.list.test.ts`，测试鉴权和返回数据，运行 `npm run test -- admin && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
 
