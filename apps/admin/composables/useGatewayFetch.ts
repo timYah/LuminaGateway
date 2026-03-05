@@ -1,6 +1,6 @@
 import { $fetch, useFetch } from "#app";
 import type { UseFetchOptions } from "nuxt/app";
-import { computed } from "vue";
+import { computed, watch } from "vue";
 
 import { useApiKey } from "./useApiKey";
 
@@ -9,15 +9,29 @@ export function useGatewayFetch<T>(
   options: UseFetchOptions<T> = {}
 ) {
   const { authHeader } = useApiKey();
+  const autoExecute = options.immediate !== false;
   const headers = computed(() => ({
     ...((options.headers as Record<string, string>) || {}),
     Authorization: authHeader.value,
   }));
 
-  return useFetch<T>(`/api${path}`, {
+  const state = useFetch<T>(`/api${path}`, {
     ...options,
+    immediate: false,
     headers,
   });
+
+  watch(
+    authHeader,
+    (value) => {
+      if (value && autoExecute) {
+        state.execute();
+      }
+    },
+    { immediate: autoExecute }
+  );
+
+  return state;
 }
 
 export async function gatewayFetch<T>(

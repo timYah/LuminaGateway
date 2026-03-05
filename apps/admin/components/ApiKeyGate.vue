@@ -28,67 +28,91 @@ const saveKey = () => {
 </script>
 
 <template>
-  <div>
-    <div v-if="!ready" class="space-y-4">
-      <div class="h-6 w-56 rounded-xl skeleton"></div>
-      <div class="h-32 rounded-2xl skeleton"></div>
-      <div class="h-24 rounded-2xl skeleton"></div>
-    </div>
-
+  <div class="space-y-6">
     <div
-      v-else-if="!hasKey"
-      class="max-w-[560px] surface rounded-3xl p-8 space-y-6"
+      v-if="hasKey"
+      class="glass-panel rounded-2xl px-5 py-4 flex items-center justify-between"
     >
       <div>
         <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-          Secure Access
+          Session
         </div>
-        <h1 class="mt-3 text-3xl font-semibold text-slate-900">
-          Connect the gateway
-        </h1>
-        <p class="mt-3 text-base text-slate-600 leading-relaxed">
-          Enter the gateway API key to unlock provider and usage management.
-          The key is stored locally in this browser.
-        </p>
+        <div class="text-sm font-medium text-slate-700">
+          API key stored for this browser.
+        </div>
       </div>
-
-      <div class="space-y-4">
-        <UFormGroup
-          label="Gateway API key"
-          help="Paste the value of GATEWAY_API_KEY from the backend environment."
-        >
-          <UInput v-model="draft" type="password" placeholder="sk-live-..." />
-        </UFormGroup>
-        <p v-if="error" class="text-sm text-rose-600">
-          {{ error }}
-        </p>
-      </div>
-
-      <div class="flex items-center justify-between">
-        <UButton class="action-press" color="primary" @click="saveKey">
-          Save key
-        </UButton>
-        <span class="text-xs text-slate-500">
-          Stored in local storage.
-        </span>
-      </div>
+      <UButton class="action-press" variant="outline" @click="clear">
+        Clear key
+      </UButton>
     </div>
 
-    <div v-else class="space-y-6">
-      <div class="glass-panel rounded-2xl px-5 py-4 flex items-center justify-between">
-        <div>
-          <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-            Session
+    <div class="relative">
+      <div
+        class="transition-all duration-300"
+        :class="
+          hasKey
+            ? 'opacity-100'
+            : 'opacity-30 blur-[1px] pointer-events-none select-none'
+        "
+      >
+        <slot />
+      </div>
+
+      <div
+        v-if="!ready"
+        class="absolute inset-0 flex items-center justify-center"
+      >
+        <div class="w-full max-w-[560px] space-y-4">
+          <div class="h-6 w-56 rounded-xl skeleton"></div>
+          <div class="h-32 rounded-2xl skeleton"></div>
+          <div class="h-24 rounded-2xl skeleton"></div>
+        </div>
+      </div>
+
+      <div
+        v-else-if="!hasKey"
+        class="absolute inset-0 flex items-center justify-center"
+      >
+        <div class="max-w-[560px] surface rounded-3xl p-8 space-y-6">
+          <div>
+            <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
+              Secure Access
+            </div>
+            <h1 class="mt-3 text-3xl font-semibold text-slate-900">
+              Connect the gateway
+            </h1>
+            <p class="mt-3 text-base text-slate-600 leading-relaxed">
+              Enter the gateway API key to unlock provider and usage management.
+              The key is stored locally in this browser.
+            </p>
           </div>
-          <div class="text-sm font-medium text-slate-700">
-            API key stored for this browser.
+
+          <div class="space-y-4">
+            <UFormGroup
+              label="Gateway API key"
+              help="Paste the value of GATEWAY_API_KEY from the backend environment."
+            >
+              <UInput
+                v-model="draft"
+                type="password"
+                placeholder="sk-live-..."
+              />
+            </UFormGroup>
+            <p v-if="error" class="text-sm text-rose-600">
+              {{ error }}
+            </p>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <UButton class="action-press" color="primary" @click="saveKey">
+              Save key
+            </UButton>
+            <span class="text-xs text-slate-500">
+              Stored in local storage.
+            </span>
           </div>
         </div>
-        <UButton class="action-press" variant="outline" @click="clear">
-          Clear key
-        </UButton>
       </div>
-      <slot />
     </div>
   </div>
 </template>
