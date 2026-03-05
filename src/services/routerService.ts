@@ -6,6 +6,7 @@ export class RouterService {
 
   async selectProvider(modelSlug: string) {
     const providers = await getActiveProvidersByModel(modelSlug);
-    return providers[0] ?? null;
+    const candidates = providers.filter((provider) => !this.breaker.isOpen(provider.id));
+    return candidates[0] ?? null;
   }
 }
