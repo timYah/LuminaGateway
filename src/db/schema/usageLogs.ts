@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { providers } from "./providers.js";
+import { providers } from "./providers";
 
 export const usageLogs = sqliteTable(
   "usage_logs",

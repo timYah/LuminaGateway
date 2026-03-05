@@ -1,5 +1,5 @@
 import { integer, real, sqliteTable, text, index } from "drizzle-orm/sqlite-core";
-import { providers } from "./providers.js";
+import { providers } from "./providers";
 
 export const models = sqliteTable(
   "models",
