@@ -56,3 +56,23 @@ export interface OpenAIChatCompletionResponse {
   choices: OpenAIChatCompletionChoice[];
   usage?: OpenAIUsage;
 }
+
+export interface OpenAIChatCompletionDelta {
+  role?: OpenAIRole;
+  content?: string;
+  tool_calls?: unknown;
+}
+
+export interface OpenAIChatCompletionChunkChoice {
+  index: number;
+  delta: OpenAIChatCompletionDelta;
+  finish_reason?: string | null;
+}
+
+export interface OpenAIChatCompletionChunk {
+  id: string;
+  object: "chat.completion.chunk";
+  created: number;
+  model: string;
+  choices: OpenAIChatCompletionChunkChoice[];
+}
