@@ -165,7 +165,7 @@
 - [x] **T-16.1** 创建 `src/services/billingService.ts` — 实现 `calculateCost(inputTokens, outputTokens, inputPrice, outputPrice)` 纯函数
 - [x] **T-16.2** 实现 `billUsage(providerId, modelSlug, usage, model)` 方法 — 计算费用、扣减余额、写入 usageLogs
 - [x] **T-16.3** 处理边界情况：usage 为空时跳过计费、价格为 0 时仅记录日志
-- [ ] **T-16.4** ✅ **验证**：编写 `src/services/__tests__/billingService.test.ts`，用精确数值验证计算公式、余额扣减、日志写入，运行 `npm run test -- billingService && npm run lint && npm run typecheck`。持续修复直到全部通过。
+- [x] **T-16.4** ✅ **验证**：编写 `src/services/__tests__/billingService.test.ts`，用精确数值验证计算公式、余额扣减、日志写入，运行 `npm run test -- billingService && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
 ---
 
