@@ -281,7 +281,7 @@
 
 ## Phase 30 — Admin 路由：创建 Provider
 
-- [ ] **T-30.1** 在 `src/routes/admin.ts` 中实现 `POST /admin/providers` 路由，接受 Provider 配置并写入数据库
+- [x] **T-30.1** 在 `src/routes/admin.ts` 中实现 `POST /admin/providers` 路由，接受 Provider 配置并写入数据库
 - [ ] **T-30.2** 添加 Zod schema 校验请求体
 - [ ] **T-30.3** ✅ **验证**：编写 `src/routes/__tests__/admin.create.test.ts`，测试创建成功和校验失败，运行 `npm run test -- admin && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
