@@ -52,3 +52,33 @@ export function relayAsOpenAIStream(
     },
   });
 }
+
+export function relayAsAnthropicStream(
+  aiSdkStream: AsyncIterable<TextStreamPart<ToolSet>>
+) {
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        for await (const part of aiSdkStream) {
+          if (part.type !== "text-delta") continue;
+          const event = {
+            type: "content_block_delta",
+            index: 0,
+            delta: { type: "text_delta", text: part.text },
+          };
+          controller.enqueue(
+            encoder.encode(
+              `event: content_block_delta\ndata: ${JSON.stringify(event)}\n\n`
+            )
+          );
+        }
+      } catch (error) {
+        controller.error(error);
+        return;
+      }
+      controller.close();
+    },
+  });
+}
