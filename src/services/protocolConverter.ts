@@ -1,6 +1,7 @@
 import type {
   OpenAIChatCompletionRequest,
   OpenAIChatCompletionResponse,
+  OpenAIToolChoice,
 } from "../types/openai";
 import type { AnthropicMessagesRequest, AnthropicMessagesResponse } from "../types/anthropic";
 import type { UpstreamRequestParams, UpstreamUsage } from "./upstreamService";
@@ -90,6 +91,27 @@ export function convertUniversalToAnthropicResponse(
 
 export type ToolFormat = "openai" | "anthropic";
 
+export type AnthropicToolChoice =
+  | { type: "auto" }
+  | { type: "none" }
+  | { type: "tool"; name: string };
+
+export type OpenAIToolCall = {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string;
+  };
+};
+
+export type AnthropicToolUse = {
+  type: "tool_use";
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+};
+
 export function convertToolSchemas(
   tools:
     | OpenAIChatCompletionRequest["tools"]
@@ -120,4 +142,69 @@ export function convertToolSchemas(
   }
 
   return tools;
+}
+
+export function convertToolChoice(
+  toolChoice: OpenAIToolChoice | AnthropicToolChoice | undefined,
+  fromFormat: ToolFormat,
+  toFormat: ToolFormat
+): OpenAIToolChoice | AnthropicToolChoice | undefined {
+  if (!toolChoice || fromFormat === toFormat) return toolChoice;
+
+  if (fromFormat === "openai" && toFormat === "anthropic") {
+    if (toolChoice === "auto") return { type: "auto" };
+    if (toolChoice === "none") return { type: "none" };
+    if (typeof toolChoice === "object" && toolChoice.type === "function") {
+      return { type: "tool", name: toolChoice.function.name };
+    }
+  }
+
+  if (fromFormat === "anthropic" && toFormat === "openai") {
+    if (toolChoice.type === "auto") return "auto";
+    if (toolChoice.type === "none") return "none";
+    if (toolChoice.type === "tool") {
+      return { type: "function", function: { name: toolChoice.name } };
+    }
+  }
+
+  return toolChoice;
+}
+
+function safeParseArguments(value: string) {
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === "object" && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function convertToolUseResults(
+  toolCalls: OpenAIToolCall[] | AnthropicToolUse[] | undefined,
+  fromFormat: ToolFormat,
+  toFormat: ToolFormat
+): OpenAIToolCall[] | AnthropicToolUse[] | undefined {
+  if (!toolCalls || fromFormat === toFormat) return toolCalls;
+
+  if (fromFormat === "openai" && toFormat === "anthropic") {
+    return (toolCalls as OpenAIToolCall[]).map((call) => ({
+      type: "tool_use",
+      id: call.id,
+      name: call.function.name,
+      input: safeParseArguments(call.function.arguments),
+    }));
+  }
+
+  if (fromFormat === "anthropic" && toFormat === "openai") {
+    return (toolCalls as AnthropicToolUse[]).map((call) => ({
+      id: call.id,
+      type: "function",
+      function: {
+        name: call.name,
+        arguments: JSON.stringify(call.input ?? {}),
+      },
+    }));
+  }
+
+  return toolCalls;
 }
