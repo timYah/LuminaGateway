@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { anthropicMessagesSchema } from "../types/validators";
 import { handleRequest, handleStreamingRequest } from "../services/gatewayService";
-import type { UpstreamRequestParams } from "../services/upstreamService";
+import { convertAnthropicToUniversal } from "../services/protocolConverter";
 
 export const anthropicRoutes = new Hono();
 
@@ -14,13 +14,7 @@ anthropicRoutes.post("/v1/messages", async (c) => {
 
   if (parsed.data.stream) {
     const response = await handleStreamingRequest(
-      {
-        model: parsed.data.model,
-        messages:
-          parsed.data.messages as unknown as UpstreamRequestParams["messages"],
-        system: parsed.data.system,
-        maxOutputTokens: parsed.data.max_tokens,
-      },
+      convertAnthropicToUniversal(parsed.data),
       "anthropic"
     );
     if ("stream" in response) {
@@ -37,13 +31,7 @@ anthropicRoutes.post("/v1/messages", async (c) => {
   }
 
   const response = await handleRequest(
-    {
-      model: parsed.data.model,
-      messages:
-        parsed.data.messages as unknown as UpstreamRequestParams["messages"],
-      system: parsed.data.system,
-      maxOutputTokens: parsed.data.max_tokens,
-    },
+    convertAnthropicToUniversal(parsed.data),
     "anthropic"
   );
   return c.json(response.body, response.status);

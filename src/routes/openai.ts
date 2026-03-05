@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { openaiChatCompletionSchema } from "../types/validators";
 import { handleRequest, handleStreamingRequest } from "../services/gatewayService";
-import type { UpstreamRequestParams } from "../services/upstreamService";
+import { convertOpenAIToUniversal } from "../services/protocolConverter";
 
 export const openaiRoutes = new Hono();
 
@@ -14,13 +14,7 @@ openaiRoutes.post("/v1/chat/completions", async (c) => {
 
   if (parsed.data.stream) {
     const response = await handleStreamingRequest(
-      {
-        model: parsed.data.model,
-        messages:
-          parsed.data.messages as unknown as UpstreamRequestParams["messages"],
-        temperature: parsed.data.temperature,
-        maxOutputTokens: parsed.data.max_tokens,
-      },
+      convertOpenAIToUniversal(parsed.data),
       "openai"
     );
     if ("stream" in response) {
@@ -37,13 +31,7 @@ openaiRoutes.post("/v1/chat/completions", async (c) => {
   }
 
   const response = await handleRequest(
-    {
-      model: parsed.data.model,
-      messages:
-        parsed.data.messages as unknown as UpstreamRequestParams["messages"],
-      temperature: parsed.data.temperature,
-      maxOutputTokens: parsed.data.max_tokens,
-    },
+    convertOpenAIToUniversal(parsed.data),
     "openai"
   );
   return c.json(response.body, response.status);
