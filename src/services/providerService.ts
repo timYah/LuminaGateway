@@ -40,3 +40,16 @@ export async function deactivateProvider(id: number) {
     .returning();
   return rows[0] ?? null;
 }
+
+export async function deductBalance(id: number, amount: number) {
+  const db = getDb();
+  const rows = await db
+    .update(providers)
+    .set({
+      balance: sql`${providers.balance} - ${amount}`,
+      updatedAt: sql`(unixepoch())`,
+    })
+    .where(eq(providers.id, id))
+    .returning();
+  return rows[0] ?? null;
+}
