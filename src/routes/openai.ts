@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { openaiChatCompletionSchema } from "../types/validators";
+import { handleRequest } from "../services/gatewayService";
 
 export const openaiRoutes = new Hono();
 
@@ -10,11 +11,18 @@ openaiRoutes.post("/v1/chat/completions", async (c) => {
     return c.json({ error: { message: "Invalid request" } }, 400);
   }
 
-  return c.json({
-    id: "chatcmpl_stub",
-    object: "chat.completion",
-    created: Math.floor(Date.now() / 1000),
-    model: parsed.data.model,
-    choices: [],
-  });
+  if (parsed.data.stream) {
+    return c.json({ error: { message: "Streaming not supported yet" } }, 400);
+  }
+
+  const response = await handleRequest(
+    {
+      model: parsed.data.model,
+      messages: parsed.data.messages,
+      temperature: parsed.data.temperature,
+      maxOutputTokens: parsed.data.max_tokens,
+    },
+    "openai"
+  );
+  return c.json(response.body, response.status);
 });
