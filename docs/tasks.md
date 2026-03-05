@@ -30,7 +30,7 @@
 - [x] **T-02.5** 创建 `src/db/schema/usageLogs.ts` — 定义 `usageLogs` 表（id, providerId FK, modelSlug, inputTokens, outputTokens, cost, statusCode, latencyMs, createdAt），添加 `createdAt` 索引
 - [x] **T-02.6** 创建 `src/db/schema/index.ts` — 统一导出所有 schema
 - [x] **T-02.7** 创建 `drizzle.config.ts` — Drizzle Kit 配置文件
-- [ ] **T-02.8** 在 `package.json` 中添加 `db:generate` 和 `db:migrate` scripts
+- [x] **T-02.8** 在 `package.json` 中添加 `db:generate` 和 `db:migrate` scripts
 - [ ] **T-02.9** 运行 `npm run db:generate` 生成初始迁移文件
 - [ ] **T-02.10** ✅ **验证**：运行 `npm run db:migrate` 确认表创建成功，运行 `npm run lint && npm run typecheck`。持续修复直到全部通过。
 
