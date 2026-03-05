@@ -1,3 +1,4 @@
+import "../env.js";
 import { getDb, type SqliteDatabase } from "./index";
 import { models, providers } from "./schema";
 

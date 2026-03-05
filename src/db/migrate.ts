@@ -1,3 +1,4 @@
+import "../env.js";
 import { migrate as migrateSqlite } from "drizzle-orm/better-sqlite3/migrator";
 import { migrate as migratePg } from "drizzle-orm/node-postgres/migrator";
 import { getDb, type PostgresDatabase, type SqliteDatabase } from "./index";
