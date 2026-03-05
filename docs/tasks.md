@@ -116,7 +116,7 @@
 
 ## Phase 11 — 熔断器
 
-- [ ] **T-11.1** 创建 `src/services/circuitBreaker.ts` — 定义 `CircuitBreaker` 类，包含 `open(providerId, cooldownMs)` 方法
+- [x] **T-11.1** 创建 `src/services/circuitBreaker.ts` — 定义 `CircuitBreaker` 类，包含 `open(providerId, cooldownMs)` 方法
 - [ ] **T-11.2** 实现 `isOpen(providerId)` 方法 — 检查 Provider 是否处于熔断状态
 - [ ] **T-11.3** 实现 `reset(providerId)` 方法 — 手动重置熔断状态
 - [ ] **T-11.4** 实现自动过期逻辑 — 超过冷却期后自动关闭熔断器
