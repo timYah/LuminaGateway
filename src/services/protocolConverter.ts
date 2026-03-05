@@ -2,6 +2,7 @@ import type {
   OpenAIChatCompletionRequest,
   OpenAIChatCompletionResponse,
 } from "../types/openai";
+import type { AnthropicMessagesRequest, AnthropicMessagesResponse } from "../types/anthropic";
 import type { UpstreamRequestParams, UpstreamUsage } from "./upstreamService";
 
 export type UniversalRequest = UpstreamRequestParams & {
@@ -53,5 +54,17 @@ export function convertUniversalToOpenAIResponse(
       },
     ],
     usage,
+  };
+}
+
+export function convertAnthropicToUniversal(
+  request: AnthropicMessagesRequest
+): UniversalRequest {
+  return {
+    model: request.model,
+    messages: request.messages as unknown as UpstreamRequestParams["messages"],
+    system: request.system,
+    maxOutputTokens: request.max_tokens,
+    tools: request.tools as unknown as UpstreamRequestParams["tools"],
   };
 }
