@@ -1,5 +1,5 @@
 import { getDb } from "./index";
-import { providers } from "./schema";
+import { models, providers } from "./schema";
 
 async function main() {
   const db = getDb();
@@ -7,7 +7,9 @@ async function main() {
   await db.delete(models);
   await db.delete(providers);
 
-  await db.insert(providers).values([
+  const insertedProviders = await db
+    .insert(providers)
+    .values([
       {
         name: "OpenAI Main",
         protocol: "openai",
@@ -35,7 +37,48 @@ async function main() {
         isActive: true,
         priority: 3,
       },
-    ]);
+    ])
+    .returning({ id: providers.id, name: providers.name });
+
+  const providerMap = new Map(insertedProviders.map((p) => [p.name, p.id]));
+
+  await db.insert(models).values([
+    {
+      providerId: providerMap.get("OpenAI Main")!,
+      slug: "gpt-4o",
+      upstreamName: "gpt-4o",
+      inputPrice: 5,
+      outputPrice: 15,
+    },
+    {
+      providerId: providerMap.get("OpenAI Main")!,
+      slug: "gpt-4o-mini",
+      upstreamName: "gpt-4o-mini",
+      inputPrice: 0.15,
+      outputPrice: 0.6,
+    },
+    {
+      providerId: providerMap.get("Anthropic Backup")!,
+      slug: "claude-sonnet-4-20250514",
+      upstreamName: "claude-sonnet-4-20250514",
+      inputPrice: 3,
+      outputPrice: 15,
+    },
+    {
+      providerId: providerMap.get("Anthropic Backup")!,
+      slug: "claude-haiku-3-20240307",
+      upstreamName: "claude-haiku-3-20240307",
+      inputPrice: 0.25,
+      outputPrice: 1.25,
+    },
+    {
+      providerId: providerMap.get("Third-Party Proxy")!,
+      slug: "gpt-4o",
+      upstreamName: "gpt-4o",
+      inputPrice: 5.5,
+      outputPrice: 16,
+    },
+  ]);
 }
 
 main().catch((error) => {
