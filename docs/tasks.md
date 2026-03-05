@@ -25,7 +25,7 @@
 
 - [x] **T-02.1** 安装数据库依赖：`drizzle-orm`、`better-sqlite3`、`drizzle-kit`
 - [x] **T-02.2** 安装类型依赖：`@types/better-sqlite3`
-- [ ] **T-02.3** 创建 `src/db/schema/providers.ts` — 定义 `providers` 表（id, name, protocol, baseUrl, apiKey, balance, isActive, priority, createdAt, updatedAt）
+- [x] **T-02.3** 创建 `src/db/schema/providers.ts` — 定义 `providers` 表（id, name, protocol, baseUrl, apiKey, balance, isActive, priority, createdAt, updatedAt）
 - [ ] **T-02.4** 创建 `src/db/schema/models.ts` — 定义 `models` 表（id, providerId FK, slug, upstreamName, inputPrice, outputPrice），添加 `slug` 索引
 - [ ] **T-02.5** 创建 `src/db/schema/usageLogs.ts` — 定义 `usageLogs` 表（id, providerId FK, modelSlug, inputTokens, outputTokens, cost, statusCode, latencyMs, createdAt），添加 `createdAt` 索引
 - [ ] **T-02.6** 创建 `src/db/schema/index.ts` — 统一导出所有 schema
