@@ -1,4 +1,4 @@
-import { APICallError, generateText } from "ai";
+import { APICallError, generateText, streamText } from "ai";
 import type { Provider } from "../db/schema/providers";
 import type { Model } from "../db/schema/models";
 import { createAIProvider } from "./aiSdkFactory";
@@ -9,6 +9,7 @@ export type UpstreamRequestParams = Omit<
 >;
 
 type GenerateTextResult = Awaited<ReturnType<typeof generateText>>;
+type StreamTextResult = Awaited<ReturnType<typeof streamText>>;
 
 export type UpstreamUsage = {
   promptTokens: number;
@@ -43,6 +44,20 @@ export async function callUpstreamNonStreaming(
     result,
     usage: normalizeUsage(result.usage),
   };
+}
+
+export function callUpstreamStreaming(
+  provider: Provider,
+  model: Model,
+  params: UpstreamRequestParams
+): StreamTextResult {
+  const aiProvider = createAIProvider(provider);
+  const languageModel = aiProvider.languageModel(model.upstreamName);
+  const fullParams = {
+    ...(params as Record<string, unknown>),
+    model: languageModel,
+  } as Parameters<typeof streamText>[0];
+  return streamText(fullParams);
 }
 
 export type UpstreamErrorType =

@@ -153,7 +153,7 @@
 
 ## Phase 15 — Upstream 调用服务（流式）
 
-- [ ] **T-15.1** 在 `src/services/upstreamService.ts` 中实现 `callUpstreamStreaming(provider, model, params)` 函数，使用 AI SDK 的 `streamText` 调用上游
+- [x] **T-15.1** 在 `src/services/upstreamService.ts` 中实现 `callUpstreamStreaming(provider, model, params)` 函数，使用 AI SDK 的 `streamText` 调用上游
 - [ ] **T-15.2** 在 `streamText` 的 `onFinish` 回调中捕获 `usage` 数据
 - [ ] **T-15.3** 返回一个包含 stream（AsyncIterable）和 usagePromise 的对象
 - [ ] **T-15.4** ✅ **验证**：编写流式相关测试（mock AI SDK），测试 chunk 迭代和 usage 捕获，运行 `npm run test -- upstreamService && npm run lint && npm run typecheck`。持续修复直到全部通过。
