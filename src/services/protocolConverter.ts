@@ -87,3 +87,37 @@ export function convertUniversalToAnthropicResponse(
       : undefined,
   };
 }
+
+export type ToolFormat = "openai" | "anthropic";
+
+export function convertToolSchemas(
+  tools:
+    | OpenAIChatCompletionRequest["tools"]
+    | AnthropicMessagesRequest["tools"]
+    | undefined,
+  fromFormat: ToolFormat,
+  toFormat: ToolFormat
+) {
+  if (!tools || fromFormat === toFormat) return tools;
+
+  if (fromFormat === "openai" && toFormat === "anthropic") {
+    return (tools as OpenAIChatCompletionRequest["tools"])?.map((tool) => ({
+      name: tool.function.name,
+      description: tool.function.description,
+      input_schema: tool.function.parameters,
+    }));
+  }
+
+  if (fromFormat === "anthropic" && toFormat === "openai") {
+    return (tools as AnthropicMessagesRequest["tools"])?.map((tool) => ({
+      type: "function",
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.input_schema,
+      },
+    }));
+  }
+
+  return tools;
+}

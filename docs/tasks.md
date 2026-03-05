@@ -240,7 +240,7 @@
 
 ## Phase 25 — 协议转换（Tool Calling）
 
-- [ ] **T-25.1** 在 `src/services/protocolConverter.ts` 中实现 `convertToolSchemas(tools, fromFormat, toFormat)` 函数 — 处理 OpenAI 与 Anthropic 的 tool schema 差异
+- [x] **T-25.1** 在 `src/services/protocolConverter.ts` 中实现 `convertToolSchemas(tools, fromFormat, toFormat)` 函数 — 处理 OpenAI 与 Anthropic 的 tool schema 差异
 - [ ] **T-25.2** 处理 tool_choice / tool_use 结果的格式映射
 - [ ] **T-25.3** ✅ **验证**：编写 tool calling 相关测试，覆盖 schema 转换和结果映射，运行 `npm run test -- protocolConverter && npm run lint && npm run typecheck`。持续修复直到全部通过。
 
