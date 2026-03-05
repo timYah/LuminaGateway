@@ -15,6 +15,7 @@ vi.mock("../../services/upstreamService", async () => {
 import { createApp } from "../../app";
 import { getDb, type SqliteDatabase } from "../../db";
 import { models, providers, usageLogs } from "../../db/schema";
+import { eq } from "drizzle-orm";
 import { createProvider } from "../../services/providerService";
 import { callUpstreamStreaming } from "../../services/upstreamService";
 
@@ -87,5 +88,40 @@ describe("integration streaming", () => {
     const body = await res.text();
     expect(body).toContain("data: [DONE]");
     expect(body).toContain("chat.completion.chunk");
+  });
+
+  it("writes billing data after stream completes", async () => {
+    const provider = await seedProvider();
+    const stream =
+      (async function* () {
+        yield { type: "text-delta", id: "1", text: "Hi" };
+      })() as unknown as AsyncIterableStream<TextStreamPart<ToolSet>>;
+
+    callUpstreamMock.mockReturnValue({
+      stream,
+      usagePromise: Promise.resolve({ promptTokens: 1000, completionTokens: 500 }),
+    });
+
+    const res = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "hi" }],
+        stream: true,
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    await res.text();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const providerRow = await db
+      .select()
+      .from(providers)
+      .where(eq(providers.id, provider!.id));
+    const usageRows = await db.select().from(usageLogs);
+    expect(usageRows).toHaveLength(1);
+    expect(providerRow[0].balance).toBeLessThan(10);
   });
 });
