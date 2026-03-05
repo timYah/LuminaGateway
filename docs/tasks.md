@@ -13,7 +13,7 @@
 - [x] **T-01.4** 创建 `tsconfig.json`，启用 `strict: true`、`ESNext` 模块
 - [x] **T-01.5** 创建 ESLint 配置文件（flat config）
 - [x] **T-01.6** 在 `package.json` 中添加 scripts：`dev`、`build`、`lint`、`typecheck`、`test`
-- [ ] **T-01.7** 创建目录结构：`src/`、`src/db/`、`src/routes/`、`src/services/`、`src/middleware/`、`src/types/`、`src/utils/`
+- [x] **T-01.7** 创建目录结构：`src/`、`src/db/`、`src/routes/`、`src/services/`、`src/middleware/`、`src/types/`、`src/utils/`
 - [ ] **T-01.8** 创建 `src/app.ts` — Hono app 工厂函数，注册 `GET /health` 返回 `{ status: "ok" }`
 - [ ] **T-01.9** 创建 `src/index.ts` — 入口文件，读取 `PORT` 环境变量，启动 Hono server
 - [ ] **T-01.10** 创建 `.env.example` 文件，列出所有环境变量及默认值
