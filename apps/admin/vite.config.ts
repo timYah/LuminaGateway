@@ -8,6 +8,8 @@ export default defineConfig(({ mode }) => {
   const envDir = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "../..");
   const env = loadEnv(mode, envDir, "");
   const gatewayPort = env.PORT || "3000";
+  const gatewayApiKey = env.VITE_GATEWAY_API_KEY || env.GATEWAY_API_KEY || "";
+  const gatewayBaseUrl = env.VITE_API_BASE_URL || env.GATEWAY_BASE_URL || "";
   const normalizeGatewayTarget = (target: string) => {
     try {
       const url = new URL(target);
@@ -51,7 +53,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      __GATEWAY_API_KEY__: JSON.stringify(env.GATEWAY_API_KEY || ""),
+      __GATEWAY_API_KEY__: JSON.stringify(gatewayApiKey),
+      __GATEWAY_BASE_URL__: JSON.stringify(gatewayBaseUrl),
     },
     server: {
       port: 3001,

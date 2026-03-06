@@ -1,8 +1,12 @@
 import "./env.js";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
+import { runMigrations } from "./db/runMigrations.js";
 
 const port = Number(process.env.PORT) || 3000;
+
+await runMigrations();
+
 const app = createApp();
 
 serve({

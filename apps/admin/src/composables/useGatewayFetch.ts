@@ -3,6 +3,8 @@ import type { Ref } from "vue";
 
 import { useApiKey } from "./useApiKey";
 
+declare const __GATEWAY_BASE_URL__: string;
+
 type QueryValue = string | number | boolean | null | undefined;
 type QueryParams = Record<string, QueryValue>;
 
@@ -19,7 +21,11 @@ type UseGatewayFetchOptions = GatewayFetchOptions & {
   watch?: boolean;
 };
 
-const apiBase = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
+const envBase =
+  typeof __GATEWAY_BASE_URL__ === "string" ? __GATEWAY_BASE_URL__.trim() : "";
+const apiBase = (
+  envBase || import.meta.env.VITE_API_BASE_URL || "/api"
+).replace(/\/$/, "");
 
 const buildUrl = (path: string, query?: QueryParams) => {
   const normalizedPath = path.startsWith("/")
