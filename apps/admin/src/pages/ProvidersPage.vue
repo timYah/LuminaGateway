@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import { gatewayFetch, useGatewayFetch } from "../composables/useGatewayFetch";
@@ -11,6 +11,7 @@ type Provider = {
   protocol: "openai" | "anthropic" | "google" | "new-api";
   baseUrl: string;
   apiKey: string;
+  apiMode: "responses" | "chat";
   balance: number;
   inputPrice: number | null;
   outputPrice: number | null;
@@ -40,6 +41,32 @@ const protocolOptions = computed(() => [
   { label: "New API", value: "new-api" },
 ]);
 
+const apiModeOptions = computed(() => [
+  { label: t("providers.form.apiModeResponses"), value: "responses" },
+  { label: t("providers.form.apiModeChat"), value: "chat" },
+]);
+
+const supportsApiMode = (protocol: Provider["protocol"]) =>
+  protocol === "openai" || protocol === "new-api";
+
+const testModelStorageKey = "lumina-admin-test-model";
+const testModel = ref("gpt-4o");
+if (typeof window !== "undefined") {
+  const stored = globalThis.localStorage?.getItem(testModelStorageKey);
+  if (stored && stored.trim().length > 0) {
+    testModel.value = stored.trim();
+  }
+}
+watch(testModel, (value) => {
+  if (typeof window === "undefined") return;
+  const trimmed = value.trim();
+  if (trimmed) {
+    globalThis.localStorage?.setItem(testModelStorageKey, trimmed);
+  } else {
+    globalThis.localStorage?.removeItem(testModelStorageKey);
+  }
+});
+
 const createOpen = ref(false);
 const editOpen = ref(false);
 const working = ref(false);
@@ -60,6 +87,7 @@ const createForm = reactive({
   protocol: "openai" as Provider["protocol"],
   baseUrl: "",
   apiKey: "",
+  apiMode: "responses" as Provider["apiMode"],
   balance: "",
   inputPrice: "",
   outputPrice: "",
@@ -72,6 +100,7 @@ const editForm = reactive({
   protocol: "openai" as Provider["protocol"],
   baseUrl: "",
   apiKey: "",
+  apiMode: "responses" as Provider["apiMode"],
   balance: "",
   inputPrice: "",
   outputPrice: "",
@@ -84,6 +113,7 @@ const resetCreate = () => {
   createForm.protocol = "openai";
   createForm.baseUrl = "";
   createForm.apiKey = "";
+  createForm.apiMode = "responses";
   createForm.balance = "";
   createForm.inputPrice = "";
   createForm.outputPrice = "";
@@ -97,6 +127,7 @@ const openEdit = (provider: Provider) => {
   editForm.protocol = provider.protocol;
   editForm.baseUrl = provider.baseUrl;
   editForm.apiKey = provider.apiKey;
+  editForm.apiMode = provider.apiMode ?? "responses";
   editForm.balance = Number.isFinite(provider.balance)
     ? provider.balance.toString()
     : "";
@@ -151,6 +182,9 @@ const submitCreate = async () => {
   }
   working.value = true;
   try {
+    const apiMode = supportsApiMode(createForm.protocol)
+      ? createForm.apiMode
+      : undefined;
     await gatewayFetch("/admin/providers", {
       method: "POST",
       body: {
@@ -158,6 +192,7 @@ const submitCreate = async () => {
         protocol: createForm.protocol,
         baseUrl: createForm.baseUrl.trim(),
         apiKey: createForm.apiKey.trim(),
+        apiMode,
         balance: normalizeOptionalNumber(createForm.balance),
         inputPrice: normalizeNullableNumber(createForm.inputPrice),
         outputPrice: normalizeNullableNumber(createForm.outputPrice),
@@ -180,6 +215,9 @@ const submitEdit = async () => {
   formError.value = "";
   working.value = true;
   try {
+    const apiMode = supportsApiMode(editForm.protocol)
+      ? editForm.apiMode
+      : undefined;
     await gatewayFetch(`/admin/providers/${editingId.value}`, {
       method: "PATCH",
       body: {
@@ -187,6 +225,7 @@ const submitEdit = async () => {
         protocol: editForm.protocol,
         baseUrl: editForm.baseUrl.trim(),
         apiKey: editForm.apiKey.trim(),
+        apiMode,
         balance: normalizeOptionalNumber(editForm.balance),
         inputPrice: normalizeNullableNumber(editForm.inputPrice),
         outputPrice: normalizeNullableNumber(editForm.outputPrice),
@@ -231,7 +270,10 @@ const testProvider = async (provider: Provider) => {
       model?: string;
       errorType?: string;
       message?: string;
-    }>(`/admin/providers/${provider.id}/test`, { method: "POST" });
+    }>(`/admin/providers/${provider.id}/test`, {
+      method: "POST",
+      query: { model: testModel.value.trim() || undefined },
+    });
     testResults.set(provider.id, res);
   } catch {
     testResults.set(provider.id, { ok: false, errorType: "unknown" });
@@ -292,9 +334,23 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
             {{ $t("providers.rosterNote") }}
           </p>
         </div>
-        <UButton class="action-press" variant="outline" @click="refresh">
-          {{ $t("providers.refresh") }}
-        </UButton>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div class="w-full sm:w-52">
+            <UFormGroup
+              :label="$t('providers.testModel.label')"
+              :help="$t('providers.testModel.help')"
+            >
+              <UInput
+                v-model="testModel"
+                :placeholder="$t('providers.testModel.placeholder')"
+                class="w-full"
+              />
+            </UFormGroup>
+          </div>
+          <UButton class="action-press" variant="outline" @click="refresh">
+            {{ $t("providers.refresh") }}
+          </UButton>
+        </div>
       </div>
 
       <div class="px-6 py-5 md:px-8 md:py-6">
@@ -469,6 +525,17 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
               />
             </UFormGroup>
             <UFormGroup
+              v-if="supportsApiMode(createForm.protocol)"
+              :label="$t('providers.form.apiMode')"
+              :help="$t('providers.form.help.apiMode')"
+            >
+              <USelect
+                v-model="createForm.apiMode"
+                :items="apiModeOptions"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
               :label="$t('providers.form.baseUrl')"
               :help="$t('providers.form.help.baseUrl')"
             >
@@ -596,6 +663,17 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
               <USelect
                 v-model="editForm.protocol"
                 :items="protocolOptions"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
+              v-if="supportsApiMode(editForm.protocol)"
+              :label="$t('providers.form.apiMode')"
+              :help="$t('providers.form.help.apiMode')"
+            >
+              <USelect
+                v-model="editForm.apiMode"
+                :items="apiModeOptions"
                 class="w-full"
               />
             </UFormGroup>

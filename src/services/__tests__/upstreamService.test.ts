@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { APICallError, generateText, streamText } from "ai";
-import type { ProviderV3 } from "@ai-sdk/provider";
 import {
   callUpstreamNonStreaming,
   callUpstreamStreaming,
@@ -33,6 +32,7 @@ const baseProvider = {
   protocol: "openai" as const,
   baseUrl: "https://example.com",
   apiKey: "sk-test",
+  apiMode: "responses" as const,
   balance: 10,
   inputPrice: null,
   outputPrice: null,
@@ -54,9 +54,10 @@ describe("upstreamService", () => {
   it("callUpstreamNonStreaming returns usage and result", async () => {
     const languageModel = { id: "mock-model" };
     const mockProvider = {
-      languageModel: vi.fn().mockReturnValue(languageModel),
+      responses: vi.fn().mockReturnValue(languageModel),
+      chat: vi.fn(),
       specificationVersion: "v3",
-    } as unknown as ProviderV3;
+    };
     createAIProvider.mockReturnValue(mockProvider);
 
     const usage = {
@@ -85,7 +86,7 @@ describe("upstreamService", () => {
     });
 
     expect(createAIProvider).toHaveBeenCalledWith(baseProvider);
-    expect(mockProvider.languageModel).toHaveBeenCalledWith(modelSlug);
+    expect(mockProvider.responses).toHaveBeenCalledWith(modelSlug);
     expect(generateTextMock).toHaveBeenCalledWith(
       expect.objectContaining({ model: languageModel, messages: [] })
     );
@@ -139,9 +140,10 @@ describe("upstreamService", () => {
   it("callUpstreamStreaming returns stream and usagePromise", async () => {
     const languageModel = { id: "mock-model" };
     const mockProvider = {
-      languageModel: vi.fn().mockReturnValue(languageModel),
+      responses: vi.fn().mockReturnValue(languageModel),
+      chat: vi.fn(),
       specificationVersion: "v3",
-    } as unknown as ProviderV3;
+    };
     createAIProvider.mockReturnValue(mockProvider);
 
     const usage = {
@@ -181,7 +183,7 @@ describe("upstreamService", () => {
     }
 
     expect(createAIProvider).toHaveBeenCalledWith(baseProvider);
-    expect(mockProvider.languageModel).toHaveBeenCalledWith(modelSlug);
+    expect(mockProvider.responses).toHaveBeenCalledWith(modelSlug);
     expect(streamTextMock).toHaveBeenCalledWith(
       expect.objectContaining({ model: languageModel, messages: [] })
     );
@@ -190,5 +192,27 @@ describe("upstreamService", () => {
       promptTokens: 5,
       completionTokens: 7,
     });
+  });
+
+  it("uses chat mode for openai when apiMode=chat", async () => {
+    const chatProvider = { ...baseProvider, apiMode: "chat" as const };
+    const chatModel = { id: "mock-chat" };
+    const mockProvider = {
+      responses: vi.fn(),
+      chat: vi.fn().mockReturnValue(chatModel),
+      specificationVersion: "v3",
+    };
+    createAIProvider.mockReturnValue(mockProvider);
+
+    const fakeResult = { usage: { inputTokens: 1, outputTokens: 1 } } as GenerateTextResult;
+    generateTextMock.mockResolvedValue(fakeResult);
+
+    await callUpstreamNonStreaming(chatProvider, modelSlug, { messages: [] });
+
+    expect(mockProvider.chat).toHaveBeenCalledWith(modelSlug);
+    expect(mockProvider.responses).not.toHaveBeenCalled();
+    expect(generateTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({ model: chatModel, messages: [] })
+    );
   });
 });

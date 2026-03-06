@@ -7,6 +7,9 @@ export const providers = sqliteTable("providers", {
   protocol: text("protocol", { enum: ["openai", "anthropic", "google", "new-api"] }).notNull(),
   baseUrl: text("base_url").notNull(),
   apiKey: text("api_key").notNull(),
+  apiMode: text("api_mode", { enum: ["responses", "chat"] })
+    .notNull()
+    .default("responses"),
   balance: real("balance").notNull().default(0),
   inputPrice: real("input_price"),
   outputPrice: real("output_price"),

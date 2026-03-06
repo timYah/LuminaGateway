@@ -29,6 +29,7 @@ const provider = {
   protocol: "openai" as const,
   baseUrl: "https://example.com",
   apiKey: "sk-test",
+  apiMode: "responses" as const,
   balance: 10,
   inputPrice: null,
   outputPrice: null,

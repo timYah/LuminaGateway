@@ -39,6 +39,11 @@ const messages = {
       rosterHint: "Changes apply immediately to routing decisions.",
       rosterNote: "Routing uses priority only. Balances are informational.",
       refresh: "Refresh list",
+      testModel: {
+        label: "Test model",
+        help: "Used for connectivity checks only.",
+        placeholder: "gpt-4o",
+      },
       errorTitle: "Provider list failed to load.",
       errorHint: "Verify the API key and gateway URL, then refresh.",
       emptyTitle: "No providers configured yet.",
@@ -88,6 +93,7 @@ const messages = {
       form: {
         name: "Name",
         protocol: "Protocol",
+        apiMode: "API mode",
         baseUrl: "Base URL",
         apiKey: "API key",
         balance: "Balance",
@@ -98,6 +104,7 @@ const messages = {
         help: {
           name: "Short label used in the routing list.",
           protocol: "Provider API dialect.",
+          apiMode: "Responses uses /responses. Chat Completions uses /chat/completions.",
           baseUrl:
             "Root URL for the provider endpoint (OpenAI-compatible providers like new-api use https://host/v1).",
           apiKey: "Stored for upstream authentication.",
@@ -113,6 +120,8 @@ const messages = {
           baseUrl: "https://api.example.com",
           apiKey: "sk-live-...",
         },
+        apiModeResponses: "Responses",
+        apiModeChat: "Chat Completions",
       },
       validation: {
         required: "Name and base URL are required.",
@@ -208,6 +217,11 @@ const messages = {
       rosterHint: "变更将立即影响路由决策。",
       rosterNote: "路由仅看优先级，余额仅作参考。",
       refresh: "刷新列表",
+      testModel: {
+        label: "测试模型",
+        help: "仅用于连通性测试。",
+        placeholder: "gpt-4o",
+      },
       errorTitle: "提供商列表加载失败。",
       errorHint: "请检查 API key 与网关地址后重试。",
       emptyTitle: "尚未配置提供商。",
@@ -257,6 +271,7 @@ const messages = {
       form: {
         name: "名称",
         protocol: "协议",
+        apiMode: "API 模式",
         baseUrl: "基础 URL",
         apiKey: "API key",
         balance: "余额",
@@ -267,6 +282,7 @@ const messages = {
         help: {
           name: "用于路由列表的简短名称。",
           protocol: "提供商 API 协议类型。",
+          apiMode: "Responses 对应 /responses，Chat Completions 对应 /chat/completions。",
           baseUrl:
             "提供商接口根地址（new-api 等 OpenAI 兼容服务请使用 https://host/v1）。",
           apiKey: "用于上游鉴权的密钥。",
@@ -282,6 +298,8 @@ const messages = {
           baseUrl: "https://api.example.com",
           apiKey: "sk-live-...",
         },
+        apiModeResponses: "Responses",
+        apiModeChat: "Chat Completions",
       },
       validation: {
         required: "名称与基础 URL 为必填。",

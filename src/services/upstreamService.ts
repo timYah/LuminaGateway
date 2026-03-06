@@ -1,4 +1,5 @@
 import { APICallError, generateText, streamText } from "ai";
+import type { OpenAIProvider } from "@ai-sdk/openai";
 import type { Provider } from "../db/schema/providers";
 import { createAIProvider } from "./aiSdkFactory";
 
@@ -25,6 +26,24 @@ export type UpstreamNonStreamingResponse = {
   usage: UpstreamUsage;
 };
 
+type ResolvedModel = {
+  languageModel: Parameters<typeof generateText>[0]["model"];
+};
+
+function resolveLanguageModel(provider: Provider, modelSlug: string): ResolvedModel {
+  const aiProvider = createAIProvider(provider);
+  if (provider.protocol === "openai" || provider.protocol === "new-api") {
+    const openAIProvider = aiProvider as OpenAIProvider;
+    const mode = provider.apiMode ?? "responses";
+    const languageModel =
+      mode === "chat"
+        ? openAIProvider.chat(modelSlug)
+        : openAIProvider.responses(modelSlug);
+    return { languageModel };
+  }
+  return { languageModel: aiProvider.languageModel(modelSlug) };
+}
+
 function normalizeUsage(usage: GenerateTextResult["usage"]): UpstreamUsage {
   return {
     promptTokens: usage.inputTokens ?? 0,
@@ -37,8 +56,7 @@ export async function callUpstreamNonStreaming(
   modelSlug: string,
   params: UpstreamRequestParams
 ): Promise<UpstreamNonStreamingResponse> {
-  const aiProvider = createAIProvider(provider);
-  const languageModel = aiProvider.languageModel(modelSlug);
+  const { languageModel } = resolveLanguageModel(provider, modelSlug);
   const fullParams = {
     ...(params as Record<string, unknown>),
     model: languageModel,
@@ -55,8 +73,7 @@ export function callUpstreamStreaming(
   modelSlug: string,
   params: UpstreamRequestParams
 ): UpstreamStreamingResponse {
-  const aiProvider = createAIProvider(provider);
-  const languageModel = aiProvider.languageModel(modelSlug);
+  const { languageModel } = resolveLanguageModel(provider, modelSlug);
   let resolveUsage!: (usage: UpstreamUsage) => void;
   let rejectUsage!: (error: unknown) => void;
   const usagePromise = new Promise<UpstreamUsage>((resolve, reject) => {

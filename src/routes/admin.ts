@@ -12,7 +12,9 @@ import {
 } from "../services/providerService";
 import {
   callUpstreamNonStreaming,
+  callUpstreamStreaming,
   classifyUpstreamError,
+  type UpstreamRequestParams,
 } from "../services/upstreamService";
 
 const providerSchema = z.object({
@@ -20,6 +22,7 @@ const providerSchema = z.object({
   protocol: z.enum(["openai", "anthropic", "google", "new-api"]),
   baseUrl: z.string().min(1),
   apiKey: z.string().min(1),
+  apiMode: z.enum(["responses", "chat"]).optional(),
   balance: z.number().optional(),
   inputPrice: z.number().nullable().optional(),
   outputPrice: z.number().nullable().optional(),
@@ -79,10 +82,20 @@ adminRoutes.post("/admin/providers/:id/test", async (c) => {
   const modelSlug = c.req.query("model")?.trim() || "gpt-4o";
   const start = Date.now();
   try {
-    await callUpstreamNonStreaming(provider, modelSlug, {
+    const testParams: UpstreamRequestParams = {
       messages: [{ role: "user", content: "hi" }],
       maxOutputTokens: 1,
-    });
+    };
+    if (provider.protocol === "new-api") {
+      const upstream = callUpstreamStreaming(provider, modelSlug, testParams);
+      const iterator = upstream.stream[Symbol.asyncIterator]();
+      await iterator.next();
+      if (iterator.return) {
+        await iterator.return();
+      }
+    } else {
+      await callUpstreamNonStreaming(provider, modelSlug, testParams);
+    }
     return c.json({ ok: true, latencyMs: Date.now() - start, model: modelSlug });
   } catch (err) {
     const errorType = classifyUpstreamError(err);
