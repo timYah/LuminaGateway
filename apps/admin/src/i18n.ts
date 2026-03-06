@@ -305,8 +305,12 @@ const messages = {
 
 const defaultLocale = "en";
 const resolveLocale = () => {
-  if (typeof window === "undefined") return defaultLocale;
-  const stored = window.localStorage.getItem(localeStorageKey);
+  const globalWindow =
+    typeof globalThis !== "undefined"
+      ? (globalThis as { window?: { localStorage?: Storage } }).window
+      : undefined;
+  if (!globalWindow?.localStorage) return defaultLocale;
+  const stored = globalWindow.localStorage.getItem(localeStorageKey);
   if (stored && Object.prototype.hasOwnProperty.call(messages, stored)) {
     return stored;
   }

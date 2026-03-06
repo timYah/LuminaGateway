@@ -14,9 +14,16 @@ const localeOptions = computed(() => [
 watch(
   locale,
   (value) => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(localeStorageKey, value);
-    document.documentElement.lang = value;
+    const globalWindow =
+      typeof globalThis !== "undefined"
+        ? (globalThis as {
+            localStorage?: Storage;
+            document?: Document;
+          })
+        : undefined;
+    if (!globalWindow?.localStorage || !globalWindow.document) return;
+    globalWindow.localStorage.setItem(localeStorageKey, value);
+    globalWindow.document.documentElement.lang = value;
   },
   { immediate: true }
 );
