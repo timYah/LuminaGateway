@@ -8,7 +8,7 @@ import {
 } from "./upstreamService";
 import type { UpstreamRequestParams } from "./upstreamService";
 import { getModelByProviderAndSlug } from "./modelService";
-import { deactivateProvider, updateProvider } from "./providerService";
+import { deactivateProvider } from "./providerService";
 import { billUsage } from "./billingService";
 import type { OpenAIChatCompletionResponse } from "../types/openai";
 import type { AnthropicMessagesResponse } from "../types/anthropic";
@@ -49,6 +49,7 @@ export type GatewayStreamingResponse =
 
 const RATE_LIMIT_COOLDOWN_MS = 60_000;
 const SERVER_COOLDOWN_MS = 30_000;
+const QUOTA_COOLDOWN_MS = 300_000;
 
 export const gatewayCircuitBreaker = new CircuitBreaker();
 export const gatewayRouter = new RouterService(gatewayCircuitBreaker);
@@ -121,7 +122,7 @@ export async function handleRequest(
     } catch (error) {
       const errorType = classifyUpstreamError(error);
       if (errorType === "quota") {
-        await updateProvider(provider.id, { balance: 0 });
+        gatewayCircuitBreaker.open(provider.id, QUOTA_COOLDOWN_MS);
         continue;
       }
       if (errorType === "rate_limit") {
@@ -181,7 +182,7 @@ export async function handleStreamingRequest(
     } catch (error) {
       const errorType = classifyUpstreamError(error);
       if (errorType === "quota") {
-        await updateProvider(provider.id, { balance: 0 });
+        gatewayCircuitBreaker.open(provider.id, QUOTA_COOLDOWN_MS);
         continue;
       }
       if (errorType === "rate_limit") {

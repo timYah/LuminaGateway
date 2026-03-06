@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { getDb, type SqliteDatabase } from "../db";
 import { type NewModel, models, providers } from "../db/schema";
 
@@ -24,11 +24,10 @@ export async function getActiveProvidersByModel(slug: string) {
     .where(
       and(
         eq(models.slug, slug),
-        eq(providers.isActive, true),
-        gt(providers.balance, 0)
+        eq(providers.isActive, true)
       )
     )
-    .orderBy(desc(providers.balance), asc(providers.priority));
+    .orderBy(asc(providers.priority), asc(providers.id));
   return rows.map((row) => row.provider);
 }
 
