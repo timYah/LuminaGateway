@@ -17,7 +17,7 @@ export function createApp() {
     origin: "*",
     allowHeaders: ["Authorization", "Content-Type"],
     allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-  } as const;
+  };
 
   app.use("/v1/*", cors(corsOptions));
   app.use("/admin/*", cors(corsOptions));
