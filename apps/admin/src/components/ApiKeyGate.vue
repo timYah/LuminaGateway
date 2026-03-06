@@ -10,6 +10,33 @@ const { key, ready, clear } = useApiKey();
 const draft = ref("");
 const error = ref("");
 
+const normalizeKey = (raw: string) => {
+  let value = raw.trim();
+  if (!value) return "";
+
+  const lower = value.toLowerCase();
+  if (lower.startsWith("authorization:")) {
+    value = value.slice("authorization:".length).trim();
+  }
+  if (value.toLowerCase().startsWith("bearer ")) {
+    value = value.slice("bearer ".length).trim();
+  }
+
+  const match = value.match(/^([A-Z0-9_]+)\s*=\s*(.+)$/i);
+  if (match && match[1].toUpperCase() === "GATEWAY_API_KEY") {
+    value = match[2].trim();
+  }
+
+  if (
+    (value.startsWith("\"") && value.endsWith("\"")) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    value = value.slice(1, -1).trim();
+  }
+
+  return value;
+};
+
 watchEffect(() => {
   if (!ready.value) return;
   if (key.value && draft.value !== key.value) {
@@ -20,7 +47,7 @@ watchEffect(() => {
 const hasKey = computed(() => Boolean(key.value && key.value.trim().length > 0));
 
 const saveKey = () => {
-  const value = draft.value.trim();
+  const value = normalizeKey(draft.value);
   if (!value) {
     error.value = t("apiKey.required");
     return;

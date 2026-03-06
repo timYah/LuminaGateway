@@ -28,7 +28,7 @@ const messages = {
       description:
         "Enter the gateway API key to unlock provider and usage management. The key is stored locally in this browser.",
       label: "Gateway API key",
-      help: "Paste the value of GATEWAY_API_KEY from the backend environment.",
+      help: "Paste the value of GATEWAY_API_KEY (without Bearer or variable name).",
       required: "API key is required.",
       save: "Save key",
       localStorage: "Stored in local storage.",
@@ -229,7 +229,7 @@ const messages = {
       description:
         "请输入网关 API key 以解锁提供商与用量管理。该 key 仅保存在本地浏览器。",
       label: "网关 API key",
-      help: "粘贴后端环境变量 GATEWAY_API_KEY 的值。",
+      help: "仅粘贴 GATEWAY_API_KEY 的值，不要包含 Bearer 或变量名。",
       required: "API key 为必填。",
       save: "保存",
       localStorage: "存储在本地。",
