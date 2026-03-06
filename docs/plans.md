@@ -483,19 +483,19 @@ npm run test
 
 ---
 
-### Milestone 14 — Admin dashboard (Nuxt UI) [ ]
+### Milestone 14 — Admin dashboard (Vue + Nuxt UI) [x]
 
 **Scope:**
-- Add a standalone Nuxt 4 + nuxt-ui admin dashboard under `apps/admin`.
+- Add a standalone Vue + Nuxt UI admin dashboard under `apps/admin`.
 - Provide UI for provider management and usage queries.
-- Proxy API calls to the gateway so browser requests do not need direct CORS access.
+- Proxy API calls in development via Vite so browser requests do not need direct CORS access.
 - Store the API key locally in the browser and send it as a Bearer token.
 
 **Key files/modules:**
-- `apps/admin/app.vue` (layout shell)
-- `apps/admin/pages/` (providers + usage pages)
-- `apps/admin/server/api/[...path].ts` (API proxy)
-- `apps/admin/nuxt.config.ts`
+- `apps/admin/src/App.vue` (layout shell)
+- `apps/admin/src/pages/` (providers + usage pages)
+- `apps/admin/src/composables/` (API access + API key storage)
+- `apps/admin/vite.config.ts`
 
 **Acceptance criteria:**
 - Dashboard runs on `http://localhost:3001`.

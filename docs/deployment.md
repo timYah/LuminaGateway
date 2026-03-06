@@ -55,7 +55,7 @@ npm run dev:admin
 
 ## Admin dashboard
 
-The admin dashboard lives in `apps/admin`. It connects to the gateway through the `/admin/*` APIs and stores the API key locally in the browser.
+The admin dashboard lives in `apps/admin`. It is a Vue + Nuxt UI app powered by Vite, connects to the gateway through the `/admin/*` APIs, and stores the API key locally in the browser.
 
 ```bash [Terminal]
 cd apps/admin
@@ -63,7 +63,7 @@ npm install
 npm run dev
 ```
 
-Set `NUXT_PUBLIC_API_BASE_URL` to point to a non-default gateway URL.
+Set `VITE_API_BASE_URL` to point to a non-default gateway URL. If the dashboard is hosted on a different origin, ensure the gateway allows CORS or place both behind the same reverse proxy.
 
 ## Usage examples
 

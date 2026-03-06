@@ -441,6 +441,7 @@
 - [x] **T-47.3** 补充模型映射测试：覆盖 `/admin/models` 创建、过滤、更新
 - [x] **T-47.4** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 - [x] **T-47.5** 修复 Admin 非 JSON 响应导致空状态的问题
+- [x] **T-47.6** 同步仓库状态：提交当前未提交变更
 
 ---
 
@@ -489,5 +490,5 @@
 | Phase 44 | 3 | Admin i18n |
 | Phase 45 | 3 | 语言切换 |
 | Phase 46 | 2 | Admin 表单宽度调整 |
-| Phase 47 | 5 | Admin 模型映射 |
-| **合计** | **170** | |
+| Phase 47 | 6 | Admin 模型映射 |
+| **合计** | **171** | |

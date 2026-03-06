@@ -10,6 +10,11 @@ node_modules/
 .output/
 apps/**/.nuxt/
 apps/**/.output/
+apps/**/dist/
+.vite/
+apps/**/.vite/
+auto-imports.d.ts
+components.d.ts
 
 # Logs
 npm-debug.log*
