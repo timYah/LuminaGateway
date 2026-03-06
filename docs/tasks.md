@@ -423,7 +423,7 @@
 
 - [x] **T-45.1** 语言切换：增加语言选择器并持久化
 - [x] **T-45.2** 新增中文文案：补充 zh 本地化文本
-- [ ] **T-45.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+- [x] **T-45.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
 ---
 
