@@ -54,5 +54,6 @@ export const anthropicMessagesSchema = z.object({
   system: z.string().optional(),
   stream: z.boolean().optional(),
   max_tokens: z.number().int().optional(),
+  temperature: z.number().optional(),
   tools: z.array(anthropicToolSchema).optional(),
 });

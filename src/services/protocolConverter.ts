@@ -65,6 +65,7 @@ export function convertAnthropicToUniversal(
     model: request.model,
     messages: request.messages as unknown as UpstreamRequestParams["messages"],
     system: request.system,
+    temperature: request.temperature,
     maxOutputTokens: request.max_tokens,
     tools: request.tools as unknown as UpstreamRequestParams["tools"],
   };

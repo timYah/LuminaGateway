@@ -1,38 +1,10 @@
-import { Hono } from "hono";
 import { openaiChatCompletionSchema } from "../types/validators";
-import { handleRequest, handleStreamingRequest } from "../services/gatewayService";
 import { convertOpenAIToUniversal } from "../services/protocolConverter";
+import { createProtocolRoute } from "./protocolRoute";
 
-export const openaiRoutes = new Hono();
-
-openaiRoutes.post("/v1/chat/completions", async (c) => {
-  const body = await c.req.json();
-  const parsed = openaiChatCompletionSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: { message: "Invalid request" } }, 400);
-  }
-
-  if (parsed.data.stream) {
-    const response = await handleStreamingRequest(
-      convertOpenAIToUniversal(parsed.data),
-      "openai"
-    );
-    if ("stream" in response) {
-      return new Response(response.stream, {
-        status: response.status,
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-      });
-    }
-    return c.json(response.body, response.status);
-  }
-
-  const response = await handleRequest(
-    convertOpenAIToUniversal(parsed.data),
-    "openai"
-  );
-  return c.json(response.body, response.status);
+export const openaiRoutes = createProtocolRoute({
+  path: "/v1/chat/completions",
+  schema: openaiChatCompletionSchema,
+  converter: convertOpenAIToUniversal,
+  clientFormat: "openai",
 });

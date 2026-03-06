@@ -32,18 +32,6 @@ export const loggerMiddleware = (): MiddlewareHandler => {
       return;
     }
 
-    if (entryLevel === "error") {
-      console.error(entry);
-      return;
-    }
-    if (entryLevel === "warn") {
-      console.warn(entry);
-      return;
-    }
-    if (level === "debug") {
-      console.debug(entry);
-      return;
-    }
-    console.info(entry);
+    console[entryLevel](entry);
   };
 };

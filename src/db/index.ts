@@ -27,6 +27,10 @@ function resolveSqliteFilename(url: string) {
   return url.startsWith("file:") ? url.slice("file:".length) : url;
 }
 
+export function getSqliteClient(): SqliteDatabase {
+  return getDb() as SqliteDatabase;
+}
+
 export function getDb(): DatabaseClient {
   if (db) return db;
 

@@ -1,6 +1,5 @@
 import { APICallError, generateText, streamText } from "ai";
 import type { Provider } from "../db/schema/providers";
-import type { Model } from "../db/schema/models";
 import { createAIProvider } from "./aiSdkFactory";
 
 export type UpstreamRequestParams = Omit<
@@ -35,11 +34,11 @@ function normalizeUsage(usage: GenerateTextResult["usage"]): UpstreamUsage {
 
 export async function callUpstreamNonStreaming(
   provider: Provider,
-  model: Model,
+  modelSlug: string,
   params: UpstreamRequestParams
 ): Promise<UpstreamNonStreamingResponse> {
   const aiProvider = createAIProvider(provider);
-  const languageModel = aiProvider.languageModel(model.upstreamName);
+  const languageModel = aiProvider.languageModel(modelSlug);
   const fullParams = {
     ...(params as Record<string, unknown>),
     model: languageModel,
@@ -53,11 +52,11 @@ export async function callUpstreamNonStreaming(
 
 export function callUpstreamStreaming(
   provider: Provider,
-  model: Model,
+  modelSlug: string,
   params: UpstreamRequestParams
 ): UpstreamStreamingResponse {
   const aiProvider = createAIProvider(provider);
-  const languageModel = aiProvider.languageModel(model.upstreamName);
+  const languageModel = aiProvider.languageModel(modelSlug);
   let resolveUsage!: (usage: UpstreamUsage) => void;
   let rejectUsage!: (error: unknown) => void;
   const usagePromise = new Promise<UpstreamUsage>((resolve, reject) => {
@@ -86,14 +85,25 @@ export type UpstreamErrorType =
   | "rate_limit"
   | "auth"
   | "server"
+  | "model_not_found"
   | "unknown";
 
 export function classifyUpstreamError(error: unknown): UpstreamErrorType {
   if (APICallError.isInstance(error)) {
     const status = error.statusCode;
+    const message = error.message?.toLowerCase() ?? "";
+    const modelMissing =
+      (status === 400 || status === 404) &&
+      message.includes("model") &&
+      (message.includes("not found") ||
+        message.includes("does not exist") ||
+        message.includes("unknown") ||
+        message.includes("not supported"));
+    if (modelMissing) return "model_not_found";
     if (status === 402) return "quota";
     if (status === 429) return "rate_limit";
     if (status === 401) return "auth";
+    if (status === 403) return "auth";
     if (status && status >= 500 && status < 600) return "server";
   }
   return "unknown";

@@ -1,11 +1,7 @@
-import type { Model } from "../db/schema/models";
 import { usageLogs } from "../db/schema/usageLogs";
-import { getDb, type SqliteDatabase } from "../db";
+import { getSqliteClient } from "../db";
 import type { UpstreamUsage } from "./upstreamService";
-
-function getClient() {
-  return getDb() as SqliteDatabase;
-}
+import type { Provider } from "../db/schema/providers";
 
 export function calculateCost(
   inputTokens: number,
@@ -18,29 +14,51 @@ export function calculateCost(
   return inputCost + outputCost;
 }
 
+function resolveEnvPrice(value: string | undefined) {
+  if (value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function resolvePrice(
+  providerPrice: number | null | undefined,
+  fallbackPrice: number | null
+) {
+  if (providerPrice !== null && providerPrice !== undefined) {
+    return providerPrice;
+  }
+  if (fallbackPrice !== null && fallbackPrice !== undefined) {
+    return fallbackPrice;
+  }
+  return 0;
+}
+
 export async function billUsage(
-  providerId: number,
+  provider: Provider,
   modelSlug: string,
-  usage: UpstreamUsage | null | undefined,
-  model: Model
+  usage: UpstreamUsage | null | undefined
 ) {
   if (!usage) {
     return null;
   }
   const inputTokens = usage.promptTokens;
   const outputTokens = usage.completionTokens;
+  const defaultInputPrice = resolveEnvPrice(process.env.DEFAULT_INPUT_PRICE);
+  const defaultOutputPrice = resolveEnvPrice(process.env.DEFAULT_OUTPUT_PRICE);
+  const inputPrice = resolvePrice(provider.inputPrice, defaultInputPrice);
+  const outputPrice = resolvePrice(provider.outputPrice, defaultOutputPrice);
   const cost = calculateCost(
     inputTokens,
     outputTokens,
-    model.inputPrice,
-    model.outputPrice
+    inputPrice,
+    outputPrice
   );
 
-  const db = getClient();
+  const db = getSqliteClient();
   const rows = await db
     .insert(usageLogs)
     .values({
-      providerId,
+      providerId: provider.id,
       modelSlug,
       inputTokens,
       outputTokens,

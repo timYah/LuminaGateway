@@ -6,7 +6,8 @@ function createChunkId() {
 }
 
 export function relayAsOpenAIStream(
-  aiSdkStream: AsyncIterable<TextStreamPart<ToolSet>>
+  aiSdkStream: AsyncIterable<TextStreamPart<ToolSet>>,
+  modelSlug: string = "unknown"
 ) {
   const encoder = new TextEncoder();
   const chunkId = createChunkId();
@@ -30,7 +31,7 @@ export function relayAsOpenAIStream(
             id: chunkId,
             object: "chat.completion.chunk",
             created,
-            model: "unknown",
+            model: modelSlug,
             choices: [
               {
                 index: 0,

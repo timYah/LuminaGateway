@@ -17,6 +17,7 @@ export interface AnthropicMessagesRequest {
   system?: string;
   stream?: boolean;
   max_tokens?: number;
+  temperature?: number;
   tools?: AnthropicToolDefinition[];
 }
 

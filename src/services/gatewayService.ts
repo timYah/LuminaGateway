@@ -7,7 +7,6 @@ import {
   type UpstreamUsage,
 } from "./upstreamService";
 import type { UpstreamRequestParams } from "./upstreamService";
-import { getModelByProviderAndSlug } from "./modelService";
 import { deactivateProvider } from "./providerService";
 import { billUsage } from "./billingService";
 import type { OpenAIChatCompletionResponse } from "../types/openai";
@@ -32,6 +31,11 @@ type OpenAIErrorResponse = {
 type AnthropicErrorResponse = {
   type: "error";
   error: { type: string; message: string };
+};
+
+type GatewayErrorResponse = {
+  status: ContentfulStatusCode;
+  body: OpenAIErrorResponse | AnthropicErrorResponse;
 };
 
 export type GatewayResponse = {
@@ -80,6 +84,40 @@ function formatErrorResponse(
   return body;
 }
 
+async function handleUpstreamError(
+  error: unknown,
+  providerId: number,
+  clientFormat: ClientFormat
+): Promise<"continue" | GatewayErrorResponse> {
+  const errorType = classifyUpstreamError(error);
+  if (errorType === "quota") {
+    gatewayCircuitBreaker.open(providerId, QUOTA_COOLDOWN_MS);
+    return "continue";
+  }
+  if (errorType === "model_not_found") {
+    return "continue";
+  }
+  if (errorType === "rate_limit") {
+    gatewayCircuitBreaker.open(providerId, RATE_LIMIT_COOLDOWN_MS);
+    return "continue";
+  }
+  if (errorType === "auth") {
+    await deactivateProvider(providerId);
+    return "continue";
+  }
+  if (errorType === "server") {
+    gatewayCircuitBreaker.open(providerId, SERVER_COOLDOWN_MS);
+    return "continue";
+  }
+  return {
+    status: 500,
+    body: formatErrorResponse(
+      clientFormat,
+      error instanceof Error ? error.message : "Upstream error"
+    ),
+  };
+}
+
 export async function handleRequest(
   requestParams: GatewayRequestParams,
   clientFormat: ClientFormat
@@ -94,15 +132,13 @@ export async function handleRequest(
   }
 
   for (const provider of candidates) {
-    const model = await getModelByProviderAndSlug(provider.id, modelSlug);
-    if (!model) continue;
     try {
       const { result, usage } = await callUpstreamNonStreaming(
         provider,
-        model,
+        modelSlug,
         params
       );
-      await billUsage(provider.id, modelSlug, usage, model);
+      await billUsage(provider, modelSlug, usage);
       const finishReason =
         typeof result.finishReason === "string" ? result.finishReason : null;
       const universal = buildUniversalResponse(
@@ -120,30 +156,9 @@ export async function handleRequest(
         body,
       };
     } catch (error) {
-      const errorType = classifyUpstreamError(error);
-      if (errorType === "quota") {
-        gatewayCircuitBreaker.open(provider.id, QUOTA_COOLDOWN_MS);
-        continue;
-      }
-      if (errorType === "rate_limit") {
-        gatewayCircuitBreaker.open(provider.id, RATE_LIMIT_COOLDOWN_MS);
-        continue;
-      }
-      if (errorType === "auth") {
-        await deactivateProvider(provider.id);
-        continue;
-      }
-      if (errorType === "server") {
-        gatewayCircuitBreaker.open(provider.id, SERVER_COOLDOWN_MS);
-        continue;
-      }
-      return {
-        status: 500,
-        body: formatErrorResponse(
-          clientFormat,
-          error instanceof Error ? error.message : "Upstream error"
-        ),
-      };
+      const result = await handleUpstreamError(error, provider.id, clientFormat);
+      if (result === "continue") continue;
+      return result;
     }
   }
 
@@ -167,43 +182,20 @@ export async function handleStreamingRequest(
   }
 
   for (const provider of candidates) {
-    const model = await getModelByProviderAndSlug(provider.id, modelSlug);
-    if (!model) continue;
     try {
-      const upstream = await callUpstreamStreaming(provider, model, params);
+      const upstream = await callUpstreamStreaming(provider, modelSlug, params);
       void upstream.usagePromise
-        .then((usage) => billUsage(provider.id, modelSlug, usage, model))
-        .catch(() => undefined);
+        .then((usage) => billUsage(provider, modelSlug, usage))
+        .catch((err) => console.error("Billing failed", err));
       const stream =
         clientFormat === "openai"
-          ? relayAsOpenAIStream(upstream.stream)
+          ? relayAsOpenAIStream(upstream.stream, modelSlug)
           : relayAsAnthropicStream(upstream.stream);
       return { status: 200, stream };
     } catch (error) {
-      const errorType = classifyUpstreamError(error);
-      if (errorType === "quota") {
-        gatewayCircuitBreaker.open(provider.id, QUOTA_COOLDOWN_MS);
-        continue;
-      }
-      if (errorType === "rate_limit") {
-        gatewayCircuitBreaker.open(provider.id, RATE_LIMIT_COOLDOWN_MS);
-        continue;
-      }
-      if (errorType === "auth") {
-        await deactivateProvider(provider.id);
-        continue;
-      }
-      if (errorType === "server") {
-        gatewayCircuitBreaker.open(provider.id, SERVER_COOLDOWN_MS);
-        continue;
-      }
-      return {
-        status: 500,
-        body: formatErrorResponse(
-          clientFormat,
-          error instanceof Error ? error.message : "Upstream error"
-        ),
-      };
+      const result = await handleUpstreamError(error, provider.id, clientFormat);
+      if (result === "continue") continue;
+      return result;
     }
   }
 
