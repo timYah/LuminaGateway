@@ -20,12 +20,20 @@ type UseGatewayFetchOptions = GatewayFetchOptions & {
 };
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
+const baseStorageKey = "lumina-admin-api-base";
+
+const resolveApiBase = () => {
+  if (typeof window === "undefined") return apiBase;
+  const stored = globalThis.localStorage?.getItem(baseStorageKey)?.trim();
+  if (!stored) return apiBase;
+  return stored.replace(/\/$/, "");
+};
 
 const buildUrl = (path: string, query?: QueryParams) => {
   const normalizedPath = path.startsWith("/")
     ? path
     : `/${path}`;
-  const base = path.startsWith("http") ? "" : apiBase;
+  const base = path.startsWith("http") ? "" : resolveApiBase();
   const url = path.startsWith("http") ? path : `${base}${normalizedPath}`;
 
   if (!query) return url;

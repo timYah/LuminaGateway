@@ -32,6 +32,11 @@ const messages = {
       required: "API key is required.",
       save: "Save key",
       localStorage: "Stored in local storage.",
+      baseUrl: "Gateway URL",
+      baseUrlHelp: "Override the gateway base URL when it is not running on localhost:3000.",
+      baseUrlPlaceholder: "http://localhost:3000",
+      saveBaseUrl: "Save URL",
+      baseUrlHint: "Leave empty to use /api proxy.",
     },
     providers: {
       title: "Balance-aware routing control",
@@ -233,6 +238,11 @@ const messages = {
       required: "API key 为必填。",
       save: "保存",
       localStorage: "存储在本地。",
+      baseUrl: "网关地址",
+      baseUrlHelp: "当网关不在 localhost:3000 时可覆盖地址。",
+      baseUrlPlaceholder: "http://localhost:3000",
+      saveBaseUrl: "保存地址",
+      baseUrlHint: "留空则使用 /api 代理。",
     },
     providers: {
       title: "余额感知路由控制",

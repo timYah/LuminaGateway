@@ -9,6 +9,8 @@ const { t } = useI18n();
 const { key, ready, clear } = useApiKey();
 const draft = ref("");
 const error = ref("");
+const baseUrlKey = "lumina-admin-api-base";
+const baseUrlDraft = ref("");
 
 const normalizeKey = (raw: string) => {
   let value = raw.trim();
@@ -37,10 +39,20 @@ const normalizeKey = (raw: string) => {
   return value;
 };
 
+const normalizeBaseUrl = (raw: string) => {
+  let value = raw.trim();
+  if (!value) return "";
+  return value.replace(/\/$/, "");
+};
+
 watchEffect(() => {
   if (!ready.value) return;
   if (key.value && draft.value !== key.value) {
     draft.value = key.value;
+  }
+  if (!baseUrlDraft.value) {
+    const stored = globalThis.localStorage?.getItem(baseUrlKey) || "";
+    baseUrlDraft.value = stored;
   }
 });
 
@@ -48,12 +60,25 @@ const hasKey = computed(() => Boolean(key.value && key.value.trim().length > 0))
 
 const saveKey = () => {
   const value = normalizeKey(draft.value);
+  const baseUrl = normalizeBaseUrl(baseUrlDraft.value);
   if (!value) {
     error.value = t("apiKey.required");
     return;
   }
+  if (baseUrl) {
+    globalThis.localStorage?.setItem(baseUrlKey, baseUrl);
+  }
   error.value = "";
   key.value = value;
+};
+
+const saveBaseUrl = () => {
+  const baseUrl = normalizeBaseUrl(baseUrlDraft.value);
+  if (!baseUrl) {
+    globalThis.localStorage?.removeItem(baseUrlKey);
+    return;
+  }
+  globalThis.localStorage?.setItem(baseUrlKey, baseUrl);
 };
 </script>
 
@@ -63,7 +88,7 @@ const saveKey = () => {
       v-if="hasKey"
       class="glass-panel radius-card px-4 py-3 flex items-center justify-between"
     >
-        <div>
+      <div>
         <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
           {{ $t("apiKey.session") }}
         </div>
@@ -74,6 +99,23 @@ const saveKey = () => {
       <UButton class="action-press" variant="outline" @click="clear">
         {{ $t("apiKey.clear") }}
       </UButton>
+    </div>
+
+    <div v-if="hasKey" class="glass-panel radius-card px-4 py-3 space-y-3">
+      <UFormGroup :label="$t('apiKey.baseUrl')" :help="$t('apiKey.baseUrlHelp')">
+        <UInput
+          v-model="baseUrlDraft"
+          :placeholder="$t('apiKey.baseUrlPlaceholder')"
+        />
+      </UFormGroup>
+      <div class="flex items-center justify-between">
+        <UButton class="action-press" variant="outline" @click="saveBaseUrl">
+          {{ $t("apiKey.saveBaseUrl") }}
+        </UButton>
+        <span class="text-xs text-slate-500">
+          {{ $t("apiKey.baseUrlHint") }}
+        </span>
+      </div>
     </div>
 
     <div class="relative">
@@ -125,6 +167,15 @@ const saveKey = () => {
                 v-model="draft"
                 type="password"
                 :placeholder="$t('providers.form.placeholder.apiKey')"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('apiKey.baseUrl')"
+              :help="$t('apiKey.baseUrlHelp')"
+            >
+              <UInput
+                v-model="baseUrlDraft"
+                :placeholder="$t('apiKey.baseUrlPlaceholder')"
               />
             </UFormGroup>
             <p v-if="error" class="text-sm text-rose-600">
