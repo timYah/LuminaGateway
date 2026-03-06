@@ -122,7 +122,9 @@ PATCH  /admin/providers/:id      — update provider fields
 GET    /admin/usage              — query usage logs
 ```
 
-`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, and optional `balance`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, and `google`.
+`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, and optional `balance`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`.
+
+For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 
 `GET /admin/usage` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `limit`, and `offset`. The response includes `{ usage, limit, offset }` sorted by `createdAt` descending.
 

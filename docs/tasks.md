@@ -406,7 +406,7 @@
 ## Phase 43 — New API Provider 支持
 
 - [x] **T-43.1** 支持 new-api 协议：扩展 provider 协议枚举、AI SDK 工厂与 Admin 表单
-- [ ] **T-43.2** 文档更新：补充 new-api 接入说明与 base URL 指引
+- [x] **T-43.2** 文档更新：补充 new-api 接入说明与 base URL 指引
 - [ ] **T-43.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
 ---

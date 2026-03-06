@@ -43,6 +43,10 @@ curl http://localhost:3000/v1/chat/completions \
   -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
+### New API providers
+
+When adding a new-api provider, set `protocol` to `new-api` and use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`).
+
 ## Admin dashboard
 
 The admin dashboard is a standalone Vue + Nuxt UI app powered by Vite. It provides provider management and usage querying in a web UI.
