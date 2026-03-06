@@ -322,6 +322,7 @@ const submitEdit = async () => {
               <UInput
                 v-model="createForm.name"
                 :placeholder="$t('providers.form.placeholder.name')"
+                class="w-full"
               />
             </UFormGroup>
             <UFormGroup
@@ -341,6 +342,7 @@ const submitEdit = async () => {
               <UInput
                 v-model="createForm.baseUrl"
                 :placeholder="$t('providers.form.placeholder.baseUrl')"
+                class="w-full"
               />
             </UFormGroup>
             <UFormGroup
@@ -351,19 +353,32 @@ const submitEdit = async () => {
                 v-model="createForm.apiKey"
                 type="password"
                 :placeholder="$t('providers.form.placeholder.apiKey')"
+                class="w-full"
               />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.balance')"
               :help="$t('providers.form.help.balanceCreate')"
             >
-              <UInput v-model="createForm.balance" type="number" min="0" step="0.01" />
+              <UInput
+                v-model="createForm.balance"
+                type="number"
+                min="0"
+                step="0.01"
+                class="w-full"
+              />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.priority')"
               :help="$t('providers.form.help.priority')"
             >
-              <UInput v-model="createForm.priority" type="number" min="1" step="1" />
+              <UInput
+                v-model="createForm.priority"
+                type="number"
+                min="1"
+                step="1"
+                class="w-full"
+              />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.active')"
@@ -414,13 +429,18 @@ const submitEdit = async () => {
               <UInput
                 v-model="editForm.name"
                 :placeholder="$t('providers.form.placeholder.name')"
+                class="w-full"
               />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.protocol')"
               :help="$t('providers.form.help.protocol')"
             >
-              <USelect v-model="editForm.protocol" :items="protocolOptions" />
+              <USelect
+                v-model="editForm.protocol"
+                :items="protocolOptions"
+                class="w-full"
+              />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.baseUrl')"
@@ -429,6 +449,7 @@ const submitEdit = async () => {
               <UInput
                 v-model="editForm.baseUrl"
                 :placeholder="$t('providers.form.placeholder.baseUrl')"
+                class="w-full"
               />
             </UFormGroup>
             <UFormGroup
@@ -439,19 +460,32 @@ const submitEdit = async () => {
                 v-model="editForm.apiKey"
                 type="password"
                 :placeholder="$t('providers.form.placeholder.apiKey')"
+                class="w-full"
               />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.balance')"
               :help="$t('providers.form.help.balanceEdit')"
             >
-              <UInput v-model="editForm.balance" type="number" min="0" step="0.01" />
+              <UInput
+                v-model="editForm.balance"
+                type="number"
+                min="0"
+                step="0.01"
+                class="w-full"
+              />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.priority')"
               :help="$t('providers.form.help.priority')"
             >
-              <UInput v-model="editForm.priority" type="number" min="1" step="1" />
+              <UInput
+                v-model="editForm.priority"
+                type="number"
+                min="1"
+                step="1"
+                class="w-full"
+              />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.active')"
