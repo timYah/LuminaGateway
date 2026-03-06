@@ -434,6 +434,13 @@
 
 ---
 
+## Phase 47 — New-API Non-Streaming Fallback
+
+- [x] **T-47.1** new-api 非流式请求失败时自动回退到流式并聚合返回文本
+- [ ] **T-47.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+
+---
+
 ## Phase 45 — 语言切换
 
 - [x] **T-45.1** 语言切换：增加语言选择器并持久化

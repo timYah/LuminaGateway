@@ -51,6 +51,44 @@ function normalizeUsage(usage: GenerateTextResult["usage"]): UpstreamUsage {
   };
 }
 
+function shouldFallbackToStreaming(provider: Provider, error: unknown) {
+  if (provider.protocol !== "new-api") return false;
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("invalid json response") ||
+    message.includes("unexpected response type")
+  );
+}
+
+async function collectStreamText(stream: UpstreamStreamingResponse["stream"]) {
+  let text = "";
+  for await (const part of stream) {
+    if (part && typeof part === "object" && "type" in part) {
+      if (part.type === "text-delta" && "text" in part) {
+        text += String(part.text ?? "");
+      }
+    }
+  }
+  return text;
+}
+
+function buildSyntheticResult(
+  text: string,
+  usage: UpstreamUsage
+): GenerateTextResult {
+  const totalTokens = usage.promptTokens + usage.completionTokens;
+  return {
+    text,
+    finishReason: "stop",
+    usage: {
+      inputTokens: usage.promptTokens,
+      outputTokens: usage.completionTokens,
+      totalTokens,
+    },
+  } as GenerateTextResult;
+}
+
 export async function callUpstreamNonStreaming(
   provider: Provider,
   modelSlug: string,
@@ -61,11 +99,29 @@ export async function callUpstreamNonStreaming(
     ...(params as Record<string, unknown>),
     model: languageModel,
   } as Parameters<typeof generateText>[0];
-  const result = await generateText(fullParams);
-  return {
-    result,
-    usage: normalizeUsage(result.usage),
-  };
+  try {
+    const result = await generateText(fullParams);
+    return {
+      result,
+      usage: normalizeUsage(result.usage),
+    };
+  } catch (error) {
+    if (!shouldFallbackToStreaming(provider, error)) {
+      throw error;
+    }
+    const upstream = callUpstreamStreaming(provider, modelSlug, params);
+    const text = await collectStreamText(upstream.stream);
+    let usage: UpstreamUsage = { promptTokens: 0, completionTokens: 0 };
+    try {
+      usage = await upstream.usagePromise;
+    } catch {
+      // keep zero usage when upstream does not report token usage
+    }
+    return {
+      result: buildSyntheticResult(text, usage),
+      usage,
+    };
+  }
 }
 
 export function callUpstreamStreaming(

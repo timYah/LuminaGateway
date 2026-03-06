@@ -215,4 +215,53 @@ describe("upstreamService", () => {
       expect.objectContaining({ model: chatModel, messages: [] })
     );
   });
+
+  it("falls back to streaming for new-api when JSON is invalid", async () => {
+    const newApiProvider = { ...baseProvider, protocol: "new-api" as const };
+    const languageModel = { id: "mock-model" };
+    const mockProvider = {
+      responses: vi.fn().mockReturnValue(languageModel),
+      chat: vi.fn(),
+      specificationVersion: "v3",
+    };
+    createAIProvider.mockReturnValue(mockProvider);
+
+    generateTextMock.mockRejectedValue(new Error("Invalid JSON response"));
+
+    const usage = {
+      inputTokens: 4,
+      outputTokens: 6,
+      totalTokens: 10,
+      inputTokenDetails: {
+        noCacheTokens: undefined,
+        cacheReadTokens: undefined,
+        cacheWriteTokens: undefined,
+      },
+      outputTokenDetails: {
+        textTokens: undefined,
+        reasoningTokens: undefined,
+      },
+    };
+
+    const fakeStream = (async function* () {
+      yield { type: "text-delta", id: "1", text: "hello" };
+      yield { type: "text-delta", id: "1", text: " world" };
+    })();
+
+    streamTextMock.mockImplementation((options) => {
+      options.onFinish?.({ totalUsage: usage } as unknown as Parameters<
+        NonNullable<typeof options.onFinish>
+      >[0]);
+      return { fullStream: fakeStream } as unknown as StreamTextResult;
+    });
+
+    const response = await callUpstreamNonStreaming(newApiProvider, modelSlug, {
+      messages: [],
+    });
+
+    expect(generateTextMock).toHaveBeenCalled();
+    expect(streamTextMock).toHaveBeenCalled();
+    expect(response.result.text).toBe("hello world");
+    expect(response.usage).toEqual({ promptTokens: 4, completionTokens: 6 });
+  });
 });
