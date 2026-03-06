@@ -427,6 +427,13 @@
 
 ---
 
+## Phase 46 — Admin Providers Load Fix
+
+- [x] **T-46.1** 开启 gateway CORS（允许 Authorization 预检），避免 Admin 跨域请求被拦截
+- [ ] **T-46.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+
+---
+
 ## Phase 45 — 语言切换
 
 - [x] **T-45.1** 语言切换：增加语言选择器并持久化
