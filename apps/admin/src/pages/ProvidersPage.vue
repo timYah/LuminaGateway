@@ -461,6 +461,9 @@ const submitModelEdit = async () => {
           <p class="text-sm text-slate-500">
             {{ $t("providers.models.hint") }}
           </p>
+          <p class="mt-1 text-xs text-slate-500">
+            {{ $t("providers.models.note") }}
+          </p>
         </div>
         <UButton
           class="action-press"

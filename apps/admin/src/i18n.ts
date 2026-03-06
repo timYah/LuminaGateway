@@ -96,6 +96,7 @@ const messages = {
       models: {
         title: "Model mappings",
         hint: "Map gateway model slugs to upstream names and pricing.",
+        note: "Only mapped models are routable. Unmapped slugs will be rejected.",
         add: "Add mapping",
         errorTitle: "Model mappings failed to load.",
         errorHint: "Verify the API key and refresh.",
@@ -295,6 +296,7 @@ const messages = {
       models: {
         title: "模型映射",
         hint: "将网关模型标识映射到上游名称与定价。",
+        note: "仅已映射的模型可路由；未映射的标识将被拒绝。",
         add: "新增映射",
         errorTitle: "模型映射加载失败。",
         errorHint: "请检查 API key 后重试。",
