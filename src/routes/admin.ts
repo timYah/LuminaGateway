@@ -11,7 +11,7 @@ import {
 
 const providerSchema = z.object({
   name: z.string().min(1),
-  protocol: z.enum(["openai", "anthropic", "google"]),
+  protocol: z.enum(["openai", "anthropic", "google", "new-api"]),
   baseUrl: z.string().min(1),
   apiKey: z.string().min(1),
   balance: z.number().optional(),

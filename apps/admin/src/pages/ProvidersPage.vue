@@ -7,7 +7,7 @@ import UFormGroup from "../components/UFormGroup.vue";
 type Provider = {
   id: number;
   name: string;
-  protocol: "openai" | "anthropic" | "google";
+  protocol: "openai" | "anthropic" | "google" | "new-api";
   baseUrl: string;
   apiKey: string;
   balance: number;
@@ -32,6 +32,7 @@ const protocolOptions = [
   { label: "OpenAI", value: "openai" },
   { label: "Anthropic", value: "anthropic" },
   { label: "Google", value: "google" },
+  { label: "New API", value: "new-api" },
 ];
 
 const createOpen = ref(false);
@@ -300,7 +301,10 @@ const submitEdit = async () => {
             <UFormGroup label="Protocol" help="Provider API dialect.">
               <USelect v-model="createForm.protocol" :options="protocolOptions" />
             </UFormGroup>
-            <UFormGroup label="Base URL" help="Root URL for the provider endpoint.">
+            <UFormGroup
+              label="Base URL"
+              help="Root URL for the provider endpoint (OpenAI-compatible providers like new-api use https://host/v1)."
+            >
               <UInput v-model="createForm.baseUrl" placeholder="https://api.example.com" />
             </UFormGroup>
             <UFormGroup label="API key" help="Stored for upstream authentication.">
@@ -357,7 +361,10 @@ const submitEdit = async () => {
             <UFormGroup label="Protocol" help="Provider API dialect.">
               <USelect v-model="editForm.protocol" :options="protocolOptions" />
             </UFormGroup>
-            <UFormGroup label="Base URL" help="Root URL for the provider endpoint.">
+            <UFormGroup
+              label="Base URL"
+              help="Root URL for the provider endpoint (OpenAI-compatible providers like new-api use https://host/v1)."
+            >
               <UInput v-model="editForm.baseUrl" placeholder="https://api.example.com" />
             </UFormGroup>
             <UFormGroup label="API key" help="Stored for upstream authentication.">

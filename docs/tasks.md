@@ -403,6 +403,14 @@
 
 ---
 
+## Phase 43 — New API Provider 支持
+
+- [x] **T-43.1** 支持 new-api 协议：扩展 provider 协议枚举、AI SDK 工厂与 Admin 表单
+- [ ] **T-43.2** 文档更新：补充 new-api 接入说明与 base URL 指引
+- [ ] **T-43.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+
+---
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -444,4 +452,5 @@
 | Phase 35 | 4 | 集成测试 流式+计费 |
 | Phase 36 | 4 | 文档+最终验证 |
 | Phase 42 | 2 | 环境变量自动加载 |
-| **合计** | **154** | |
+| Phase 43 | 3 | New API Provider 支持 |
+| **合计** | **157** | |

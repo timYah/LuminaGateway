@@ -52,4 +52,23 @@ describe("admin provider create", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("accepts new-api protocol", async () => {
+    const res = await app.request("/admin/providers", {
+      method: "POST",
+      headers: { ...authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "New API Proxy",
+        protocol: "new-api",
+        baseUrl: "https://newapi.example.com/v1",
+        apiKey: "sk-newapi",
+        balance: 5,
+        priority: 3,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.provider.protocol).toBe("new-api");
+  });
 });

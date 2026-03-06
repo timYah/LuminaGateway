@@ -7,6 +7,7 @@ import type { Provider } from "../db/schema/providers";
 export function createAIProvider(provider: Provider): ProviderV3 {
   switch (provider.protocol) {
     case "openai":
+    case "new-api":
       return createOpenAI({
         apiKey: provider.apiKey,
         baseURL: provider.baseUrl,

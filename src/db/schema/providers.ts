@@ -4,7 +4,7 @@ import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 export const providers = sqliteTable("providers", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  protocol: text("protocol", { enum: ["openai", "anthropic", "google"] }).notNull(),
+  protocol: text("protocol", { enum: ["openai", "anthropic", "google", "new-api"] }).notNull(),
   baseUrl: text("base_url").notNull(),
   apiKey: text("api_key").notNull(),
   balance: real("balance").notNull().default(0),
