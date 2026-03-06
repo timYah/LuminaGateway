@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { getDb, type SqliteDatabase } from "../../db";
-import { models, providers } from "../../db/schema";
+import { providers } from "../../db/schema";
 import {
   createProvider,
   deleteProvider,
@@ -22,7 +22,6 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  db.delete(models).run();
   db.delete(providers).run();
 });
 

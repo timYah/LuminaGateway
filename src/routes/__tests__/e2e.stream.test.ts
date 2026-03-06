@@ -10,10 +10,6 @@ vi.mock("../../services/upstreamService", async () => {
   };
 });
 
-vi.mock("../../services/modelService", () => ({
-  getModelByProviderAndSlug: vi.fn(),
-}));
-
 vi.mock("../../services/billingService", () => ({
   billUsage: vi.fn(),
 }));
@@ -21,7 +17,6 @@ vi.mock("../../services/billingService", () => ({
 import { createApp } from "../../app";
 import { gatewayRouter } from "../../services/gatewayService";
 import { callUpstreamStreaming } from "../../services/upstreamService";
-import { getModelByProviderAndSlug } from "../../services/modelService";
 import type { AsyncIterableStream, TextStreamPart, ToolSet } from "ai";
 
 process.env.GATEWAY_API_KEY = "test-key";
@@ -42,26 +37,14 @@ const provider = {
   updatedAt: new Date(),
 };
 
-const model = {
-  id: 1,
-  providerId: 1,
-  slug: "gpt-4o",
-  upstreamName: "gpt-4o",
-  inputPrice: 1,
-  outputPrice: 2,
-};
-
 const callUpstreamStreamingMock = vi.mocked(callUpstreamStreaming);
-const getModelMock = vi.mocked(getModelByProviderAndSlug);
 const getAllCandidatesSpy = vi.spyOn(gatewayRouter, "getAllCandidates");
 
 describe("e2e streaming routes", () => {
   beforeEach(() => {
     callUpstreamStreamingMock.mockReset();
-    getModelMock.mockReset();
     getAllCandidatesSpy.mockReset();
     getAllCandidatesSpy.mockResolvedValue([provider]);
-    getModelMock.mockResolvedValue(model);
   });
 
   it("streams OpenAI SSE response", async () => {

@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { getDb, type SqliteDatabase } from "../../db";
-import { models, providers } from "../../db/schema";
+import { providers } from "../../db/schema";
 import { CircuitBreaker } from "../circuitBreaker";
 import { NoProviderAvailableError, RouterService } from "../routerService";
 
@@ -15,7 +15,6 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  db.delete(models).run();
   db.delete(providers).run();
 });
 
@@ -52,16 +51,6 @@ async function seed() {
       },
     ])
     .returning({ id: providers.id, name: providers.name });
-
-  for (const provider of inserted) {
-    await db.insert(models).values({
-      providerId: provider.id,
-      slug: "gpt-4o",
-      upstreamName: "gpt-4o",
-      inputPrice: 5,
-      outputPrice: 15,
-    });
-  }
 
   return inserted;
 }

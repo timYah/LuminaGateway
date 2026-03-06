@@ -14,7 +14,7 @@ vi.mock("../../services/upstreamService", async () => {
 
 import { createApp } from "../../app";
 import { getDb, type SqliteDatabase } from "../../db";
-import { models, providers, usageLogs } from "../../db/schema";
+import { providers, usageLogs } from "../../db/schema";
 import { createProvider } from "../../services/providerService";
 import { callUpstreamNonStreaming } from "../../services/upstreamService";
 import { gatewayCircuitBreaker } from "../../services/gatewayService";
@@ -35,6 +35,8 @@ async function seedProviders() {
     baseUrl: "https://example.com",
     apiKey: "sk-a",
     balance: 10,
+    inputPrice: 1,
+    outputPrice: 1,
     isActive: true,
     priority: 1,
   });
@@ -44,26 +46,11 @@ async function seedProviders() {
     baseUrl: "https://example.com",
     apiKey: "sk-b",
     balance: 5,
+    inputPrice: 1,
+    outputPrice: 1,
     isActive: true,
     priority: 2,
   });
-
-  await db.insert(models).values([
-    {
-      providerId: providerA!.id,
-      slug: "gpt-4o",
-      upstreamName: "gpt-4o",
-      inputPrice: 1,
-      outputPrice: 1,
-    },
-    {
-      providerId: providerB!.id,
-      slug: "gpt-4o",
-      upstreamName: "gpt-4o",
-      inputPrice: 1,
-      outputPrice: 1,
-    },
-  ]);
 
   return { providerA, providerB };
 }
@@ -75,7 +62,6 @@ beforeAll(() => {
 beforeEach(() => {
   callUpstreamMock.mockReset();
   db.delete(usageLogs).run();
-  db.delete(models).run();
   db.delete(providers).run();
   gatewayCircuitBreaker.reset(1);
   gatewayCircuitBreaker.reset(2);

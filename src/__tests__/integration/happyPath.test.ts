@@ -13,7 +13,7 @@ vi.mock("../../services/upstreamService", async () => {
 
 import { createApp } from "../../app";
 import { getDb, type SqliteDatabase } from "../../db";
-import { models, providers, usageLogs } from "../../db/schema";
+import { providers, usageLogs } from "../../db/schema";
 import { createProvider, getProviderById } from "../../services/providerService";
 import { callUpstreamNonStreaming } from "../../services/upstreamService";
 
@@ -33,7 +33,6 @@ beforeAll(() => {
 beforeEach(() => {
   callUpstreamMock.mockReset();
   db.delete(usageLogs).run();
-  db.delete(models).run();
   db.delete(providers).run();
 });
 
@@ -45,21 +44,11 @@ describe("integration happy path", () => {
       baseUrl: "https://example.com",
       apiKey: "sk-happy",
       balance: 10,
+      inputPrice: 2,
+      outputPrice: 4,
       isActive: true,
       priority: 1,
     });
-
-    const modelRows = await db
-      .insert(models)
-      .values({
-        providerId: provider!.id,
-        slug: "gpt-4o",
-        upstreamName: "gpt-4o",
-        inputPrice: 2,
-        outputPrice: 4,
-      })
-      .returning();
-    const model = modelRows[0]!;
 
     callUpstreamMock.mockResolvedValue({
       result: {
@@ -87,6 +76,6 @@ describe("integration happy path", () => {
 
     const logs = await db.select().from(usageLogs);
     expect(logs).toHaveLength(1);
-    expect(logs[0].modelSlug).toBe(model.slug);
+    expect(logs[0].modelSlug).toBe("gpt-4o");
   });
 });

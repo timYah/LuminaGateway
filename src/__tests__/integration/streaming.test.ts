@@ -14,8 +14,7 @@ vi.mock("../../services/upstreamService", async () => {
 
 import { createApp } from "../../app";
 import { getDb, type SqliteDatabase } from "../../db";
-import { models, providers, usageLogs } from "../../db/schema";
-import { eq } from "drizzle-orm";
+import { providers, usageLogs } from "../../db/schema";
 import { createProvider } from "../../services/providerService";
 import { APICallError } from "ai";
 import { callUpstreamStreaming } from "../../services/upstreamService";
@@ -36,16 +35,10 @@ async function seedProvider() {
     baseUrl: "https://example.com",
     apiKey: "sk-stream",
     balance: 10,
-    isActive: true,
-    priority: 1,
-  });
-
-  await db.insert(models).values({
-    providerId: provider!.id,
-    slug: "gpt-4o",
-    upstreamName: "gpt-4o",
     inputPrice: 1,
     outputPrice: 1,
+    isActive: true,
+    priority: 1,
   });
 
   return provider;
@@ -58,6 +51,8 @@ async function seedProviders() {
     baseUrl: "https://example.com",
     apiKey: "sk-a",
     balance: 10,
+    inputPrice: 1,
+    outputPrice: 1,
     isActive: true,
     priority: 1,
   });
@@ -67,26 +62,11 @@ async function seedProviders() {
     baseUrl: "https://example.com",
     apiKey: "sk-b",
     balance: 5,
+    inputPrice: 1,
+    outputPrice: 1,
     isActive: true,
     priority: 2,
   });
-
-  await db.insert(models).values([
-    {
-      providerId: providerA!.id,
-      slug: "gpt-4o",
-      upstreamName: "gpt-4o",
-      inputPrice: 1,
-      outputPrice: 1,
-    },
-    {
-      providerId: providerB!.id,
-      slug: "gpt-4o",
-      upstreamName: "gpt-4o",
-      inputPrice: 1,
-      outputPrice: 1,
-    },
-  ]);
 
   return { providerA, providerB };
 }
@@ -98,7 +78,6 @@ beforeAll(() => {
 beforeEach(() => {
   callUpstreamMock.mockReset();
   db.delete(usageLogs).run();
-  db.delete(models).run();
   db.delete(providers).run();
 });
 
@@ -132,7 +111,7 @@ describe("integration streaming", () => {
   });
 
   it("writes billing data after stream completes", async () => {
-    const provider = await seedProvider();
+    await seedProvider();
     const stream =
       (async function* () {
         yield { type: "text-delta", id: "1", text: "Hi" };
@@ -157,13 +136,9 @@ describe("integration streaming", () => {
     await res.text();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const providerRow = await db
-      .select()
-      .from(providers)
-      .where(eq(providers.id, provider!.id));
     const usageRows = await db.select().from(usageLogs);
     expect(usageRows).toHaveLength(1);
-    expect(providerRow[0].balance).toBe(10);
+    expect(usageRows[0].cost).toBeCloseTo(0.0015);
   });
 
   it("fails over when upstream errors before stream starts", async () => {

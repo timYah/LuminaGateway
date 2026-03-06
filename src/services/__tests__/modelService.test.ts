@@ -1,12 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { getDb, type SqliteDatabase } from "../../db";
-import { models, providers } from "../../db/schema";
-import {
-  getActiveProvidersByModel,
-  getModelByProviderAndSlug,
-  getModelsBySlug,
-} from "../modelService";
+import { providers } from "../../db/schema";
+import { getActiveProvidersByModel } from "../modelService";
 
 process.env.DATABASE_TYPE = "sqlite";
 process.env.DATABASE_URL = "file:./test-model.db";
@@ -18,7 +14,6 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  db.delete(models).run();
   db.delete(providers).run();
 });
 
@@ -67,42 +62,8 @@ async function seedProviders() {
 }
 
 describe("modelService", () => {
-  it("getModelsBySlug returns models with provider info", async () => {
-    const inserted = await seedProviders();
-    const [a, b] = inserted;
-    await db.insert(models).values([
-      {
-        providerId: a.id,
-        slug: "gpt-4o",
-        upstreamName: "gpt-4o",
-        inputPrice: 5,
-        outputPrice: 15,
-      },
-      {
-        providerId: b.id,
-        slug: "gpt-4o",
-        upstreamName: "gpt-4o",
-        inputPrice: 5,
-        outputPrice: 15,
-      },
-    ]);
-
-    const rows = await getModelsBySlug("gpt-4o");
-    expect(rows).toHaveLength(2);
-    expect(rows[0].providers.name).toBeDefined();
-  });
-
   it("getActiveProvidersByModel sorts by priority asc then id", async () => {
-    const inserted = await seedProviders();
-    for (const provider of inserted) {
-      await db.insert(models).values({
-        providerId: provider.id,
-        slug: "gpt-4o",
-        upstreamName: "gpt-4o",
-        inputPrice: 5,
-        outputPrice: 15,
-      });
-    }
+    await seedProviders();
 
     const list = await getActiveProvidersByModel("gpt-4o");
     expect(list.map((p) => p.name)).toEqual([
@@ -111,20 +72,5 @@ describe("modelService", () => {
       "Provider D",
       "Provider A",
     ]);
-  });
-
-  it("getModelByProviderAndSlug returns model pricing", async () => {
-    const inserted = await seedProviders();
-    const provider = inserted[0];
-    await db.insert(models).values({
-      providerId: provider.id,
-      slug: "gpt-4o-mini",
-      upstreamName: "gpt-4o-mini",
-      inputPrice: 0.15,
-      outputPrice: 0.6,
-    });
-
-    const model = await getModelByProviderAndSlug(provider.id, "gpt-4o-mini");
-    expect(model?.upstreamName).toBe("gpt-4o-mini");
   });
 });

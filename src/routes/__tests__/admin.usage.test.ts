@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { createApp } from "../../app";
 import { getDb, type SqliteDatabase } from "../../db";
-import { models, providers, usageLogs } from "../../db/schema";
+import { providers, usageLogs } from "../../db/schema";
 import { createProvider } from "../../services/providerService";
 
 process.env.DATABASE_TYPE = "sqlite";
@@ -19,7 +19,6 @@ beforeAll(() => {
 
 beforeEach(() => {
   db.delete(usageLogs).run();
-  db.delete(models).run();
   db.delete(providers).run();
 });
 

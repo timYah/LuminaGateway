@@ -13,10 +13,6 @@ vi.mock("../upstreamService", async () => {
   };
 });
 
-vi.mock("../modelService", () => ({
-  getModelByProviderAndSlug: vi.fn(),
-}));
-
 vi.mock("../billingService", () => ({
   billUsage: vi.fn(),
 }));
@@ -37,7 +33,6 @@ import {
   gatewayRouter,
 } from "../gatewayService";
 import { callUpstreamNonStreaming, callUpstreamStreaming } from "../upstreamService";
-import { getModelByProviderAndSlug } from "../modelService";
 import { billUsage } from "../billingService";
 import { relayAsOpenAIStream } from "../streamRelay";
 
@@ -67,18 +62,8 @@ const providerB = {
   updatedAt: new Date(),
 };
 
-const model = {
-  id: 1,
-  providerId: 1,
-  slug: "gpt-4o",
-  upstreamName: "gpt-4o",
-  inputPrice: 1,
-  outputPrice: 2,
-};
-
 const callUpstreamMock = vi.mocked(callUpstreamNonStreaming);
 const callUpstreamStreamingMock = vi.mocked(callUpstreamStreaming);
-const getModelMock = vi.mocked(getModelByProviderAndSlug);
 const billUsageMock = vi.mocked(billUsage);
 const getAllCandidatesSpy = vi.spyOn(gatewayRouter, "getAllCandidates");
 const relayOpenAIMock = vi.mocked(relayAsOpenAIStream);
@@ -88,7 +73,6 @@ describe("gatewayService", () => {
   beforeEach(() => {
     callUpstreamMock.mockReset();
     callUpstreamStreamingMock.mockReset();
-    getModelMock.mockReset();
     billUsageMock.mockReset();
     getAllCandidatesSpy.mockReset();
     getAllCandidatesSpy.mockResolvedValue([providerA]);
@@ -96,11 +80,9 @@ describe("gatewayService", () => {
     breakerOpenSpy.mockReset();
     gatewayCircuitBreaker.reset(providerA.id);
     gatewayCircuitBreaker.reset(providerB.id);
-    getModelMock.mockResolvedValue(model);
   });
 
   it("handles a successful request", async () => {
-    getModelMock.mockResolvedValue(model);
     callUpstreamMock.mockResolvedValue({
       result: {
         text: "Hello",
@@ -120,16 +102,14 @@ describe("gatewayService", () => {
       model: "gpt-4o",
     });
     expect(billUsageMock).toHaveBeenCalledWith(
-      providerA.id,
+      providerA,
       "gpt-4o",
-      { promptTokens: 2, completionTokens: 3 },
-      model
+      { promptTokens: 2, completionTokens: 3 }
     );
   });
 
   it("falls back when the first provider is exhausted", async () => {
     getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
-    getModelMock.mockResolvedValue(model);
     callUpstreamMock
       .mockRejectedValueOnce(
         new APICallError({
@@ -157,6 +137,35 @@ describe("gatewayService", () => {
       providerA.id,
       expect.any(Number)
     );
+  });
+
+  it("falls back when the model is not found", async () => {
+    getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
+    callUpstreamMock
+      .mockRejectedValueOnce(
+        new APICallError({
+          message: "Model not found",
+          url: "https://example.com",
+          requestBodyValues: {},
+          statusCode: 404,
+        })
+      )
+      .mockResolvedValueOnce({
+        result: {
+          text: "Fallback",
+          finishReason: "stop",
+        },
+        usage: { promptTokens: 1, completionTokens: 1 },
+      } as unknown as Awaited<ReturnType<typeof callUpstreamNonStreaming>>);
+
+    const response = await handleRequest(
+      { model: "gpt-4o", messages: [] },
+      "openai"
+    );
+
+    expect(response.status).toBe(200);
+    expect(callUpstreamMock.mock.calls[0][0].id).toBe(providerA.id);
+    expect(callUpstreamMock.mock.calls[1][0].id).toBe(providerB.id);
   });
 
   it("returns an error when no providers are available", async () => {
@@ -189,14 +198,13 @@ describe("gatewayService", () => {
 
     expect(response.status).toBe(200);
     expect("stream" in response).toBe(true);
-    expect(relayOpenAIMock).toHaveBeenCalledWith(stream);
+    expect(relayOpenAIMock).toHaveBeenCalledWith(stream, "gpt-4o");
 
     await Promise.resolve();
     expect(billUsageMock).toHaveBeenCalledWith(
-      providerA.id,
+      providerA,
       "gpt-4o",
-      { promptTokens: 1, completionTokens: 2 },
-      model
+      { promptTokens: 1, completionTokens: 2 }
     );
   });
 

@@ -10,10 +10,6 @@ vi.mock("../../services/upstreamService", async () => {
   };
 });
 
-vi.mock("../../services/modelService", () => ({
-  getModelByProviderAndSlug: vi.fn(),
-}));
-
 vi.mock("../../services/billingService", () => ({
   billUsage: vi.fn(),
 }));
@@ -21,7 +17,6 @@ vi.mock("../../services/billingService", () => ({
 import { createApp } from "../../app";
 import { gatewayRouter } from "../../services/gatewayService";
 import { callUpstreamNonStreaming } from "../../services/upstreamService";
-import { getModelByProviderAndSlug } from "../../services/modelService";
 
 process.env.GATEWAY_API_KEY = "test-key";
 
@@ -41,26 +36,14 @@ const provider = {
   updatedAt: new Date(),
 };
 
-const model = {
-  id: 1,
-  providerId: 1,
-  slug: "gpt-4o",
-  upstreamName: "gpt-4o",
-  inputPrice: 1,
-  outputPrice: 2,
-};
-
 const callUpstreamMock = vi.mocked(callUpstreamNonStreaming);
-const getModelMock = vi.mocked(getModelByProviderAndSlug);
 const getAllCandidatesSpy = vi.spyOn(gatewayRouter, "getAllCandidates");
 
 describe("e2e non-streaming routes", () => {
   beforeEach(() => {
     callUpstreamMock.mockReset();
-    getModelMock.mockReset();
     getAllCandidatesSpy.mockReset();
     getAllCandidatesSpy.mockResolvedValue([provider]);
-    getModelMock.mockResolvedValue(model);
   });
 
   it("handles OpenAI non-streaming request", async () => {

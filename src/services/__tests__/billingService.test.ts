@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { getDb, type SqliteDatabase } from "../../db";
-import { models, providers, usageLogs } from "../../db/schema";
+import { providers, usageLogs } from "../../db/schema";
 import { calculateCost, billUsage } from "../billingService";
 import { createProvider, getProviderById } from "../providerService";
 
@@ -16,8 +16,9 @@ beforeAll(() => {
 
 beforeEach(() => {
   db.delete(usageLogs).run();
-  db.delete(models).run();
   db.delete(providers).run();
+  delete process.env.DEFAULT_INPUT_PRICE;
+  delete process.env.DEFAULT_OUTPUT_PRICE;
 });
 
 const baseProvider = {
@@ -36,25 +37,17 @@ describe("billingService", () => {
     expect(cost).toBeCloseTo(8);
   });
 
-  it("billUsage writes usage log without deducting balance", async () => {
-    const provider = await createProvider(baseProvider);
-    const rows = await db
-      .insert(models)
-      .values({
-        providerId: provider!.id,
-        slug: "gpt-4o",
-        upstreamName: "gpt-4o",
-        inputPrice: 2,
-        outputPrice: 3,
-      })
-      .returning();
-    const model = rows[0]!;
+  it("billUsage uses provider pricing when set", async () => {
+    const provider = await createProvider({
+      ...baseProvider,
+      inputPrice: 2,
+      outputPrice: 3,
+    });
 
     await billUsage(
-      provider!.id,
-      model.slug,
-      { promptTokens: 1_000_000, completionTokens: 1_000_000 },
-      model
+      provider!,
+      "gpt-4o",
+      { promptTokens: 1_000_000, completionTokens: 1_000_000 }
     );
 
     const updated = await getProviderById(provider!.id);
@@ -63,57 +56,45 @@ describe("billingService", () => {
     const logs = await db.select().from(usageLogs);
     expect(logs).toHaveLength(1);
     expect(logs[0].cost).toBeCloseTo(5);
-    expect(logs[0].inputTokens).toBe(1_000_000);
-    expect(logs[0].outputTokens).toBe(1_000_000);
   });
 
-  it("billUsage skips when usage is missing", async () => {
+  it("billUsage falls back to default env pricing", async () => {
+    process.env.DEFAULT_INPUT_PRICE = "1.5";
+    process.env.DEFAULT_OUTPUT_PRICE = "2.5";
     const provider = await createProvider(baseProvider);
-    const rows = await db
-      .insert(models)
-      .values({
-        providerId: provider!.id,
-        slug: "gpt-4o",
-        upstreamName: "gpt-4o",
-        inputPrice: 2,
-        outputPrice: 3,
-      })
-      .returning();
-    const model = rows[0]!;
-
-    const result = await billUsage(provider!.id, model.slug, null, model);
-    expect(result).toBeNull();
-
-    const logs = await db.select().from(usageLogs);
-    expect(logs).toHaveLength(0);
-  });
-
-  it("billUsage logs cost when price is zero without deducting", async () => {
-    const provider = await createProvider({ ...baseProvider, balance: 50 });
-    const rows = await db
-      .insert(models)
-      .values({
-        providerId: provider!.id,
-        slug: "gpt-4o",
-        upstreamName: "gpt-4o",
-        inputPrice: 0,
-        outputPrice: 0,
-      })
-      .returning();
-    const model = rows[0]!;
 
     await billUsage(
-      provider!.id,
-      model.slug,
-      { promptTokens: 1000, completionTokens: 2000 },
-      model
+      provider!,
+      "gpt-4o",
+      { promptTokens: 1_000_000, completionTokens: 1_000_000 }
     );
 
-    const updated = await getProviderById(provider!.id);
-    expect(updated?.balance).toBe(50);
+    const logs = await db.select().from(usageLogs);
+    expect(logs).toHaveLength(1);
+    expect(logs[0].cost).toBeCloseTo(4);
+  });
+
+  it("billUsage uses zero when no pricing is set", async () => {
+    const provider = await createProvider(baseProvider);
+
+    await billUsage(
+      provider!,
+      "gpt-4o",
+      { promptTokens: 1000, completionTokens: 2000 }
+    );
 
     const logs = await db.select().from(usageLogs);
     expect(logs).toHaveLength(1);
     expect(logs[0].cost).toBe(0);
+  });
+
+  it("billUsage skips when usage is missing", async () => {
+    const provider = await createProvider(baseProvider);
+
+    const result = await billUsage(provider!, "gpt-4o", null);
+    expect(result).toBeNull();
+
+    const logs = await db.select().from(usageLogs);
+    expect(logs).toHaveLength(0);
   });
 });
