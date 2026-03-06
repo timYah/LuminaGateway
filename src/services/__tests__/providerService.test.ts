@@ -4,6 +4,7 @@ import { getDb, type SqliteDatabase } from "../../db";
 import { models, providers } from "../../db/schema";
 import {
   createProvider,
+  deleteProvider,
   deactivateProvider,
   deductBalance,
   getAllProviders,
@@ -67,5 +68,13 @@ describe("providerService", () => {
     const created = await createProvider({ ...baseProvider, balance: 100 });
     const updated = await deductBalance(created!.id, 12.5);
     expect(updated?.balance).toBeCloseTo(87.5);
+  });
+
+  it("deleteProvider removes the provider", async () => {
+    const created = await createProvider(baseProvider);
+    const removed = await deleteProvider(created!.id);
+    expect(removed?.id).toBe(created!.id);
+    const list = await getAllProviders();
+    expect(list).toHaveLength(0);
   });
 });
