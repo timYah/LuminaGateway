@@ -455,7 +455,7 @@
 
 - [x] **T-48.1** 调整路由与计费：余额视为无限，仅按 `priority` 排序，记录 usage 成本但不扣减余额
 - [x] **T-48.2** 更新测试：覆盖路由排序、计费不扣减、配额错误不归零余额
-- [ ] **T-48.3** 文档更新：同步 spec、plans、documentation 的余额与降级策略说明
+- [x] **T-48.3** 文档更新：同步 spec、plans、documentation 的余额与降级策略说明
 - [ ] **T-48.4** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
 ---

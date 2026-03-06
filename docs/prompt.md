@@ -5,9 +5,9 @@ You are Codex acting as a senior backend engineer and system architect. Build a 
 ## Core goals
 
 - A unified API gateway that accepts **both** OpenAI (`/v1/chat/completions`) and Anthropic (`/v1/messages`) request formats.
-- Aggregate multiple upstream LLM providers (OpenAI, Anthropic, Google, third-party proxies) and **route requests intelligently** based on remaining balance, health, and priority.
+- Aggregate multiple upstream LLM providers (OpenAI, Anthropic, Google, third-party proxies) and **route requests intelligently** based on priority and health.
 - **Automatic failover**: when a provider returns quota/rate-limit errors, seamlessly retry with the next available provider — the client should be unaware.
-- Real-time token-based billing: deduct estimated cost from each provider's local balance after every completion.
+- Real-time token-based billing: compute and record usage cost after every completion without deducting provider balances.
 - Clean, type-safe TypeScript codebase with Hono, Vercel AI SDK, and Drizzle ORM.
 - You will run for hours: plan first, then implement milestone by milestone. Do not skip the planning phase.
 
@@ -30,8 +30,8 @@ You are Codex acting as a senior backend engineer and system architect. Build a 
 ## Hard constraints
 
 - All provider API keys are stored in the database, never hard-coded.
-- Balance tracking is local and optimistic — the gateway does NOT query upstream billing APIs.
-- Provider selection must be deterministic given the same balance/priority state (testable).
+- Balance is informational only — the gateway does NOT query upstream billing APIs.
+- Provider selection must be deterministic given the same priority/health state (testable).
 - Token counting relies on AI SDK's `usage` callback; no custom tokenizer.
 - Request/response protocol conversion must be lossless for the supported subset (messages, system, tools, temperature, max_tokens, stream).
 
@@ -66,9 +66,9 @@ A repo that contains:
 
 ### C) Smart routing — "The Switch"
 
-- **Balance-priority routing (default)**: among active providers that serve the requested model, pick the one with the highest `balance`. If balances are equal, use `priority` as tiebreaker.
+- **Priority routing (default)**: among active providers that serve the requested model, pick the one with the lowest `priority` (then `id` as tiebreaker).
 - **Health-aware fallback**: if the chosen provider returns `402`, `429`, `401`, or `5xx`:
-  - Mark it temporarily unhealthy (circuit breaker with configurable cooldown, default 60s).
+  - Mark it temporarily unhealthy (circuit breaker; defaults: quota 5m, rate limit 60s, server 30s).
   - Immediately retry with the next candidate — no error returned to client unless all candidates exhausted.
 - **Deterministic selection**: given the same DB state, the same provider is always chosen (important for tests).
 
@@ -76,8 +76,8 @@ A repo that contains:
 
 - After each successful completion, use Vercel AI SDK's `usage` object (`promptTokens`, `completionTokens`) to calculate cost.
 - Cost formula: `(inputTokens / 1_000_000) * inputPrice + (outputTokens / 1_000_000) * outputPrice`
-- Deduct the computed cost from the provider's `balance` column.
 - Insert a row into the `usageLogs` table for auditing.
+- Provider balances are not deducted; they remain informational.
 - For streaming responses, billing happens in the `onFinish` callback after the stream completes.
 
 ### E) Protocol conversion layer

@@ -1,6 +1,6 @@
 # Lumina Gateway — Documentation
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI and Anthropic request formats, routes requests based on balance and health, and fails over when providers are rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI and Anthropic request formats, routes requests based on provider priority and health, and fails over when providers are rate limited or out of quota.
 
 ## What Lumina Gateway is
 
@@ -122,7 +122,7 @@ PATCH  /admin/providers/:id      — update provider fields
 GET    /admin/usage              — query usage logs
 ```
 
-`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, and optional `balance`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`.
+`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, and optional `balance`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. `balance` is informational only and does not affect routing.
 
 For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 
@@ -159,9 +159,9 @@ Set `VITE_API_BASE_URL` before starting the dashboard to target a different gate
 
 ## Provider selection and failover
 
-The gateway loads all providers that match the requested model slug, are active, and have a positive balance. It sorts by `balance` descending and `priority` ascending, then skips providers that are currently circuit-broken.
+The gateway loads all providers that match the requested model slug and are active. It sorts by `priority` ascending (lower is preferred), then by `id` for deterministic tie-breaking, and skips providers that are currently circuit-broken. Balances are informational only and do not affect routing.
 
-On upstream failures, the gateway reacts to the classified error type. Quota exhaustion sets the provider balance to `0`, rate limits open a 60-second circuit breaker, and 5xx server errors open a 30-second circuit breaker before retrying the next provider. Authentication errors deactivate the provider immediately, while unknown errors return a `500` without failover.
+On upstream failures, the gateway reacts to the classified error type. Quota exhaustion opens a 5-minute circuit breaker, rate limits open a 60-second circuit breaker, and 5xx server errors open a 30-second circuit breaker before retrying the next provider. Authentication errors deactivate the provider immediately, while unknown errors return a `500` without failover.
 
 ## Billing and usage
 
@@ -173,7 +173,7 @@ outputCost = (completionTokens / 1,000,000) × outputPrice
 totalCost  = inputCost + outputCost
 ```
 
-Streaming requests bill after the stream finishes and usage is resolved. Non-streaming requests bill immediately after the provider response completes.
+Streaming requests bill after the stream finishes and usage is resolved. Non-streaming requests bill immediately after the provider response completes. Billing records the computed cost in `usageLogs` without deducting provider balances.
 
 ## Error response format
 
@@ -223,7 +223,7 @@ src/
 ├── services/
 │   ├── routerService.ts     # provider selection algorithm
 │   ├── upstreamService.ts   # AI SDK call wrapper
-│   ├── billingService.ts    # cost calculation + balance deduction
+│   ├── billingService.ts    # cost calculation + usage logging
 │   ├── gatewayService.ts    # orchestrator (route → call → bill → respond)
 │   ├── circuitBreaker.ts    # per-provider health tracking
 │   ├── protocolConverter.ts # OpenAI ↔ Anthropic format conversion
@@ -249,7 +249,7 @@ drizzle/                     # generated migration files
 
 - **Port 3000 already in use**: `lsof -i :3000 -t | xargs kill`
 - **Database locked**: ensure no other process holds `lumina.db`; SQLite uses WAL mode for concurrency
-- **No provider available**: check `GET /admin/providers` for balances and active status
+- **No provider available**: check `GET /admin/providers` for active status, priorities, and circuit breaker state
 - **401 on requests**: verify `GATEWAY_API_KEY` matches the Bearer token
 - **Migration fails**: delete `lumina.db`, then run `npm run db:migrate && npm run db:seed`
 

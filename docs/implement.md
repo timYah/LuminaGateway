@@ -117,7 +117,7 @@ Update `docs/documentation.md` continuously as you implement. At the end, ensure
 - [ ] OpenAI-format requests work (streaming and non-streaming).
 - [ ] Anthropic-format requests work (streaming and non-streaming).
 - [ ] Failover works across multiple providers (tested with mocked upstreams).
-- [ ] Billing correctly deducts balance and writes usage logs.
+- [ ] Billing writes usage logs without deducting balance.
 - [ ] Admin routes for provider/model management work.
 - [ ] `npm run test`, `npm run lint`, and `npm run typecheck` all pass.
 - [ ] `docs/documentation.md` is accurate and complete.

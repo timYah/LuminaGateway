@@ -28,8 +28,8 @@ Client Request
 [Model Resolution]  ── look up `slug` in models table → find candidate providers
     │
     ▼
-[Provider Router]   ── select provider by balance (desc) → priority (asc)
-    │                   filter: isActive=true, balance>0, not circuit-broken
+[Provider Router]   ── select provider by priority (asc) → id (asc)
+    │                   filter: isActive=true, not circuit-broken
     ▼
 [Protocol Adapter]  ── convert request to upstream provider's native format
     │
@@ -40,7 +40,7 @@ Client Request
 [Response Relay]    ── re-frame SSE events to client's expected format
     │
     ▼
-[Billing Hook]      ── onFinish: calculate cost, deduct balance, write usage log
+[Billing Hook]      ── onFinish: calculate cost, write usage log
     │
     ▼
 [Fallback Loop]     ── on quota/rate error → mark provider unhealthy → retry next
@@ -53,8 +53,8 @@ function selectProvider(modelSlug):
   candidates = db.models
     .where(slug = modelSlug)
     .join(providers)
-    .where(isActive = true AND balance > 0 AND NOT circuitBroken)
-    .orderBy(balance DESC, priority ASC)
+    .where(isActive = true AND NOT circuitBroken)
+    .orderBy(priority ASC, id ASC)
 
   return candidates[0]  // deterministic: same state → same pick
 ```
@@ -76,7 +76,6 @@ onFinish(result):
   outputCost = (result.usage.completionTokens / 1_000_000) * model.outputPrice
   totalCost  = inputCost + outputCost
 
-  UPDATE providers SET balance = balance - totalCost WHERE id = providerId
   INSERT INTO usageLogs (providerId, modelSlug, inputTokens, outputTokens, cost, ...)
 ```
 
@@ -98,7 +97,7 @@ for each candidate in sortedProviders:
     return response
   catch error:
     if isQuotaError(error):        // 402
-      setBalance(candidate, 0)
+      openCircuitBreaker(candidate, cooldown=5m)
       continue
     if isRateLimitError(error):    // 429
       openCircuitBreaker(candidate, cooldown=60s)
@@ -197,7 +196,7 @@ npm run lint && npm run typecheck && npm run test
 **Acceptance criteria:**
 - `npm run db:seed` populates at least 3 providers and 5+ model mappings.
 - Service methods are typed and tested.
-- `getActiveProvidersByModel(slug)` returns providers sorted by balance desc, priority asc.
+- `getActiveProvidersByModel(slug)` returns providers sorted by priority asc, id asc.
 
 **Verification commands:**
 ```bash
@@ -295,7 +294,7 @@ npm run lint && npm run typecheck && npm run test
 ### Milestone 07 — Billing engine + usage logging [x]
 
 **Scope:**
-- Implement `BillingService` that calculates cost and deducts balance.
+- Implement `BillingService` that calculates cost and writes usage logs.
 - Write usage log entries to the database.
 - Handle edge cases: zero-price models, missing usage data.
 
@@ -305,7 +304,7 @@ npm run lint && npm run typecheck && npm run test
 
 **Acceptance criteria:**
 - Cost calculation matches the formula: `(input/1M * inputPrice) + (output/1M * outputPrice)`.
-- Provider balance is correctly decremented.
+- Provider balances remain unchanged by billing.
 - Usage log row is inserted with all fields populated.
 - Billing does not fail silently; errors are logged.
 
@@ -429,9 +428,9 @@ npm run lint && npm run typecheck
 
 **Scope:**
 - Add internal API routes for provider and model management.
-- `GET /admin/providers` — list all providers with balances.
+- `GET /admin/providers` — list all providers (including balances for reference).
 - `POST /admin/providers` — add a new provider.
-- `PATCH /admin/providers/:id` — update provider (balance top-up, toggle active).
+- `PATCH /admin/providers/:id` — update provider (balance value, toggle active).
 - `GET /admin/usage` — query usage logs with filters.
 
 **Key files/modules:**
@@ -517,7 +516,7 @@ npm run dev
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
 | **Streaming relay drops chunks** | Client receives incomplete response | Medium | Buffer validation; test with large streaming responses; integration tests with mock SSE upstream |
-| **Balance race condition** | Over-spending under concurrent requests | Medium | Use atomic `UPDATE ... SET balance = balance - cost` SQL; accept optimistic local tracking as stated non-goal for v1 |
+| **Quota thrash** | Repeated retries against out-of-credit providers | Medium | Open a longer circuit breaker on quota errors and rely on priority-based routing for healthy providers |
 | **Protocol conversion edge cases** | Malformed requests to upstream | High | Extensive unit tests for tool schemas, system prompts, multi-turn conversations; AI SDK handles most heavy lifting |
 | **Circuit breaker false positives** | Healthy provider excluded | Low | Short cooldown (60s default); configurable per-provider; manual override via admin API |
 | **AI SDK version breaking changes** | Build failures | Low | Pin exact dependency versions; test against specific SDK version |
@@ -541,7 +540,7 @@ npm run dev
 - [x] Anthropic-format non-streaming request works
 - [x] Anthropic-format streaming request works
 - [x] Failover works when primary provider returns 402
-- [x] Billing correctly deducts balance
+- [x] Billing records usage cost
 - [x] Usage logs are written
 - [x] Admin routes return correct data
 
@@ -551,6 +550,6 @@ npm run dev
 
 - Use the Vercel AI SDK as the unified upstream interface and convert client requests to a universal parameter shape before calling providers.
 - Relay streaming responses by re-framing `text-delta` parts into OpenAI or Anthropic SSE events, and bill after the usage promise resolves at stream end.
-- Apply circuit breaker cooldowns for rate limits (60s) and upstream 5xx errors (30s), set balance to `0` on quota exhaustion, and deactivate providers on auth failures.
+- Apply circuit breaker cooldowns for rate limits (60s), quota exhaustion (5m), and upstream 5xx errors (30s); deactivate providers on auth failures.
 - Standardize gateway errors as `gateway_error` for both API formats, while unhandled exceptions return `server_error` via the global error handler.
 - Paginate admin usage queries with `limit` and `offset`, return results sorted by newest first, and include filters for provider, model, and date range.
