@@ -8,6 +8,13 @@
       "when": 1772698758225,
       "tag": "0000_odd_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1772793296000,
+      "tag": "0001_remove_models_add_provider_prices",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,8 @@ export const providers = sqliteTable("providers", {
   baseUrl: text("base_url").notNull(),
   apiKey: text("api_key").notNull(),
   balance: real("balance").notNull().default(0),
+  inputPrice: real("input_price"),
+  outputPrice: real("output_price"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   priority: integer("priority").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" })

@@ -1,14 +1,14 @@
 import "../env.js";
 import { getDb, type SqliteDatabase } from "./index";
-import { models, providers } from "./schema";
+import { providers, usageLogs } from "./schema";
 
 async function main() {
   const client = getDb() as SqliteDatabase;
 
-  await client.delete(models);
+  await client.delete(usageLogs);
   await client.delete(providers);
 
-  const insertedProviders = await client
+  await client
     .insert(providers)
     .values([
       {
@@ -17,6 +17,8 @@ async function main() {
         baseUrl: "https://api.openai.com/v1",
         apiKey: "sk-openai-demo",
         balance: 100,
+        inputPrice: 5,
+        outputPrice: 15,
         isActive: true,
         priority: 1,
       },
@@ -26,6 +28,8 @@ async function main() {
         baseUrl: "https://api.anthropic.com",
         apiKey: "sk-anthropic-demo",
         balance: 50,
+        inputPrice: 3,
+        outputPrice: 15,
         isActive: true,
         priority: 2,
       },
@@ -35,51 +39,13 @@ async function main() {
         baseUrl: "https://proxy.example.com/v1",
         apiKey: "sk-proxy-demo",
         balance: 20,
+        inputPrice: 5.5,
+        outputPrice: 16,
         isActive: true,
         priority: 3,
       },
     ])
     .returning({ id: providers.id, name: providers.name });
-
-  const providerMap = new Map(insertedProviders.map((p) => [p.name, p.id]));
-
-  await client.insert(models).values([
-    {
-      providerId: providerMap.get("OpenAI Main")!,
-      slug: "gpt-4o",
-      upstreamName: "gpt-4o",
-      inputPrice: 5,
-      outputPrice: 15,
-    },
-    {
-      providerId: providerMap.get("OpenAI Main")!,
-      slug: "gpt-4o-mini",
-      upstreamName: "gpt-4o-mini",
-      inputPrice: 0.15,
-      outputPrice: 0.6,
-    },
-    {
-      providerId: providerMap.get("Anthropic Backup")!,
-      slug: "claude-sonnet-4-20250514",
-      upstreamName: "claude-sonnet-4-20250514",
-      inputPrice: 3,
-      outputPrice: 15,
-    },
-    {
-      providerId: providerMap.get("Anthropic Backup")!,
-      slug: "claude-haiku-3-20240307",
-      upstreamName: "claude-haiku-3-20240307",
-      inputPrice: 0.25,
-      outputPrice: 1.25,
-    },
-    {
-      providerId: providerMap.get("Third-Party Proxy")!,
-      slug: "gpt-4o",
-      upstreamName: "gpt-4o",
-      inputPrice: 5.5,
-      outputPrice: 16,
-    },
-  ]);
 }
 
 main().catch((error) => {
