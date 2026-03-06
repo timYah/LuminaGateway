@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from "vue";
+import { useI18n } from "vue-i18n";
 
 import { useApiKey } from "../composables/useApiKey";
 import UFormGroup from "./UFormGroup.vue";
 
+const { t } = useI18n();
 const { key, ready, clear } = useApiKey();
 const draft = ref("");
 const error = ref("");
@@ -20,7 +22,7 @@ const hasKey = computed(() => Boolean(key.value && key.value.trim().length > 0))
 const saveKey = () => {
   const value = draft.value.trim();
   if (!value) {
-    error.value = "API key is required.";
+    error.value = t("apiKey.required");
     return;
   }
   error.value = "";
@@ -34,16 +36,16 @@ const saveKey = () => {
       v-if="hasKey"
       class="glass-panel radius-card px-4 py-3 flex items-center justify-between"
     >
-      <div>
+        <div>
         <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-          Session
+          {{ $t("apiKey.session") }}
         </div>
         <div class="text-sm font-medium text-slate-700">
-          API key stored for this browser.
+          {{ $t("apiKey.stored") }}
         </div>
       </div>
       <UButton class="action-press" variant="outline" @click="clear">
-        Clear key
+        {{ $t("apiKey.clear") }}
       </UButton>
     </div>
 
@@ -77,26 +79,25 @@ const saveKey = () => {
         <div class="max-w-[560px] surface radius-panel p-6 md:p-7 space-y-5">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-              Secure Access
+              {{ $t("apiKey.secureAccess") }}
             </div>
             <h1 class="mt-3 text-3xl font-semibold text-slate-900">
-              Connect the gateway
+              {{ $t("apiKey.connect") }}
             </h1>
             <p class="mt-3 text-base text-slate-600 leading-relaxed">
-              Enter the gateway API key to unlock provider and usage management.
-              The key is stored locally in this browser.
+              {{ $t("apiKey.description") }}
             </p>
           </div>
 
           <div class="space-y-3">
             <UFormGroup
-              label="Gateway API key"
-              help="Paste the value of GATEWAY_API_KEY from the backend environment."
+              :label="$t('apiKey.label')"
+              :help="$t('apiKey.help')"
             >
               <UInput
                 v-model="draft"
                 type="password"
-                placeholder="sk-live-..."
+                :placeholder="$t('providers.form.placeholder.apiKey')"
               />
             </UFormGroup>
             <p v-if="error" class="text-sm text-rose-600">
@@ -106,10 +107,10 @@ const saveKey = () => {
 
           <div class="flex items-center justify-between">
             <UButton class="action-press" color="primary" @click="saveKey">
-              Save key
+              {{ $t("apiKey.save") }}
             </UButton>
             <span class="text-xs text-slate-500">
-              Stored in local storage.
+              {{ $t("apiKey.localStorage") }}
             </span>
           </div>
         </div>

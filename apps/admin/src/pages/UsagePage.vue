@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 
 import { gatewayFetch, useGatewayFetch } from "../composables/useGatewayFetch";
 import { useApiKey } from "../composables/useApiKey";
@@ -26,9 +27,10 @@ type UsageResponse = {
   offset: number;
 };
 
+const { t } = useI18n();
 const providers = ref<Provider[]>([]);
 const providerOptions = computed(() => [
-  { label: "All providers", value: "" },
+  { label: t("common.allProviders"), value: "" },
   ...providers.value.map((provider) => ({
     label: provider.name,
     value: provider.id.toString(),
@@ -133,58 +135,80 @@ watch(
       class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
     >
       <div>
-        <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-          Usage
+          <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
+            {{ $t("nav.usage") }}
+          </div>
+          <h1 class="mt-3 text-3xl font-semibold text-slate-900">
+            {{ $t("usage.title") }}
+          </h1>
+          <p class="mt-3 text-base text-slate-600 leading-relaxed max-w-[65ch]">
+            {{ $t("usage.intro") }}
+          </p>
         </div>
-        <h1 class="mt-3 text-3xl font-semibold text-slate-900">
-          Token flow and cost clarity
-        </h1>
-        <p class="mt-3 text-base text-slate-600 leading-relaxed max-w-[65ch]">
-          Filter usage logs by provider, model, or time window to reconcile
-          spend across the gateway.
-        </p>
-      </div>
-      <div class="flex items-center gap-3">
-        <UButton class="action-press" variant="outline" @click="execute">
-          Refresh usage
-        </UButton>
-      </div>
-    </header>
+        <div class="flex items-center gap-3">
+          <UButton class="action-press" variant="outline" @click="execute">
+            {{ $t("usage.refresh") }}
+          </UButton>
+        </div>
+      </header>
 
     <div class="border-b border-slate-200/70"></div>
 
     <div class="surface radius-panel divide-y divide-slate-200/60">
       <div class="px-6 py-5 md:px-8 md:py-6">
-        <div class="text-sm font-medium text-slate-900">Filters</div>
+        <div class="text-sm font-medium text-slate-900">
+          {{ $t("usage.filters") }}
+        </div>
       </div>
       <div class="px-6 py-5 md:px-8 md:py-6">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          <UFormGroup label="Provider" help="Filter by provider ID.">
+          <UFormGroup
+            :label="$t('usage.form.provider')"
+            :help="$t('usage.form.help.provider')"
+          >
             <USelect v-model="filters.providerId" :options="providerOptions" />
           </UFormGroup>
-          <UFormGroup label="Model slug" help="Exact model slug value.">
-            <UInput v-model="filters.modelSlug" placeholder="gpt-4o" />
+          <UFormGroup
+            :label="$t('usage.form.modelSlug')"
+            :help="$t('usage.form.help.modelSlug')"
+          >
+            <UInput
+              v-model="filters.modelSlug"
+              :placeholder="$t('usage.form.placeholder.modelSlug')"
+            />
           </UFormGroup>
-          <UFormGroup label="Start date" help="Inclusive, local time.">
+          <UFormGroup
+            :label="$t('usage.form.startDate')"
+            :help="$t('usage.form.help.startDate')"
+          >
             <UInput v-model="filters.startDate" type="date" />
           </UFormGroup>
-          <UFormGroup label="End date" help="Inclusive, local time.">
+          <UFormGroup
+            :label="$t('usage.form.endDate')"
+            :help="$t('usage.form.help.endDate')"
+          >
             <UInput v-model="filters.endDate" type="date" />
           </UFormGroup>
-          <UFormGroup label="Limit" help="Rows per request.">
+          <UFormGroup
+            :label="$t('usage.form.limit')"
+            :help="$t('usage.form.help.limit')"
+          >
             <UInput v-model="filters.limit" type="number" min="1" step="1" />
           </UFormGroup>
-          <UFormGroup label="Offset" help="Zero-based row offset.">
+          <UFormGroup
+            :label="$t('usage.form.offset')"
+            :help="$t('usage.form.help.offset')"
+          >
             <UInput v-model="filters.offset" type="number" min="0" step="1" />
           </UFormGroup>
         </div>
       </div>
       <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
         <UButton class="action-press" color="primary" @click="applyFilters">
-          Apply filters
+          {{ $t("usage.apply") }}
         </UButton>
         <div class="text-xs text-slate-500">
-          Requests use the current offset and limit values.
+          {{ $t("usage.hint") }}
         </div>
       </div>
     </div>
@@ -192,9 +216,11 @@ watch(
     <div class="surface radius-panel divide-y divide-slate-200/60">
       <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
         <div>
-          <div class="text-sm font-medium text-slate-900">Usage log</div>
+          <div class="text-sm font-medium text-slate-900">
+            {{ $t("usage.log") }}
+          </div>
           <p class="text-sm text-slate-500">
-            Sorted by newest entries first.
+            {{ $t("usage.logHint") }}
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -205,7 +231,7 @@ watch(
             :disabled="!canPrev"
             @click="prevPage"
           >
-            Previous
+            {{ $t("usage.previous") }}
           </UButton>
           <UButton
             class="action-press"
@@ -214,7 +240,7 @@ watch(
             :disabled="!canNext"
             @click="nextPage"
           >
-            Next
+            {{ $t("usage.next") }}
           </UButton>
         </div>
       </div>
@@ -231,10 +257,10 @@ watch(
           class="radius-card border border-rose-200 bg-rose-50 p-4"
         >
           <div class="text-sm font-medium text-rose-700">
-            Usage data failed to load.
+            {{ $t("usage.errorTitle") }}
           </div>
           <p class="text-sm text-rose-600">
-            Verify the API key and filters, then refresh.
+            {{ $t("usage.errorHint") }}
           </p>
         </div>
 
@@ -243,10 +269,10 @@ watch(
           class="radius-card border border-slate-200/60 p-5"
         >
           <div class="text-sm font-medium text-slate-800">
-            No usage records match the current filters.
+            {{ $t("usage.emptyTitle") }}
           </div>
           <p class="text-sm text-slate-500 mt-2">
-            Adjust the filters or check again after new requests.
+            {{ $t("usage.emptyHint") }}
           </p>
         </div>
 
@@ -254,14 +280,26 @@ watch(
           <table class="min-w-[900px] w-full text-sm">
             <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
               <tr class="border-b border-slate-200/60">
-              <th class="py-2.5 text-left font-medium">Time</th>
-              <th class="py-2.5 text-left font-medium">Provider</th>
-              <th class="py-2.5 text-left font-medium">Model</th>
-              <th class="py-2.5 text-left font-medium">Input</th>
-              <th class="py-2.5 text-left font-medium">Output</th>
-              <th class="py-2.5 text-left font-medium">Cost</th>
-            </tr>
-          </thead>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.table.time") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.table.provider") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.table.model") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.table.input") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.table.output") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.table.cost") }}
+                </th>
+              </tr>
+            </thead>
           <tbody>
               <tr
                 v-for="(row, index) in rows"

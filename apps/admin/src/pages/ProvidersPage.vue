@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
 import { gatewayFetch, useGatewayFetch } from "../composables/useGatewayFetch";
 import UFormGroup from "../components/UFormGroup.vue";
@@ -28,12 +29,14 @@ const { data, pending, error, refresh } = useGatewayFetch<ProviderResponse>(
 const providers = computed(() => data.value?.providers ?? []);
 const empty = computed(() => !pending.value && providers.value.length === 0);
 
-const protocolOptions = [
+const { t } = useI18n();
+
+const protocolOptions = computed(() => [
   { label: "OpenAI", value: "openai" },
   { label: "Anthropic", value: "anthropic" },
   { label: "Google", value: "google" },
   { label: "New API", value: "new-api" },
-];
+]);
 
 const createOpen = ref(false);
 const editOpen = ref(false);
@@ -92,7 +95,7 @@ const normalizeNumber = (value: string, fallback = 0) => {
 const submitCreate = async () => {
   formError.value = "";
   if (!createForm.name.trim() || !createForm.baseUrl.trim()) {
-    formError.value = "Name and base URL are required.";
+    formError.value = t("providers.validation.required");
     return;
   }
   working.value = true;
@@ -113,7 +116,7 @@ const submitCreate = async () => {
     resetCreate();
     await refresh();
   } catch (err) {
-    formError.value = "Create failed. Check the inputs and try again.";
+    formError.value = t("providers.error.create");
   } finally {
     working.value = false;
   }
@@ -140,7 +143,7 @@ const submitEdit = async () => {
     editingId.value = null;
     await refresh();
   } catch (err) {
-    formError.value = "Update failed. Check the inputs and try again.";
+    formError.value = t("providers.error.update");
   } finally {
     working.value = false;
   }
@@ -153,36 +156,37 @@ const submitEdit = async () => {
       class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
     >
       <div>
-        <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-          Providers
+          <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
+            {{ $t("nav.providers") }}
+          </div>
+          <h1 class="mt-3 text-3xl font-semibold text-slate-900">
+            {{ $t("providers.title") }}
+          </h1>
+          <p class="mt-3 text-base text-slate-600 leading-relaxed max-w-[65ch]">
+            {{ $t("providers.intro") }}
+          </p>
         </div>
-        <h1 class="mt-3 text-3xl font-semibold text-slate-900">
-          Balance-aware routing control
-        </h1>
-        <p class="mt-3 text-base text-slate-600 leading-relaxed max-w-[65ch]">
-          Review provider health, update balances, and keep routing priorities
-          aligned with your account strategy.
-        </p>
-      </div>
-      <div class="flex items-center gap-3">
-        <UButton class="action-press" color="primary" @click="createOpen = true">
-          Add provider
-        </UButton>
-      </div>
-    </header>
+        <div class="flex items-center gap-3">
+          <UButton class="action-press" color="primary" @click="createOpen = true">
+            {{ $t("providers.add") }}
+          </UButton>
+        </div>
+      </header>
 
     <div class="border-b border-slate-200/70"></div>
 
     <div class="surface radius-panel divide-y divide-slate-200/60">
       <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
         <div>
-          <div class="text-sm font-medium text-slate-900">Provider roster</div>
+          <div class="text-sm font-medium text-slate-900">
+            {{ $t("providers.roster") }}
+          </div>
           <p class="text-sm text-slate-500">
-            Changes apply immediately to routing decisions.
+            {{ $t("providers.rosterHint") }}
           </p>
         </div>
         <UButton class="action-press" variant="outline" @click="refresh">
-          Refresh list
+          {{ $t("providers.refresh") }}
         </UButton>
       </div>
 
@@ -198,10 +202,10 @@ const submitEdit = async () => {
           class="radius-card border border-rose-200 bg-rose-50 p-4"
         >
           <div class="text-sm font-medium text-rose-700">
-            Provider list failed to load.
+            {{ $t("providers.errorTitle") }}
           </div>
           <p class="text-sm text-rose-600">
-            Verify the API key and gateway URL, then refresh.
+            {{ $t("providers.errorHint") }}
           </p>
         </div>
 
@@ -210,10 +214,10 @@ const submitEdit = async () => {
           class="radius-card border border-slate-200/60 p-5"
         >
           <div class="text-sm font-medium text-slate-800">
-            No providers configured yet.
+            {{ $t("providers.emptyTitle") }}
           </div>
           <p class="text-sm text-slate-500 mt-2">
-            Add a provider to start routing traffic through the gateway.
+            {{ $t("providers.emptyHint") }}
           </p>
         </div>
 
@@ -221,14 +225,26 @@ const submitEdit = async () => {
           <table class="min-w-[860px] w-full text-sm">
             <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
               <tr class="border-b border-slate-200/60">
-              <th class="py-2.5 text-left font-medium">Name</th>
-              <th class="py-2.5 text-left font-medium">Protocol</th>
-              <th class="py-2.5 text-left font-medium">Balance</th>
-              <th class="py-2.5 text-left font-medium">Priority</th>
-              <th class="py-2.5 text-left font-medium">Status</th>
-              <th class="py-2.5 text-left font-medium">Actions</th>
-            </tr>
-          </thead>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.table.name") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.table.protocol") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.table.balance") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.table.priority") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.table.status") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.table.actions") }}
+                </th>
+              </tr>
+            </thead>
           <tbody>
               <tr
                 v-for="(provider, index) in providers"
@@ -262,7 +278,11 @@ const submitEdit = async () => {
                         : 'bg-slate-200 text-slate-600'
                     "
                   >
-                    {{ provider.isActive ? "Active" : "Paused" }}
+                    {{
+                      provider.isActive
+                        ? $t("providers.status.active")
+                        : $t("providers.status.paused")
+                    }}
                   </span>
                 </td>
                 <td class="py-3">
@@ -272,7 +292,7 @@ const submitEdit = async () => {
                     variant="outline"
                     @click="openEdit(provider)"
                   >
-                    Edit
+                    {{ $t("providers.action.edit") }}
                   </UButton>
                 </td>
               </tr>
@@ -287,36 +307,67 @@ const submitEdit = async () => {
         <div class="surface radius-panel p-6 md:p-7 space-y-5">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-              New provider
+              {{ $t("providers.create.title") }}
             </div>
             <div class="mt-2 text-2xl font-semibold text-slate-900">
-              Add a routing target
+              {{ $t("providers.create.subtitle") }}
             </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            <UFormGroup label="Name" help="Short label used in the routing list.">
-              <UInput v-model="createForm.name" placeholder="Lumen Arc" />
-            </UFormGroup>
-            <UFormGroup label="Protocol" help="Provider API dialect.">
-              <USelect v-model="createForm.protocol" :options="protocolOptions" />
+            <UFormGroup
+              :label="$t('providers.form.name')"
+              :help="$t('providers.form.help.name')"
+            >
+              <UInput
+                v-model="createForm.name"
+                :placeholder="$t('providers.form.placeholder.name')"
+              />
             </UFormGroup>
             <UFormGroup
-              label="Base URL"
-              help="Root URL for the provider endpoint (OpenAI-compatible providers like new-api use https://host/v1)."
+              :label="$t('providers.form.protocol')"
+              :help="$t('providers.form.help.protocol')"
             >
-              <UInput v-model="createForm.baseUrl" placeholder="https://api.example.com" />
+              <USelect
+                v-model="createForm.protocol"
+                :options="protocolOptions"
+              />
             </UFormGroup>
-            <UFormGroup label="API key" help="Stored for upstream authentication.">
-              <UInput v-model="createForm.apiKey" type="password" placeholder="sk-live-..." />
+            <UFormGroup
+              :label="$t('providers.form.baseUrl')"
+              :help="$t('providers.form.help.baseUrl')"
+            >
+              <UInput
+                v-model="createForm.baseUrl"
+                :placeholder="$t('providers.form.placeholder.baseUrl')"
+              />
             </UFormGroup>
-            <UFormGroup label="Balance" help="Initial balance in USD.">
+            <UFormGroup
+              :label="$t('providers.form.apiKey')"
+              :help="$t('providers.form.help.apiKey')"
+            >
+              <UInput
+                v-model="createForm.apiKey"
+                type="password"
+                :placeholder="$t('providers.form.placeholder.apiKey')"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.form.balance')"
+              :help="$t('providers.form.help.balanceCreate')"
+            >
               <UInput v-model="createForm.balance" type="number" min="0" step="0.01" />
             </UFormGroup>
-            <UFormGroup label="Priority" help="Lower values take precedence.">
+            <UFormGroup
+              :label="$t('providers.form.priority')"
+              :help="$t('providers.form.help.priority')"
+            >
               <UInput v-model="createForm.priority" type="number" min="1" step="1" />
             </UFormGroup>
-            <UFormGroup label="Active" help="Active providers are eligible for routing.">
+            <UFormGroup
+              :label="$t('providers.form.active')"
+              :help="$t('providers.form.help.active')"
+            >
               <USwitch v-model="createForm.isActive" />
             </UFormGroup>
           </div>
@@ -327,7 +378,7 @@ const submitEdit = async () => {
 
           <div class="flex items-center justify-between">
             <UButton class="action-press" variant="outline" @click="createOpen = false">
-              Cancel
+              {{ $t("providers.cancel") }}
             </UButton>
             <UButton
               class="action-press"
@@ -335,7 +386,7 @@ const submitEdit = async () => {
               :loading="working"
               @click="submitCreate"
             >
-              Create provider
+              {{ $t("providers.create.submit") }}
             </UButton>
           </div>
         </div>
@@ -347,36 +398,64 @@ const submitEdit = async () => {
         <div class="surface radius-panel p-6 md:p-7 space-y-5">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-              Provider update
+              {{ $t("providers.edit.title") }}
             </div>
             <div class="mt-2 text-2xl font-semibold text-slate-900">
-              Adjust routing inputs
+              {{ $t("providers.edit.subtitle") }}
             </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            <UFormGroup label="Name" help="Short label used in the routing list.">
-              <UInput v-model="editForm.name" placeholder="Lumen Arc" />
+            <UFormGroup
+              :label="$t('providers.form.name')"
+              :help="$t('providers.form.help.name')"
+            >
+              <UInput
+                v-model="editForm.name"
+                :placeholder="$t('providers.form.placeholder.name')"
+              />
             </UFormGroup>
-            <UFormGroup label="Protocol" help="Provider API dialect.">
+            <UFormGroup
+              :label="$t('providers.form.protocol')"
+              :help="$t('providers.form.help.protocol')"
+            >
               <USelect v-model="editForm.protocol" :options="protocolOptions" />
             </UFormGroup>
             <UFormGroup
-              label="Base URL"
-              help="Root URL for the provider endpoint (OpenAI-compatible providers like new-api use https://host/v1)."
+              :label="$t('providers.form.baseUrl')"
+              :help="$t('providers.form.help.baseUrl')"
             >
-              <UInput v-model="editForm.baseUrl" placeholder="https://api.example.com" />
+              <UInput
+                v-model="editForm.baseUrl"
+                :placeholder="$t('providers.form.placeholder.baseUrl')"
+              />
             </UFormGroup>
-            <UFormGroup label="API key" help="Stored for upstream authentication.">
-              <UInput v-model="editForm.apiKey" type="password" placeholder="sk-live-..." />
+            <UFormGroup
+              :label="$t('providers.form.apiKey')"
+              :help="$t('providers.form.help.apiKey')"
+            >
+              <UInput
+                v-model="editForm.apiKey"
+                type="password"
+                :placeholder="$t('providers.form.placeholder.apiKey')"
+              />
             </UFormGroup>
-            <UFormGroup label="Balance" help="Current balance in USD.">
+            <UFormGroup
+              :label="$t('providers.form.balance')"
+              :help="$t('providers.form.help.balanceEdit')"
+            >
               <UInput v-model="editForm.balance" type="number" min="0" step="0.01" />
             </UFormGroup>
-            <UFormGroup label="Priority" help="Lower values take precedence.">
+            <UFormGroup
+              :label="$t('providers.form.priority')"
+              :help="$t('providers.form.help.priority')"
+            >
               <UInput v-model="editForm.priority" type="number" min="1" step="1" />
             </UFormGroup>
-            <UFormGroup label="Active" help="Active providers are eligible for routing.">
+            <UFormGroup
+              :label="$t('providers.form.active')"
+              :help="$t('providers.form.help.active')"
+            >
               <USwitch v-model="editForm.isActive" />
             </UFormGroup>
           </div>
@@ -387,7 +466,7 @@ const submitEdit = async () => {
 
           <div class="flex items-center justify-between">
             <UButton class="action-press" variant="outline" @click="editOpen = false">
-              Cancel
+              {{ $t("providers.cancel") }}
             </UButton>
             <UButton
               class="action-press"
@@ -395,7 +474,7 @@ const submitEdit = async () => {
               :loading="working"
               @click="submitEdit"
             >
-              Save changes
+              {{ $t("providers.edit.submit") }}
             </UButton>
           </div>
         </div>

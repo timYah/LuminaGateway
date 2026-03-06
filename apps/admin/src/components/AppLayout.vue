@@ -5,13 +5,13 @@
         <aside class="space-y-6">
           <div class="glass-panel radius-panel p-4 subtle-ring">
             <div class="text-xs uppercase tracking-[0.32em] text-slate-500">
-              Lumina Gateway
+              {{ $t("app.brand") }}
             </div>
             <div class="mt-3 text-2xl font-semibold text-slate-900">
-              Admin Console
+              {{ $t("app.console") }}
             </div>
             <p class="mt-2 text-sm text-slate-600 leading-relaxed">
-              Manage providers, balances, and usage activity with a single view.
+              {{ $t("app.tagline") }}
             </p>
           </div>
           <nav class="space-y-1">
@@ -20,14 +20,14 @@
               class="block radius-card px-3.5 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-white/70 hover:text-slate-900 action-press"
               active-class="bg-white text-slate-900 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.4)]"
             >
-              Providers
+              {{ $t("nav.providers") }}
             </RouterLink>
             <RouterLink
               to="/usage"
               class="block radius-card px-3.5 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-white/70 hover:text-slate-900 action-press"
               active-class="bg-white text-slate-900 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.4)]"
             >
-              Usage
+              {{ $t("nav.usage") }}
             </RouterLink>
           </nav>
         </aside>
