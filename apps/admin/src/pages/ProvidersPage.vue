@@ -60,7 +60,7 @@ const createForm = reactive({
   protocol: "openai" as Provider["protocol"],
   baseUrl: "",
   apiKey: "",
-  balance: "0",
+  balance: "",
   inputPrice: "",
   outputPrice: "",
   isActive: true,
@@ -72,7 +72,7 @@ const editForm = reactive({
   protocol: "openai" as Provider["protocol"],
   baseUrl: "",
   apiKey: "",
-  balance: "0",
+  balance: "",
   inputPrice: "",
   outputPrice: "",
   isActive: true,
@@ -84,7 +84,7 @@ const resetCreate = () => {
   createForm.protocol = "openai";
   createForm.baseUrl = "";
   createForm.apiKey = "";
-  createForm.balance = "0";
+  createForm.balance = "";
   createForm.inputPrice = "";
   createForm.outputPrice = "";
   createForm.isActive = true;
@@ -97,7 +97,9 @@ const openEdit = (provider: Provider) => {
   editForm.protocol = provider.protocol;
   editForm.baseUrl = provider.baseUrl;
   editForm.apiKey = provider.apiKey;
-  editForm.balance = provider.balance.toString();
+  editForm.balance = Number.isFinite(provider.balance)
+    ? provider.balance.toString()
+    : "";
   editForm.inputPrice =
     provider.inputPrice !== null && provider.inputPrice !== undefined
       ? provider.inputPrice.toString()
@@ -130,6 +132,12 @@ const normalizeNumber = (value: string, fallback = 0) => {
 };
 
 const normalizeOptionalNumber = (value: string) => {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const normalizeNullableNumber = (value: string) => {
   if (!value.trim()) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -150,9 +158,9 @@ const submitCreate = async () => {
         protocol: createForm.protocol,
         baseUrl: createForm.baseUrl.trim(),
         apiKey: createForm.apiKey.trim(),
-        balance: normalizeNumber(createForm.balance, 0),
-        inputPrice: normalizeOptionalNumber(createForm.inputPrice),
-        outputPrice: normalizeOptionalNumber(createForm.outputPrice),
+        balance: normalizeOptionalNumber(createForm.balance),
+        inputPrice: normalizeNullableNumber(createForm.inputPrice),
+        outputPrice: normalizeNullableNumber(createForm.outputPrice),
         isActive: createForm.isActive,
         priority: normalizeNumber(createForm.priority, 1),
       },
@@ -179,9 +187,9 @@ const submitEdit = async () => {
         protocol: editForm.protocol,
         baseUrl: editForm.baseUrl.trim(),
         apiKey: editForm.apiKey.trim(),
-        balance: normalizeNumber(editForm.balance, 0),
-        inputPrice: normalizeOptionalNumber(editForm.inputPrice),
-        outputPrice: normalizeOptionalNumber(editForm.outputPrice),
+        balance: normalizeOptionalNumber(editForm.balance),
+        inputPrice: normalizeNullableNumber(editForm.inputPrice),
+        outputPrice: normalizeNullableNumber(editForm.outputPrice),
         isActive: editForm.isActive,
         priority: normalizeNumber(editForm.priority, 1),
       },
