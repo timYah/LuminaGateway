@@ -32,6 +32,8 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 | `DATABASE_URL` | `file:./lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
 | `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
 | `PORT` | `3000` | Server listen port. |
+| `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
+| `DEFAULT_OUTPUT_PRICE` | *(optional)* | Global output price fallback (USD per 1M tokens). |
 | `LOG_LEVEL` | `info` | Logging threshold: `debug`, `info`, `warn`, `error`. |
 
 ## Verification commands
@@ -88,19 +90,20 @@ Content-Type: application/json
   "messages": [{"role": "user", "content": "Hello"}],
   "system": "You are a helpful assistant.",
   "stream": false,
+  "temperature": 0.7,
   "max_tokens": 1000,
   "tools": []
 }
 ```
 
-Supported fields match the Anthropic subset used by the validators: `model`, `messages`, `system`, `stream`, `max_tokens`, and `tools`.
+Supported fields match the Anthropic subset used by the validators: `model`, `messages`, `system`, `stream`, `temperature`, `max_tokens`, and `tools`.
 
 ### Streaming responses
 
 OpenAI streaming returns `text/event-stream` with chat completion chunks followed by `[DONE]`.
 
 ```text [SSE]
-data: {"id":"chatcmpl_...","object":"chat.completion.chunk","created":...,"model":"unknown","choices":[{"index":0,"delta":{"role":"assistant","content":"Hi"},"finish_reason":null}]}
+data: {"id":"chatcmpl_...","object":"chat.completion.chunk","created":...,"model":"gpt-4o","choices":[{"index":0,"delta":{"role":"assistant","content":"Hi"},"finish_reason":null}]}
 data: [DONE]
 ```
 
@@ -119,11 +122,14 @@ data: {"type":"message_stop"}
 GET    /admin/providers          — list all providers
 POST   /admin/providers          — create a provider
 PATCH  /admin/providers/:id      — update provider fields
-DELETE /admin/providers/:id      — delete provider (also removes model mappings and usage logs)
+POST   /admin/providers/:id/test — test provider connectivity
+DELETE /admin/providers/:id      — delete provider (also removes usage logs)
 GET    /admin/usage              — query usage logs
 ```
 
-`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, and optional `balance`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. `balance` is informational only and does not affect routing.
+`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, and optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
+
+`POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug.
 
 For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 
@@ -160,9 +166,9 @@ Set `VITE_API_BASE_URL` before starting the dashboard to target a different gate
 
 ## Provider selection and failover
 
-The gateway loads all providers that match the requested model slug and are active. It sorts by `priority` ascending (lower is preferred), then by `id` for deterministic tie-breaking, and skips providers that are currently circuit-broken. Balances are informational only and do not affect routing.
+The gateway loads all active providers and sorts by `priority` ascending (lower is preferred), then by `id` for deterministic tie-breaking. It skips providers that are currently circuit-broken and forwards the requested model slug directly to the upstream provider.
 
-On upstream failures, the gateway reacts to the classified error type. Quota exhaustion opens a 5-minute circuit breaker, rate limits open a 60-second circuit breaker, and 5xx server errors open a 30-second circuit breaker before retrying the next provider. Authentication errors deactivate the provider immediately, while unknown errors return a `500` without failover.
+On upstream failures, the gateway reacts to the classified error type. Quota exhaustion opens a 5-minute circuit breaker, rate limits open a 60-second circuit breaker, and 5xx server errors open a 30-second circuit breaker before retrying the next provider. Authentication errors deactivate the provider immediately, model-not-found errors skip to the next provider, and unknown errors return a `500` without failover.
 
 ## Billing and usage
 
@@ -173,6 +179,8 @@ inputCost  = (promptTokens / 1,000,000) × inputPrice
 outputCost = (completionTokens / 1,000,000) × outputPrice
 totalCost  = inputCost + outputCost
 ```
+
+Pricing resolves per provider. If `inputPrice` or `outputPrice` is missing, the gateway falls back to `DEFAULT_INPUT_PRICE` and `DEFAULT_OUTPUT_PRICE`. If both are unset, the cost is recorded as `0`.
 
 Streaming requests bill after the stream finishes and usage is resolved. Non-streaming requests bill immediately after the provider response completes. Billing records the computed cost in `usageLogs` without deducting provider balances.
 

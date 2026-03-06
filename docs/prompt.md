@@ -41,7 +41,7 @@ A repo that contains:
 
 - A working Hono API server implementing the features below
 - Database schema + migrations (Drizzle)
-- Seed script to populate demo providers and models
+- Seed script to populate demo providers
 - Scripts: `dev`, `build`, `test`, `lint`, `typecheck`, `db:migrate`, `db:seed`
 - A `docs/plans.md` file capturing the full implementation plan
 
@@ -53,20 +53,19 @@ A repo that contains:
   - Accepts standard OpenAI request body (`model`, `messages`, `stream`, `temperature`, `max_tokens`, `tools`, `tool_choice`)
   - Returns OpenAI-format response (non-streaming JSON or SSE stream)
 - `POST /v1/messages` — Anthropic-compatible endpoint
-  - Accepts standard Anthropic request body (`model`, `messages`, `system`, `stream`, `max_tokens`, `tools`)
+  - Accepts standard Anthropic request body (`model`, `messages`, `system`, `stream`, `temperature`, `max_tokens`, `tools`)
   - Returns Anthropic-format response (non-streaming JSON or SSE stream)
-- Both endpoints resolve the requested `model` slug to an upstream provider + upstream model name via the `models` table.
+- Both endpoints forward the requested `model` slug directly to the selected upstream provider.
 
 ### B) Provider management (database-driven)
 
-- Providers table: `id`, `name`, `protocol` (openai | anthropic | google), `baseUrl`, `apiKey`, `balance`, `isActive`, `priority`, `createdAt`, `updatedAt`
-- Models table: `id`, `providerId` (FK), `slug`, `upstreamName`, `inputPrice` (per 1M tokens), `outputPrice` (per 1M tokens)
+- Providers table: `id`, `name`, `protocol` (openai | anthropic | google), `baseUrl`, `apiKey`, `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`, `createdAt`, `updatedAt`
 - Usage logs table: `id`, `providerId`, `modelSlug`, `inputTokens`, `outputTokens`, `cost`, `statusCode`, `latencyMs`, `createdAt`
 - Admin CRUD via internal routes or seed script (no public admin API in v1).
 
 ### C) Smart routing — "The Switch"
 
-- **Priority routing (default)**: among active providers that serve the requested model, pick the one with the lowest `priority` (then `id` as tiebreaker).
+- **Priority routing (default)**: among active providers, pick the one with the lowest `priority` (then `id` as tiebreaker).
 - **Health-aware fallback**: if the chosen provider returns `402`, `429`, `401`, or `5xx`:
   - Mark it temporarily unhealthy (circuit breaker; defaults: quota 5m, rate limit 60s, server 30s).
   - Immediately retry with the next candidate — no error returned to client unless all candidates exhausted.
@@ -76,6 +75,7 @@ A repo that contains:
 
 - After each successful completion, use Vercel AI SDK's `usage` object (`promptTokens`, `completionTokens`) to calculate cost.
 - Cost formula: `(inputTokens / 1_000_000) * inputPrice + (outputTokens / 1_000_000) * outputPrice`
+- Resolve `inputPrice` and `outputPrice` from the provider first, then fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE`, otherwise record `0`.
 - Insert a row into the `usageLogs` table for auditing.
 - Provider balances are not deducted; they remain informational.
 - For streaming responses, billing happens in the `onFinish` callback after the stream completes.
@@ -94,6 +94,8 @@ A repo that contains:
 DATABASE_TYPE=sqlite          # sqlite | postgres
 DATABASE_URL=file:./lumina.db # or postgres://...
 GATEWAY_API_KEY=sk-lumina-xxx # bearer token for gateway auth
+DEFAULT_INPUT_PRICE=0.0       # optional, USD per 1M input tokens
+DEFAULT_OUTPUT_PRICE=0.0      # optional, USD per 1M output tokens
 PORT=3000
 LOG_LEVEL=info                # debug | info | warn | error
 ```
@@ -101,7 +103,7 @@ LOG_LEVEL=info                # debug | info | warn | error
 ### G) Quality and engineering
 
 - Strong TypeScript types for:
-  - Provider and model entities
+- Provider entities and usage logs
   - Request/response schemas (OpenAI format, Anthropic format)
   - Router decision types
   - Billing calculation types

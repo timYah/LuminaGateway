@@ -25,7 +25,7 @@ Client Request
 [Format Detection]  ── determine if request is OpenAI or Anthropic format
     │
     ▼
-[Model Resolution]  ── look up `slug` in models table → find candidate providers
+[Provider Load]    ── load active providers (priority ordered)
     │
     ▼
 [Provider Router]   ── select provider by priority (asc) → id (asc)
@@ -49,10 +49,8 @@ Client Request
 ### Provider selection algorithm
 
 ```
-function selectProvider(modelSlug):
-  candidates = db.models
-    .where(slug = modelSlug)
-    .join(providers)
+function selectProvider():
+  candidates = db.providers
     .where(isActive = true AND NOT circuitBroken)
     .orderBy(priority ASC, id ASC)
 
@@ -72,8 +70,8 @@ Vercel AI SDK abstracts most differences. The gateway handles:
 
 ```
 onFinish(result):
-  inputCost  = (result.usage.promptTokens / 1_000_000) * model.inputPrice
-  outputCost = (result.usage.completionTokens / 1_000_000) * model.outputPrice
+  inputCost  = (result.usage.promptTokens / 1_000_000) * resolveInputPrice(provider)
+  outputCost = (result.usage.completionTokens / 1_000_000) * resolveOutputPrice(provider)
   totalCost  = inputCost + outputCost
 
   INSERT INTO usageLogs (providerId, modelSlug, inputTokens, outputTokens, cost, ...)
@@ -82,9 +80,8 @@ onFinish(result):
 ### Database schema relationships
 
 ```
-providers (1) ──< models (N)        // one provider has many model mappings
 providers (1) ──< usageLogs (N)     // one provider has many usage records
-models.slug ← request.model        // client references model by slug
+usageLogs.modelSlug ← request.model // client references model by slug
 ```
 
 ### Error handling and fallback flow
@@ -104,6 +101,8 @@ for each candidate in sortedProviders:
       continue
     if isAuthError(error):         // 401
       deactivateProvider(candidate)
+      continue
+    if isModelNotFound(error):     // 400/404
       continue
     if isServerError(error):       // 5xx
       openCircuitBreaker(candidate, cooldown=30s)
@@ -153,14 +152,13 @@ curl http://localhost:3000/health
 ### Milestone 02 — Database schema + migrations [x]
 
 **Scope:**
-- Define Drizzle schema for `providers`, `models`, `usageLogs` tables (SQLite).
+- Define Drizzle schema for `providers` and `usageLogs` tables (SQLite).
 - Define Drizzle schema for PostgreSQL variant.
 - Implement database factory (`getDb()`) that switches by `DATABASE_TYPE`.
 - Create and run initial migration.
 
 **Key files/modules:**
 - `src/db/schema/providers.ts`
-- `src/db/schema/models.ts`
 - `src/db/schema/usageLogs.ts`
 - `src/db/index.ts` (factory)
 - `src/db/migrate.ts`
@@ -169,8 +167,8 @@ curl http://localhost:3000/health
 **Acceptance criteria:**
 - `npm run db:migrate` creates the database file and tables.
 - Schema supports both SQLite and PostgreSQL.
-- Foreign key from `models.providerId` → `providers.id` exists.
-- Indexes on `models.slug` and `usageLogs.createdAt`.
+- Providers include `inputPrice` and `outputPrice` for pricing.
+- Indexes on `usageLogs.createdAt`.
 
 **Verification commands:**
 ```bash
@@ -183,9 +181,9 @@ npm run lint && npm run typecheck && npm run test
 ### Milestone 03 — Seed script + provider CRUD service [x]
 
 **Scope:**
-- Create seed script that populates demo providers and models.
+- Create seed script that populates demo providers.
 - Implement `ProviderService` with CRUD operations.
-- Implement `ModelService` for model lookups.
+- Implement `ModelService` for provider candidate lookup.
 
 **Key files/modules:**
 - `src/db/seed.ts`
@@ -194,7 +192,7 @@ npm run lint && npm run typecheck && npm run test
 - `src/services/__tests__/providerService.test.ts`
 
 **Acceptance criteria:**
-- `npm run db:seed` populates at least 3 providers and 5+ model mappings.
+- `npm run db:seed` populates at least 3 providers.
 - Service methods are typed and tested.
 - `getActiveProvidersByModel(slug)` returns providers sorted by priority asc, id asc.
 
@@ -240,7 +238,7 @@ npm run lint && npm run typecheck && npm run test
 ### Milestone 05 — Provider router + circuit breaker [x]
 
 **Scope:**
-- Implement `RouterService` that selects the best provider for a given model slug.
+- Implement `RouterService` that selects the best provider for a request (model slug is passed through).
 - Implement in-memory circuit breaker with configurable cooldown.
 - Ensure selection is deterministic.
 
@@ -296,7 +294,7 @@ npm run lint && npm run typecheck && npm run test
 **Scope:**
 - Implement `BillingService` that calculates cost and writes usage logs.
 - Write usage log entries to the database.
-- Handle edge cases: zero-price models, missing usage data.
+- Handle edge cases: zero-price providers, missing usage data.
 
 **Key files/modules:**
 - `src/services/billingService.ts`
@@ -401,7 +399,7 @@ npm run lint && npm run typecheck && npm run test
 ### Milestone 11 — Logging, error handling, and observability [x]
 
 **Scope:**
-- Add structured logging (request ID, provider, model, latency, status).
+- Add structured logging (request ID, provider, model slug, latency, status).
 - Standardize error responses across both API formats.
 - Add request timing and latency tracking in usage logs.
 
@@ -427,7 +425,7 @@ npm run lint && npm run typecheck
 ### Milestone 12 — Admin / management routes [x]
 
 **Scope:**
-- Add internal API routes for provider and model management.
+- Add internal API routes for provider management.
 - `GET /admin/providers` — list all providers (including balances for reference).
 - `POST /admin/providers` — add a new provider.
 - `PATCH /admin/providers/:id` — update provider (balance value, toggle active).
@@ -440,7 +438,7 @@ npm run lint && npm run typecheck
 **Acceptance criteria:**
 - Admin routes are protected by the same `GATEWAY_API_KEY`.
 - CRUD operations work correctly.
-- Usage logs can be filtered by provider, model, and date range.
+- Usage logs can be filtered by provider, model slug, and date range.
 
 **Verification commands:**
 ```bash
@@ -552,4 +550,4 @@ npm run dev
 - Relay streaming responses by re-framing `text-delta` parts into OpenAI or Anthropic SSE events, and bill after the usage promise resolves at stream end.
 - Apply circuit breaker cooldowns for rate limits (60s), quota exhaustion (5m), and upstream 5xx errors (30s); deactivate providers on auth failures.
 - Standardize gateway errors as `gateway_error` for both API formats, while unhandled exceptions return `server_error` via the global error handler.
-- Paginate admin usage queries with `limit` and `offset`, return results sorted by newest first, and include filters for provider, model, and date range.
+- Paginate admin usage queries with `limit` and `offset`, return results sorted by newest first, and include filters for provider, model slug, and date range.
