@@ -430,7 +430,7 @@
 ## Phase 46 — Admin 表单宽度调整
 
 - [x] **T-46.1** 调整新增提供商协议选择宽度，使其与 API Key 输入一致
-- [ ] **T-46.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+- [x] **T-46.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
 ---
 
