@@ -411,6 +411,14 @@
 
 ---
 
+## Phase 44 — Admin i18n
+
+- [x] **T-44.1** 引入 i18n：集成 vue-i18n，默认英文
+- [ ] **T-44.2** 文案国际化：覆盖 Admin UI 文案与表单提示
+- [ ] **T-44.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+
+---
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -453,4 +461,5 @@
 | Phase 36 | 4 | 文档+最终验证 |
 | Phase 42 | 2 | 环境变量自动加载 |
 | Phase 43 | 3 | New API Provider 支持 |
-| **合计** | **157** | |
+| Phase 44 | 3 | Admin i18n |
+| **合计** | **160** | |

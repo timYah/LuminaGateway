@@ -3,15 +3,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nuxt dev --port 3001",
-    "build": "nuxt build",
-    "preview": "nuxt preview",
-    "prepare": "nuxt prepare"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.2.7",
     "@fontsource/geist-sans": "^5.2.5",
     "@nuxt/ui": "^4.5.1",
-    "nuxt": "^4.3.1"
+    "vue": "^3.5.29",
+    "vue-i18n": "^11.2.8",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
   }
 }
