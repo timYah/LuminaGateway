@@ -65,7 +65,7 @@ watch(
             <div class="text-xs uppercase tracking-[0.32em] text-slate-500">
               {{ $t("app.language") }}
             </div>
-            <USelect v-model="locale" :options="localeOptions" />
+            <USelect v-model="locale" :items="localeOptions" />
           </div>
         </aside>
 

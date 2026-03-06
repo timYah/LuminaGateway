@@ -166,7 +166,7 @@ watch(
             :label="$t('usage.form.provider')"
             :help="$t('usage.form.help.provider')"
           >
-            <USelect v-model="filters.providerId" :options="providerOptions" />
+            <USelect v-model="filters.providerId" :items="providerOptions" />
           </UFormGroup>
           <UFormGroup
             :label="$t('usage.form.modelSlug')"
