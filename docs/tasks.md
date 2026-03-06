@@ -444,7 +444,7 @@
 ## Phase 48 — Network Failover Logging
 
 - [x] **T-48.1** 将网络错误归类为 server 并输出 failover 日志
-- [ ] **T-48.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+- [x] **T-48.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
 ---
 
