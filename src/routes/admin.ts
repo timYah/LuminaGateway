@@ -1,19 +1,19 @@
 import { Hono } from "hono";
 import { and, eq, gte, lte, desc } from "drizzle-orm";
 import { z } from "zod";
-import { getDb, type SqliteDatabase } from "../db";
+import { getSqliteClient } from "../db";
 import { usageLogs } from "../db/schema";
 import {
   createProvider,
   deleteProvider,
   getAllProviders,
+  getProviderById,
   updateProvider,
 } from "../services/providerService";
 import {
-  createModelMapping,
-  getAllModelMappings,
-  updateModelMapping,
-} from "../services/modelService";
+  callUpstreamNonStreaming,
+  classifyUpstreamError,
+} from "../services/upstreamService";
 
 const providerSchema = z.object({
   name: z.string().min(1),
@@ -21,48 +21,19 @@ const providerSchema = z.object({
   baseUrl: z.string().min(1),
   apiKey: z.string().min(1),
   balance: z.number().optional(),
+  inputPrice: z.number().nullable().optional(),
+  outputPrice: z.number().nullable().optional(),
   isActive: z.boolean().optional(),
   priority: z.number().int().optional(),
 });
 
-const modelSchema = z.object({
-  providerId: z.number().int(),
-  slug: z.string().min(1),
-  upstreamName: z.string().min(1),
-  inputPrice: z.number().optional(),
-  outputPrice: z.number().optional(),
-});
-
-const modelUpdateSchema = modelSchema.partial();
-
-function getClient() {
-  return getDb() as SqliteDatabase;
-}
+const providerUpdateSchema = providerSchema.partial();
 
 export const adminRoutes = new Hono();
 
 adminRoutes.get("/admin/providers", async (c) => {
   const providers = await getAllProviders();
   return c.json({ providers });
-});
-
-adminRoutes.get("/admin/models", async (c) => {
-  const { providerId, slug } = c.req.query();
-  const filters: { providerId?: number; slug?: string } = {};
-
-  if (providerId) {
-    const parsed = Number(providerId);
-    if (Number.isFinite(parsed)) {
-      filters.providerId = parsed;
-    }
-  }
-
-  if (slug && slug.trim()) {
-    filters.slug = slug.trim();
-  }
-
-  const models = await getAllModelMappings(filters);
-  return c.json({ models });
 });
 
 adminRoutes.post("/admin/providers", async (c) => {
@@ -75,20 +46,14 @@ adminRoutes.post("/admin/providers", async (c) => {
   return c.json({ provider }, 201);
 });
 
-adminRoutes.post("/admin/models", async (c) => {
-  const body = await c.req.json();
-  const parsed = modelSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: { message: "Invalid request" } }, 400);
-  }
-  const model = await createModelMapping(parsed.data);
-  return c.json({ model }, 201);
-});
-
 adminRoutes.patch("/admin/providers/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const body = await c.req.json();
-  const provider = await updateProvider(id, body);
+  const parsed = providerUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: { message: "Invalid request" } }, 400);
+  }
+  const provider = await updateProvider(id, parsed.data);
   if (!provider) {
     return c.json({ error: { message: "Provider not found" } }, 404);
   }
@@ -104,22 +69,33 @@ adminRoutes.delete("/admin/providers/:id", async (c) => {
   return c.json({ provider });
 });
 
-adminRoutes.patch("/admin/models/:id", async (c) => {
+adminRoutes.post("/admin/providers/:id/test", async (c) => {
   const id = Number(c.req.param("id"));
-  const body = await c.req.json();
-  const parsed = modelUpdateSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: { message: "Invalid request" } }, 400);
+  const provider = await getProviderById(id);
+  if (!provider) {
+    return c.json({ error: { message: "Provider not found" } }, 404);
   }
-  const model = await updateModelMapping(id, parsed.data);
-  if (!model) {
-    return c.json({ error: { message: "Model mapping not found" } }, 404);
+
+  const modelSlug = c.req.query("model")?.trim() || "gpt-4o";
+  const start = Date.now();
+  try {
+    await callUpstreamNonStreaming(provider, modelSlug, {
+      messages: [{ role: "user", content: "hi" }],
+      maxOutputTokens: 1,
+    });
+    return c.json({ ok: true, latencyMs: Date.now() - start, model: modelSlug });
+  } catch (err) {
+    const errorType = classifyUpstreamError(err);
+    return c.json({
+      ok: false,
+      errorType,
+      message: err instanceof Error ? err.message : "Unknown error",
+    });
   }
-  return c.json({ model });
 });
 
 adminRoutes.get("/admin/usage", async (c) => {
-  const db = getClient();
+  const db = getSqliteClient();
   const { providerId, modelSlug, startDate, endDate } = c.req.query();
   const limit = Number(c.req.query("limit") ?? 50);
   const offset = Number(c.req.query("offset") ?? 0);
