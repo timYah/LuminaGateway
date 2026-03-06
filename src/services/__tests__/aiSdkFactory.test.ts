@@ -17,6 +17,8 @@ describe("createAIProvider", () => {
       baseUrl: "https://newapi.example.com/v1",
       apiKey: "sk-newapi",
       balance: 1,
+      inputPrice: null,
+      outputPrice: null,
       isActive: true,
       priority: 1,
       createdAt: new Date(),

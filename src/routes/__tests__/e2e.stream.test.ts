@@ -31,6 +31,8 @@ const provider = {
   baseUrl: "https://example.com",
   apiKey: "sk-test",
   balance: 10,
+  inputPrice: null,
+  outputPrice: null,
   isActive: true,
   priority: 1,
   createdAt: new Date(),

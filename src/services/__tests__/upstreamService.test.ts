@@ -34,20 +34,15 @@ const baseProvider = {
   baseUrl: "https://example.com",
   apiKey: "sk-test",
   balance: 10,
+  inputPrice: null,
+  outputPrice: null,
   isActive: true,
   priority: 1,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
 
-const baseModel = {
-  id: 1,
-  providerId: 1,
-  slug: "gpt-4o",
-  upstreamName: "gpt-4o",
-  inputPrice: 1,
-  outputPrice: 2,
-};
+const modelSlug = "gpt-4o";
 
 describe("upstreamService", () => {
   beforeEach(() => {
@@ -85,12 +80,12 @@ describe("upstreamService", () => {
 
     generateTextMock.mockResolvedValue(fakeResult);
 
-    const response = await callUpstreamNonStreaming(baseProvider, baseModel, {
+    const response = await callUpstreamNonStreaming(baseProvider, modelSlug, {
       messages: [],
     });
 
     expect(createAIProvider).toHaveBeenCalledWith(baseProvider);
-    expect(mockProvider.languageModel).toHaveBeenCalledWith(baseModel.upstreamName);
+    expect(mockProvider.languageModel).toHaveBeenCalledWith(modelSlug);
     expect(generateTextMock).toHaveBeenCalledWith(
       expect.objectContaining({ model: languageModel, messages: [] })
     );
@@ -126,11 +121,18 @@ describe("upstreamService", () => {
       requestBodyValues: {},
       statusCode: 503,
     });
+    const modelMissing = new APICallError({
+      message: "Model not found",
+      url: "http://example.com",
+      requestBodyValues: {},
+      statusCode: 404,
+    });
 
     expect(classifyUpstreamError(quota)).toBe("quota");
     expect(classifyUpstreamError(rate)).toBe("rate_limit");
     expect(classifyUpstreamError(auth)).toBe("auth");
     expect(classifyUpstreamError(server)).toBe("server");
+    expect(classifyUpstreamError(modelMissing)).toBe("model_not_found");
     expect(classifyUpstreamError(new Error("other"))).toBe("unknown");
   });
 
@@ -169,7 +171,7 @@ describe("upstreamService", () => {
       return { fullStream: fakeStream } as unknown as StreamTextResult;
     });
 
-    const response = callUpstreamStreaming(baseProvider, baseModel, {
+    const response = callUpstreamStreaming(baseProvider, modelSlug, {
       messages: [],
     });
 
@@ -179,7 +181,7 @@ describe("upstreamService", () => {
     }
 
     expect(createAIProvider).toHaveBeenCalledWith(baseProvider);
-    expect(mockProvider.languageModel).toHaveBeenCalledWith(baseModel.upstreamName);
+    expect(mockProvider.languageModel).toHaveBeenCalledWith(modelSlug);
     expect(streamTextMock).toHaveBeenCalledWith(
       expect.objectContaining({ model: languageModel, messages: [] })
     );
