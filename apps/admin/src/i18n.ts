@@ -57,6 +57,13 @@ const messages = {
       },
       action: {
         edit: "Edit",
+        delete: "Delete",
+      },
+      delete: {
+        title: "Delete provider",
+        subtitle: "This removes its model mappings and usage logs.",
+        confirm: "Delete provider",
+        warning: "This action cannot be undone.",
       },
       create: {
         title: "New provider",
@@ -152,6 +159,7 @@ const messages = {
       error: {
         create: "Create failed. Check the inputs and try again.",
         update: "Update failed. Check the inputs and try again.",
+        delete: "Delete failed. Try again.",
       },
       cancel: "Cancel",
     },
@@ -257,6 +265,13 @@ const messages = {
       },
       action: {
         edit: "编辑",
+        delete: "删除",
+      },
+      delete: {
+        title: "删除提供商",
+        subtitle: "将同时移除其模型映射与用量记录。",
+        confirm: "确认删除",
+        warning: "此操作不可撤销。",
       },
       create: {
         title: "新增提供商",
@@ -352,6 +367,7 @@ const messages = {
       error: {
         create: "创建失败，请检查输入后重试。",
         update: "更新失败，请检查输入后重试。",
+        delete: "删除失败，请稍后重试。",
       },
       cancel: "取消",
     },

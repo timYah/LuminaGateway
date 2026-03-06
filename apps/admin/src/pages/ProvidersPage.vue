@@ -75,6 +75,10 @@ const editOpen = ref(false);
 const working = ref(false);
 const formError = ref("");
 const editingId = ref<number | null>(null);
+const deleteOpen = ref(false);
+const deleteWorking = ref(false);
+const deleteError = ref("");
+const deleteTarget = ref<Provider | null>(null);
 
 const modelCreateOpen = ref(false);
 const modelEditOpen = ref(false);
@@ -156,6 +160,18 @@ const openEdit = (provider: Provider) => {
   editOpen.value = true;
 };
 
+const openDelete = (provider: Provider) => {
+  deleteTarget.value = provider;
+  deleteError.value = "";
+  deleteOpen.value = true;
+};
+
+const closeDelete = () => {
+  deleteOpen.value = false;
+  deleteTarget.value = null;
+  deleteError.value = "";
+};
+
 const openModelEdit = (model: ModelMapping) => {
   modelEditingId.value = model.id;
   modelEditForm.providerId = model.providerId.toString();
@@ -228,6 +244,24 @@ const submitEdit = async () => {
     formError.value = t("providers.error.update");
   } finally {
     working.value = false;
+  }
+};
+
+const submitDelete = async () => {
+  if (!deleteTarget.value) return;
+  deleteError.value = "";
+  deleteWorking.value = true;
+  try {
+    await gatewayFetch(`/admin/providers/${deleteTarget.value.id}`, {
+      method: "DELETE",
+    });
+    closeDelete();
+    await refresh();
+    await refreshModels();
+  } catch (err) {
+    deleteError.value = t("providers.error.delete");
+  } finally {
+    deleteWorking.value = false;
   }
 };
 
@@ -436,14 +470,24 @@ const submitModelEdit = async () => {
                   </span>
                 </td>
                 <td class="py-3">
-                  <UButton
-                    class="action-press"
-                    size="sm"
-                    variant="outline"
-                    @click="openEdit(provider)"
-                  >
-                    {{ $t("providers.action.edit") }}
-                  </UButton>
+                  <div class="flex items-center gap-2">
+                    <UButton
+                      class="action-press"
+                      size="sm"
+                      variant="outline"
+                      @click="openEdit(provider)"
+                    >
+                      {{ $t("providers.action.edit") }}
+                    </UButton>
+                    <UButton
+                      class="action-press text-rose-600 hover:text-rose-700"
+                      size="sm"
+                      variant="outline"
+                      @click="openDelete(provider)"
+                    >
+                      {{ $t("providers.action.delete") }}
+                    </UButton>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -779,6 +823,56 @@ const submitModelEdit = async () => {
               @click="submitEdit"
             >
               {{ $t("providers.edit.submit") }}
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="deleteOpen">
+      <template #content>
+        <div class="surface radius-panel p-6 md:p-7 space-y-5">
+          <div>
+            <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
+              {{ $t("providers.delete.title") }}
+            </div>
+            <div class="mt-2 text-2xl font-semibold text-slate-900">
+              {{ deleteTarget?.name ?? "" }}
+            </div>
+            <p class="mt-2 text-sm text-slate-600">
+              {{ $t("providers.delete.subtitle") }}
+            </p>
+            <p class="mt-1 text-xs text-rose-600">
+              {{ $t("providers.delete.warning") }}
+            </p>
+          </div>
+
+          <div
+            v-if="deleteTarget"
+            class="radius-soft border border-slate-200/60 p-3"
+          >
+            <div class="text-sm font-medium text-slate-900">
+              {{ deleteTarget.name }}
+            </div>
+            <div class="text-xs text-slate-500">
+              {{ deleteTarget.baseUrl }}
+            </div>
+          </div>
+
+          <p v-if="deleteError" class="text-sm text-rose-600">
+            {{ deleteError }}
+          </p>
+
+          <div class="flex items-center justify-between">
+            <UButton class="action-press" variant="outline" @click="closeDelete">
+              {{ $t("providers.cancel") }}
+            </UButton>
+            <UButton
+              class="action-press bg-rose-600 text-white hover:bg-rose-700"
+              :loading="deleteWorking"
+              @click="submitDelete"
+            >
+              {{ $t("providers.delete.confirm") }}
             </UButton>
           </div>
         </div>
