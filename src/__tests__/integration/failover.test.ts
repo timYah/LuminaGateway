@@ -83,7 +83,7 @@ beforeEach(() => {
 
 describe("integration failover", () => {
   it("falls back when provider A returns 402", async () => {
-    const { providerA, providerB } = await seedProviders();
+    const { providerA } = await seedProviders();
 
     callUpstreamMock
       .mockRejectedValueOnce(
