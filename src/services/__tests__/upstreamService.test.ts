@@ -128,12 +128,15 @@ describe("upstreamService", () => {
       requestBodyValues: {},
       statusCode: 404,
     });
+    const network = new Error("fetch failed");
+    (network as { code?: string }).code = "ECONNREFUSED";
 
     expect(classifyUpstreamError(quota)).toBe("quota");
     expect(classifyUpstreamError(rate)).toBe("rate_limit");
     expect(classifyUpstreamError(auth)).toBe("auth");
     expect(classifyUpstreamError(server)).toBe("server");
     expect(classifyUpstreamError(modelMissing)).toBe("model_not_found");
+    expect(classifyUpstreamError(network)).toBe("server");
     expect(classifyUpstreamError(new Error("other"))).toBe("unknown");
   });
 

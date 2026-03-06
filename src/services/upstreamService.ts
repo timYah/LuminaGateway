@@ -161,6 +161,37 @@ export type UpstreamErrorType =
   | "model_not_found"
   | "unknown";
 
+const NETWORK_ERROR_CODES = new Set([
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "EPIPE",
+  "ETIMEDOUT",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_SOCKET",
+  "UND_ERR_HEADERS_TIMEOUT",
+  "UND_ERR_REQUEST_TIMEOUT",
+  "UND_ERR_BODY_TIMEOUT",
+]);
+
+export function isNetworkError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const anyError = error as { code?: string; cause?: { code?: string } };
+  const code = anyError.code || anyError.cause?.code;
+  if (code && NETWORK_ERROR_CODES.has(code)) return true;
+  const message = error.message?.toLowerCase() ?? "";
+  return (
+    message.includes("fetch failed") ||
+    message.includes("network") ||
+    message.includes("socket") ||
+    message.includes("timeout") ||
+    message.includes("connect")
+  );
+}
+
 export function classifyUpstreamError(error: unknown): UpstreamErrorType {
   if (APICallError.isInstance(error)) {
     const status = error.statusCode;
@@ -178,6 +209,8 @@ export function classifyUpstreamError(error: unknown): UpstreamErrorType {
     if (status === 401) return "auth";
     if (status === 403) return "auth";
     if (status && status >= 500 && status < 600) return "server";
+    if (isNetworkError(error)) return "server";
   }
+  if (isNetworkError(error)) return "server";
   return "unknown";
 }

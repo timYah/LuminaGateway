@@ -4,6 +4,7 @@ import {
   callUpstreamNonStreaming,
   callUpstreamStreaming,
   classifyUpstreamError,
+  isNetworkError,
   type UpstreamUsage,
 } from "./upstreamService";
 import type { UpstreamRequestParams } from "./upstreamService";
@@ -106,6 +107,13 @@ async function handleUpstreamError(
     return "continue";
   }
   if (errorType === "server") {
+    if (isNetworkError(error)) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.warn("[gateway] upstream network error; failing over", {
+        providerId,
+        message,
+      });
+    }
     gatewayCircuitBreaker.open(providerId, SERVER_COOLDOWN_MS);
     return "continue";
   }
