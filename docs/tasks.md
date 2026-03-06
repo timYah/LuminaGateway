@@ -415,7 +415,7 @@
 
 - [x] **T-44.1** 引入 i18n：集成 vue-i18n，默认英文
 - [x] **T-44.2** 文案国际化：覆盖 Admin UI 文案与表单提示
-- [ ] **T-44.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+- [x] **T-44.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
 ---
 
