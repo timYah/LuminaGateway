@@ -31,6 +31,10 @@ Lumina Gateway is a TypeScript-based LLM aggregation gateway. It unifies multipl
 5. **提交**：`git add` 相关文件并 `git commit`（格式见下方 Git commit rules）。
 6. 在 `docs/tasks.md` 中勾选 `[x]`，继续下一个 Task。
 
+### 自动化测试规则
+
+- **每次任务都必须进行自动化测试验证**：运行 `npm run lint && npm run typecheck && npm run test`，全部通过后才能提交。
+
 ### 自我修复原则
 
 - 报错时读取完整日志，分析根因后再修复，不要盲目重试。
