@@ -119,6 +119,7 @@ data: {"type":"message_stop"}
 GET    /admin/providers          — list all providers
 POST   /admin/providers          — create a provider
 PATCH  /admin/providers/:id      — update provider fields
+DELETE /admin/providers/:id      — delete provider (also removes model mappings and usage logs)
 GET    /admin/usage              — query usage logs
 ```
 
