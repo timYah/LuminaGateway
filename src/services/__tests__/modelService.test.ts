@@ -92,7 +92,7 @@ describe("modelService", () => {
     expect(rows[0].providers.name).toBeDefined();
   });
 
-  it("getActiveProvidersByModel sorts by balance desc then priority asc", async () => {
+  it("getActiveProvidersByModel sorts by priority asc then id", async () => {
     const inserted = await seedProviders();
     for (const provider of inserted) {
       await db.insert(models).values({
@@ -106,9 +106,10 @@ describe("modelService", () => {
 
     const list = await getActiveProvidersByModel("gpt-4o");
     expect(list.map((p) => p.name)).toEqual([
-      "Provider C",
-      "Provider A",
       "Provider B",
+      "Provider C",
+      "Provider D",
+      "Provider A",
     ]);
   });
 

@@ -163,7 +163,7 @@ describe("integration streaming", () => {
       .where(eq(providers.id, provider!.id));
     const usageRows = await db.select().from(usageLogs);
     expect(usageRows).toHaveLength(1);
-    expect(providerRow[0].balance).toBeLessThan(10);
+    expect(providerRow[0].balance).toBe(10);
   });
 
   it("fails over when upstream errors before stream starts", async () => {

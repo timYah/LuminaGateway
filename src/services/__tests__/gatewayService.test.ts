@@ -22,7 +22,6 @@ vi.mock("../billingService", () => ({
 }));
 
 vi.mock("../providerService", () => ({
-  updateProvider: vi.fn(),
   deactivateProvider: vi.fn(),
 }));
 
@@ -31,11 +30,15 @@ vi.mock("../streamRelay", () => ({
   relayAsAnthropicStream: vi.fn(() => new ReadableStream()),
 }));
 
-import { handleRequest, handleStreamingRequest, gatewayRouter } from "../gatewayService";
+import {
+  handleRequest,
+  handleStreamingRequest,
+  gatewayCircuitBreaker,
+  gatewayRouter,
+} from "../gatewayService";
 import { callUpstreamNonStreaming, callUpstreamStreaming } from "../upstreamService";
 import { getModelByProviderAndSlug } from "../modelService";
 import { billUsage } from "../billingService";
-import { updateProvider } from "../providerService";
 import { relayAsOpenAIStream } from "../streamRelay";
 
 const providerA = {
@@ -77,9 +80,9 @@ const callUpstreamMock = vi.mocked(callUpstreamNonStreaming);
 const callUpstreamStreamingMock = vi.mocked(callUpstreamStreaming);
 const getModelMock = vi.mocked(getModelByProviderAndSlug);
 const billUsageMock = vi.mocked(billUsage);
-const updateProviderMock = vi.mocked(updateProvider);
 const getAllCandidatesSpy = vi.spyOn(gatewayRouter, "getAllCandidates");
 const relayOpenAIMock = vi.mocked(relayAsOpenAIStream);
+const breakerOpenSpy = vi.spyOn(gatewayCircuitBreaker, "open");
 
 describe("gatewayService", () => {
   beforeEach(() => {
@@ -87,10 +90,12 @@ describe("gatewayService", () => {
     callUpstreamStreamingMock.mockReset();
     getModelMock.mockReset();
     billUsageMock.mockReset();
-    updateProviderMock.mockReset();
     getAllCandidatesSpy.mockReset();
     getAllCandidatesSpy.mockResolvedValue([providerA]);
     relayOpenAIMock.mockClear();
+    breakerOpenSpy.mockReset();
+    gatewayCircuitBreaker.reset(providerA.id);
+    gatewayCircuitBreaker.reset(providerB.id);
     getModelMock.mockResolvedValue(model);
   });
 
@@ -148,9 +153,10 @@ describe("gatewayService", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(updateProviderMock).toHaveBeenCalledWith(providerA.id, {
-      balance: 0,
-    });
+    expect(breakerOpenSpy).toHaveBeenCalledWith(
+      providerA.id,
+      expect.any(Number)
+    );
   });
 
   it("returns an error when no providers are available", async () => {
@@ -219,8 +225,9 @@ describe("gatewayService", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(updateProviderMock).toHaveBeenCalledWith(providerA.id, {
-      balance: 0,
-    });
+    expect(breakerOpenSpy).toHaveBeenCalledWith(
+      providerA.id,
+      expect.any(Number)
+    );
   });
 });

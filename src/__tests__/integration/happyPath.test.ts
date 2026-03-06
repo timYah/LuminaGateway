@@ -83,8 +83,7 @@ describe("integration happy path", () => {
     expect(body.object).toBe("chat.completion");
 
     const updated = await getProviderById(provider!.id);
-    const expectedCost = (1000 / 1_000_000) * 2 + (500 / 1_000_000) * 4;
-    expect(updated?.balance).toBeCloseTo(10 - expectedCost);
+    expect(updated?.balance).toBeCloseTo(10);
 
     const logs = await db.select().from(usageLogs);
     expect(logs).toHaveLength(1);

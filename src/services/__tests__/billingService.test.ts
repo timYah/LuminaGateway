@@ -36,7 +36,7 @@ describe("billingService", () => {
     expect(cost).toBeCloseTo(8);
   });
 
-  it("billUsage deducts balance and writes usage log", async () => {
+  it("billUsage writes usage log without deducting balance", async () => {
     const provider = await createProvider(baseProvider);
     const rows = await db
       .insert(models)
@@ -58,7 +58,7 @@ describe("billingService", () => {
     );
 
     const updated = await getProviderById(provider!.id);
-    expect(updated?.balance).toBeCloseTo(95);
+    expect(updated?.balance).toBeCloseTo(100);
 
     const logs = await db.select().from(usageLogs);
     expect(logs).toHaveLength(1);

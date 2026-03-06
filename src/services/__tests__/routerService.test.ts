@@ -67,7 +67,7 @@ async function seed() {
 }
 
 describe("routerService", () => {
-  it("selects provider by balance desc then priority asc", async () => {
+  it("selects provider by priority asc then id", async () => {
     await seed();
     const router = new RouterService(new CircuitBreaker());
     const selected = await router.selectProvider("gpt-4o");
@@ -80,7 +80,7 @@ describe("routerService", () => {
     const router = new RouterService(breaker);
     breaker.open(inserted[1].id, 1000);
     const selected = await router.selectProvider("gpt-4o");
-    expect(selected.name).toBe("Provider A");
+    expect(selected.name).toBe("Provider C");
   });
 
   it("getAllCandidates returns sorted filtered list", async () => {
@@ -89,8 +89,8 @@ describe("routerService", () => {
     const list = await router.getAllCandidates("gpt-4o");
     expect(list.map((p) => p.name)).toEqual([
       "Provider B",
-      "Provider A",
       "Provider C",
+      "Provider A",
     ]);
   });
 

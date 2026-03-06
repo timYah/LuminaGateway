@@ -112,11 +112,7 @@ describe("integration failover", () => {
     const body = await res.json();
     expect(body.choices[0].message.content).toBe("Fallback");
 
-    const providerRows = await db.select().from(providers);
-    const updatedA = providerRows.find((row) => row.id === providerA!.id);
-    const updatedB = providerRows.find((row) => row.id === providerB!.id);
-    expect(updatedA?.balance).toBe(0);
-    expect(updatedB?.balance).toBeGreaterThan(0);
+    expect(gatewayCircuitBreaker.isOpen(providerA!.id)).toBe(true);
   });
 
   it("returns error when all providers fail", async () => {
