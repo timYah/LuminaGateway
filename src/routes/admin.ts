@@ -8,6 +8,11 @@ import {
   getAllProviders,
   updateProvider,
 } from "../services/providerService";
+import {
+  createModelMapping,
+  getAllModelMappings,
+  updateModelMapping,
+} from "../services/modelService";
 
 const providerSchema = z.object({
   name: z.string().min(1),
@@ -18,6 +23,16 @@ const providerSchema = z.object({
   isActive: z.boolean().optional(),
   priority: z.number().int().optional(),
 });
+
+const modelSchema = z.object({
+  providerId: z.number().int(),
+  slug: z.string().min(1),
+  upstreamName: z.string().min(1),
+  inputPrice: z.number().optional(),
+  outputPrice: z.number().optional(),
+});
+
+const modelUpdateSchema = modelSchema.partial();
 
 function getClient() {
   return getDb() as SqliteDatabase;
@@ -30,6 +45,25 @@ adminRoutes.get("/admin/providers", async (c) => {
   return c.json({ providers });
 });
 
+adminRoutes.get("/admin/models", async (c) => {
+  const { providerId, slug } = c.req.query();
+  const filters: { providerId?: number; slug?: string } = {};
+
+  if (providerId) {
+    const parsed = Number(providerId);
+    if (Number.isFinite(parsed)) {
+      filters.providerId = parsed;
+    }
+  }
+
+  if (slug && slug.trim()) {
+    filters.slug = slug.trim();
+  }
+
+  const models = await getAllModelMappings(filters);
+  return c.json({ models });
+});
+
 adminRoutes.post("/admin/providers", async (c) => {
   const body = await c.req.json();
   const parsed = providerSchema.safeParse(body);
@@ -40,6 +74,16 @@ adminRoutes.post("/admin/providers", async (c) => {
   return c.json({ provider }, 201);
 });
 
+adminRoutes.post("/admin/models", async (c) => {
+  const body = await c.req.json();
+  const parsed = modelSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: { message: "Invalid request" } }, 400);
+  }
+  const model = await createModelMapping(parsed.data);
+  return c.json({ model }, 201);
+});
+
 adminRoutes.patch("/admin/providers/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const body = await c.req.json();
@@ -48,6 +92,20 @@ adminRoutes.patch("/admin/providers/:id", async (c) => {
     return c.json({ error: { message: "Provider not found" } }, 404);
   }
   return c.json({ provider });
+});
+
+adminRoutes.patch("/admin/models/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const body = await c.req.json();
+  const parsed = modelUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: { message: "Invalid request" } }, 400);
+  }
+  const model = await updateModelMapping(id, parsed.data);
+  if (!model) {
+    return c.json({ error: { message: "Model mapping not found" } }, 404);
+  }
+  return c.json({ model });
 });
 
 adminRoutes.get("/admin/usage", async (c) => {
