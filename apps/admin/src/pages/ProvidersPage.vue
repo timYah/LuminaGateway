@@ -328,7 +328,11 @@ const submitEdit = async () => {
               :label="$t('providers.form.protocol')"
               :help="$t('providers.form.help.protocol')"
             >
-              <USelect v-model="createForm.protocol" :items="protocolOptions" />
+              <USelect
+                v-model="createForm.protocol"
+                :items="protocolOptions"
+                class="w-full"
+              />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.baseUrl')"
