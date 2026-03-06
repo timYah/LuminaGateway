@@ -69,8 +69,10 @@ watch(testModel, (value) => {
 
 const createOpen = ref(false);
 const editOpen = ref(false);
-const working = ref(false);
-const formError = ref("");
+const createWorking = ref(false);
+const editWorking = ref(false);
+const createError = ref("");
+const editError = ref("");
 const editingId = ref<number | null>(null);
 const deleteOpen = ref(false);
 const deleteWorking = ref(false);
@@ -141,7 +143,7 @@ const openEdit = (provider: Provider) => {
       : "";
   editForm.isActive = provider.isActive;
   editForm.priority = provider.priority.toString();
-  formError.value = "";
+  editError.value = "";
   editOpen.value = true;
 };
 
@@ -174,13 +176,33 @@ const normalizeNullableNumber = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const submitCreate = async () => {
-  formError.value = "";
-  if (!createForm.name.trim() || !createForm.baseUrl.trim()) {
-    formError.value = t("providers.validation.required");
+watch(createOpen, (open) => {
+  if (open) {
+    createError.value = "";
     return;
   }
-  working.value = true;
+  createWorking.value = false;
+  createError.value = "";
+  resetCreate();
+});
+
+watch(editOpen, (open) => {
+  if (open) {
+    editError.value = "";
+    return;
+  }
+  editWorking.value = false;
+  editError.value = "";
+  editingId.value = null;
+});
+
+const submitCreate = async () => {
+  createError.value = "";
+  if (!createForm.name.trim() || !createForm.baseUrl.trim()) {
+    createError.value = t("providers.validation.required");
+    return;
+  }
+  createWorking.value = true;
   try {
     const apiMode = supportsApiMode(createForm.protocol)
       ? createForm.apiMode
@@ -204,16 +226,16 @@ const submitCreate = async () => {
     resetCreate();
     await refresh();
   } catch (err) {
-    formError.value = t("providers.error.create");
+    createError.value = t("providers.error.create");
   } finally {
-    working.value = false;
+    createWorking.value = false;
   }
 };
 
 const submitEdit = async () => {
   if (!editingId.value) return;
-  formError.value = "";
-  working.value = true;
+  editError.value = "";
+  editWorking.value = true;
   try {
     const apiMode = supportsApiMode(editForm.protocol)
       ? editForm.apiMode
@@ -237,9 +259,9 @@ const submitEdit = async () => {
     editingId.value = null;
     await refresh();
   } catch (err) {
-    formError.value = t("providers.error.update");
+    editError.value = t("providers.error.update");
   } finally {
-    working.value = false;
+    editWorking.value = false;
   }
 };
 
@@ -612,8 +634,8 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
             </UFormGroup>
           </div>
 
-          <p v-if="formError" class="text-sm text-rose-600">
-            {{ formError }}
+          <p v-if="createError" class="text-sm text-rose-600">
+            {{ createError }}
           </p>
 
           <div class="flex items-center justify-between">
@@ -623,7 +645,7 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
             <UButton
               class="action-press"
               color="primary"
-              :loading="working"
+              :loading="createWorking"
               @click="submitCreate"
             >
               {{ $t("providers.create.submit") }}
@@ -754,8 +776,8 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
             </UFormGroup>
           </div>
 
-          <p v-if="formError" class="text-sm text-rose-600">
-            {{ formError }}
+          <p v-if="editError" class="text-sm text-rose-600">
+            {{ editError }}
           </p>
 
           <div class="flex items-center justify-between">
@@ -765,7 +787,7 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
             <UButton
               class="action-press"
               color="primary"
-              :loading="working"
+              :loading="editWorking"
               @click="submitEdit"
             >
               {{ $t("providers.edit.submit") }}
