@@ -1,3 +1,27 @@
+<script setup lang="ts">
+import { computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
+
+import { localeStorageKey } from "../i18n";
+
+const { locale, t } = useI18n();
+
+const localeOptions = computed(() => [
+  { label: t("app.languageOptions.en"), value: "en" },
+  { label: t("app.languageOptions.zh"), value: "zh" },
+]);
+
+watch(
+  locale,
+  (value) => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(localeStorageKey, value);
+    document.documentElement.lang = value;
+  },
+  { immediate: true }
+);
+</script>
+
 <template>
   <div class="relative z-10">
     <div class="max-w-[1400px] mx-auto px-4 md:px-8 py-8">
@@ -30,6 +54,12 @@
               {{ $t("nav.usage") }}
             </RouterLink>
           </nav>
+          <div class="pt-4 border-t border-slate-200/60 space-y-2">
+            <div class="text-xs uppercase tracking-[0.32em] text-slate-500">
+              {{ $t("app.language") }}
+            </div>
+            <USelect v-model="locale" :options="localeOptions" />
+          </div>
         </aside>
 
         <main class="space-y-6">
