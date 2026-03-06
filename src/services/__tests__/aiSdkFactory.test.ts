@@ -1,14 +1,10 @@
-import type { ProviderV3 } from "@ai-sdk/provider";
 import { describe, expect, it, vi } from "vitest";
 
-const createOpenAI = vi.fn(() => ({}) as ProviderV3);
-const createAnthropic = vi.fn(() => ({}) as ProviderV3);
-const createGoogleGenerativeAI = vi.fn(() => ({}) as ProviderV3);
+vi.mock("@ai-sdk/openai", () => ({ createOpenAI: vi.fn() }));
+vi.mock("@ai-sdk/anthropic", () => ({ createAnthropic: vi.fn() }));
+vi.mock("@ai-sdk/google", () => ({ createGoogleGenerativeAI: vi.fn() }));
 
-vi.mock("@ai-sdk/openai", () => ({ createOpenAI }));
-vi.mock("@ai-sdk/anthropic", () => ({ createAnthropic }));
-vi.mock("@ai-sdk/google", () => ({ createGoogleGenerativeAI }));
-
+import { createOpenAI } from "@ai-sdk/openai";
 import type { Provider } from "../../db/schema/providers";
 import { createAIProvider } from "../aiSdkFactory";
 
@@ -29,7 +25,7 @@ describe("createAIProvider", () => {
 
     createAIProvider(provider);
 
-    expect(createOpenAI).toHaveBeenCalledWith({
+    expect(vi.mocked(createOpenAI)).toHaveBeenCalledWith({
       apiKey: "sk-newapi",
       baseURL: "https://newapi.example.com/v1",
     });
