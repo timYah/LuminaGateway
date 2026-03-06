@@ -78,7 +78,7 @@ const messages = {
       create: {
         title: "New provider",
         subtitle: "Add a routing target",
-        submit: "Create provider",
+        submit: "Add provider",
       },
       edit: {
         title: "Provider update",
@@ -247,7 +247,7 @@ const messages = {
       create: {
         title: "新增提供商",
         subtitle: "添加路由目标",
-        submit: "创建提供商",
+        submit: "添加提供商",
       },
       edit: {
         title: "更新提供商",
