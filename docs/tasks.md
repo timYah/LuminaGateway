@@ -423,7 +423,7 @@
 
 - [x] **T-45.1** 修复 Providers 新增失败后的表单状态：允许重新提交并清理 loading/error
 - [x] **T-45.2** 规范 OpenAI/new-api 的 base URL：自动补全 `/v1`
-- [ ] **T-45.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+- [x] **T-45.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
 ---
 
