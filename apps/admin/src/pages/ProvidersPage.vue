@@ -331,6 +331,9 @@ const submitModelEdit = async () => {
           <p class="text-sm text-slate-500">
             {{ $t("providers.rosterHint") }}
           </p>
+          <p class="mt-1 text-xs text-slate-500">
+            {{ $t("providers.rosterNote") }}
+          </p>
         </div>
         <UButton class="action-press" variant="outline" @click="refresh">
           {{ $t("providers.refresh") }}

@@ -8,7 +8,7 @@ const messages = {
       brand: "Lumina Gateway",
       console: "Admin Console",
       tagline:
-        "Manage providers, balances, and usage activity with a single view.",
+        "Manage providers, routing priorities, and usage activity with a single view.",
       language: "Language",
       languageOptions: {
         en: "English",
@@ -31,12 +31,13 @@ const messages = {
       localStorage: "Stored in local storage.",
     },
     providers: {
-      title: "Balance-aware routing control",
+      title: "Priority-based routing control",
       intro:
-        "Review provider health, update balances, and keep routing priorities aligned with your account strategy.",
+        "Review provider health, tune priorities, and track usage cost. Balances are informational only.",
       add: "Add provider",
       roster: "Provider roster",
       rosterHint: "Changes apply immediately to routing decisions.",
+      rosterNote: "Routing uses priority only. Balances are informational.",
       refresh: "Refresh list",
       errorTitle: "Provider list failed to load.",
       errorHint: "Verify the API key and gateway URL, then refresh.",
@@ -45,7 +46,7 @@ const messages = {
       table: {
         name: "Name",
         protocol: "Protocol",
-        balance: "Balance",
+        balance: "Balance (info)",
         priority: "Priority",
         status: "Status",
         actions: "Actions",
@@ -81,8 +82,8 @@ const messages = {
           baseUrl:
             "Root URL for the provider endpoint (OpenAI-compatible providers like new-api use https://host/v1).",
           apiKey: "Stored for upstream authentication.",
-          balanceCreate: "Initial balance in USD.",
-          balanceEdit: "Current balance in USD.",
+          balanceCreate: "Informational only. Routing uses priority.",
+          balanceEdit: "Informational only. Routing uses priority.",
           priority: "Lower values take precedence.",
           active: "Active providers are eligible for routing.",
         },
@@ -206,7 +207,7 @@ const messages = {
       brand: "Lumina Gateway",
       console: "管理控制台",
       tagline:
-        "统一管理提供商、余额与用量活动。",
+        "统一管理提供商、路由优先级与用量活动。",
       language: "语言",
       languageOptions: {
         en: "English",
@@ -229,12 +230,13 @@ const messages = {
       localStorage: "存储在本地。",
     },
     providers: {
-      title: "余额感知路由控制",
+      title: "优先级路由控制",
       intro:
-        "查看提供商状态、更新余额，并保持路由优先级与策略一致。",
+        "查看提供商状态、调整优先级并跟踪用量成本。余额仅作参考。",
       add: "新增提供商",
       roster: "提供商列表",
       rosterHint: "变更将立即影响路由决策。",
+      rosterNote: "路由仅看优先级，余额仅作参考。",
       refresh: "刷新列表",
       errorTitle: "提供商列表加载失败。",
       errorHint: "请检查 API key 与网关地址后重试。",
@@ -243,7 +245,7 @@ const messages = {
       table: {
         name: "名称",
         protocol: "协议",
-        balance: "余额",
+        balance: "余额（仅参考）",
         priority: "优先级",
         status: "状态",
         actions: "操作",
@@ -279,8 +281,8 @@ const messages = {
           baseUrl:
             "提供商接口根地址（new-api 等 OpenAI 兼容服务请使用 https://host/v1）。",
           apiKey: "用于上游鉴权的密钥。",
-          balanceCreate: "初始余额（USD）。",
-          balanceEdit: "当前余额（USD）。",
+          balanceCreate: "仅作参考，路由以优先级为准。",
+          balanceEdit: "仅作参考，路由以优先级为准。",
           priority: "数值越小优先级越高。",
           active: "启用的提供商可参与路由。",
         },
