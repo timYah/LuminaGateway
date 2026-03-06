@@ -20,9 +20,6 @@ const messages = {
       usage: "Usage",
     },
     apiKey: {
-      session: "Session",
-      stored: "API key stored for this browser.",
-      clear: "Clear key",
       secureAccess: "Secure Access",
       connect: "Connect the gateway",
       description:
@@ -221,9 +218,6 @@ const messages = {
       usage: "用量",
     },
     apiKey: {
-      session: "会话",
-      stored: "API key 已保存在当前浏览器。",
-      clear: "清除",
       secureAccess: "安全访问",
       connect: "连接网关",
       description:

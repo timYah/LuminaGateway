@@ -6,7 +6,7 @@ import { useApiKey } from "../composables/useApiKey";
 import UFormGroup from "./UFormGroup.vue";
 
 const { t } = useI18n();
-const { key, ready, clear, fromEnv } = useApiKey();
+const { key, ready } = useApiKey();
 const draft = ref("");
 const error = ref("");
 
@@ -59,28 +59,6 @@ const saveKey = () => {
 
 <template>
   <div class="space-y-4">
-    <div
-      v-if="hasKey"
-      class="glass-panel radius-card px-4 py-3 flex items-center justify-between"
-    >
-      <div>
-        <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-          {{ $t("apiKey.session") }}
-        </div>
-        <div class="text-sm font-medium text-slate-700">
-          {{ $t("apiKey.stored") }}
-        </div>
-      </div>
-      <UButton
-        v-if="!fromEnv"
-        class="action-press"
-        variant="outline"
-        @click="clear"
-      >
-        {{ $t("apiKey.clear") }}
-      </UButton>
-    </div>
-
     <div class="relative">
       <div
         class="transition-all duration-300"
