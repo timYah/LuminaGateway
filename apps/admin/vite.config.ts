@@ -8,7 +8,20 @@ export default defineConfig(({ mode }) => {
   const envDir = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "../..");
   const env = loadEnv(mode, envDir, "");
   const gatewayPort = env.PORT || "3000";
-  const gatewayTarget = env.GATEWAY_BASE_URL || `http://localhost:${gatewayPort}`;
+  const normalizeGatewayTarget = (target: string) => {
+    try {
+      const url = new URL(target);
+      if (url.hostname === "localhost") {
+        url.hostname = "127.0.0.1";
+      }
+      return url.toString().replace(/\/$/, "");
+    } catch {
+      return target;
+    }
+  };
+  const gatewayTarget = normalizeGatewayTarget(
+    env.GATEWAY_BASE_URL || `http://localhost:${gatewayPort}`
+  );
 
   return {
     envDir,
