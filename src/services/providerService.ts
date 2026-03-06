@@ -57,3 +57,12 @@ export async function deductBalance(id: number, amount: number) {
     .returning();
   return rows[0] ?? null;
 }
+
+export async function deleteProvider(id: number) {
+  const db = getClient();
+  const rows = await db
+    .delete(providers)
+    .where(eq(providers.id, id))
+    .returning();
+  return rows[0] ?? null;
+}

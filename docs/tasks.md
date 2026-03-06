@@ -467,6 +467,16 @@
 
 ---
 
+## Phase 50 — Provider 删除
+
+- [x] **T-50.1** 服务端支持 Provider 删除：新增 deleteProvider 服务与 admin delete 路由
+- [ ] **T-50.2** 测试覆盖 Provider 删除：服务层与 admin 路由
+- [ ] **T-50.3** Admin UI 增加删除操作与确认
+- [ ] **T-50.4** 文档更新：补充删除接口说明
+- [ ] **T-50.5** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+
+---
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -515,4 +525,5 @@
 | Phase 47 | 12 | Admin 模型映射 |
 | Phase 48 | 4 | 余额简化与优先级路由 |
 | Phase 49 | 2 | Admin UI 适配 |
-| **合计** | **183** | |
+| Phase 50 | 5 | Provider 删除 |
+| **合计** | **188** | |

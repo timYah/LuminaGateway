@@ -5,6 +5,7 @@ import { getDb, type SqliteDatabase } from "../db";
 import { usageLogs } from "../db/schema";
 import {
   createProvider,
+  deleteProvider,
   getAllProviders,
   updateProvider,
 } from "../services/providerService";
@@ -88,6 +89,15 @@ adminRoutes.patch("/admin/providers/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const body = await c.req.json();
   const provider = await updateProvider(id, body);
+  if (!provider) {
+    return c.json({ error: { message: "Provider not found" } }, 404);
+  }
+  return c.json({ provider });
+});
+
+adminRoutes.delete("/admin/providers/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const provider = await deleteProvider(id);
   if (!provider) {
     return c.json({ error: { message: "Provider not found" } }, 404);
   }
