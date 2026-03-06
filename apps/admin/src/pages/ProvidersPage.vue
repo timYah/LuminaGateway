@@ -22,12 +22,37 @@ type ProviderResponse = {
   providers: Provider[];
 };
 
+type ModelMapping = {
+  id: number;
+  providerId: number;
+  providerName: string;
+  slug: string;
+  upstreamName: string;
+  inputPrice: number;
+  outputPrice: number;
+};
+
+type ModelMappingResponse = {
+  models: ModelMapping[];
+};
+
 const { data, pending, error, refresh } = useGatewayFetch<ProviderResponse>(
   "/admin/providers"
 );
 
+const {
+  data: modelData,
+  pending: modelPending,
+  error: modelError,
+  refresh: refreshModels,
+} = useGatewayFetch<ModelMappingResponse>("/admin/models");
+
 const providers = computed(() => data.value?.providers ?? []);
 const empty = computed(() => !pending.value && providers.value.length === 0);
+const modelMappings = computed(() => modelData.value?.models ?? []);
+const modelEmpty = computed(
+  () => !modelPending.value && modelMappings.value.length === 0
+);
 
 const { t } = useI18n();
 
@@ -38,11 +63,24 @@ const protocolOptions = computed(() => [
   { label: "New API", value: "new-api" },
 ]);
 
+const providerOptions = computed(() =>
+  providers.value.map((provider) => ({
+    label: provider.name,
+    value: provider.id.toString(),
+  }))
+);
+
 const createOpen = ref(false);
 const editOpen = ref(false);
 const working = ref(false);
 const formError = ref("");
 const editingId = ref<number | null>(null);
+
+const modelCreateOpen = ref(false);
+const modelEditOpen = ref(false);
+const modelWorking = ref(false);
+const modelFormError = ref("");
+const modelEditingId = ref<number | null>(null);
 
 const createForm = reactive({
   name: "",
@@ -64,6 +102,22 @@ const editForm = reactive({
   priority: "1",
 });
 
+const modelCreateForm = reactive({
+  providerId: "",
+  slug: "",
+  upstreamName: "",
+  inputPrice: "0",
+  outputPrice: "0",
+});
+
+const modelEditForm = reactive({
+  providerId: "",
+  slug: "",
+  upstreamName: "",
+  inputPrice: "0",
+  outputPrice: "0",
+});
+
 const resetCreate = () => {
   createForm.name = "";
   createForm.protocol = "openai";
@@ -72,6 +126,21 @@ const resetCreate = () => {
   createForm.balance = "0";
   createForm.isActive = true;
   createForm.priority = "1";
+};
+
+const resetModelCreate = () => {
+  modelCreateForm.providerId = "";
+  modelCreateForm.slug = "";
+  modelCreateForm.upstreamName = "";
+  modelCreateForm.inputPrice = "0";
+  modelCreateForm.outputPrice = "0";
+};
+
+const openModelCreate = () => {
+  resetModelCreate();
+  modelCreateForm.providerId = providerOptions.value[0]?.value ?? "";
+  modelFormError.value = "";
+  modelCreateOpen.value = true;
 };
 
 const openEdit = (provider: Provider) => {
@@ -87,10 +156,23 @@ const openEdit = (provider: Provider) => {
   editOpen.value = true;
 };
 
+const openModelEdit = (model: ModelMapping) => {
+  modelEditingId.value = model.id;
+  modelEditForm.providerId = model.providerId.toString();
+  modelEditForm.slug = model.slug;
+  modelEditForm.upstreamName = model.upstreamName;
+  modelEditForm.inputPrice = model.inputPrice.toString();
+  modelEditForm.outputPrice = model.outputPrice.toString();
+  modelFormError.value = "";
+  modelEditOpen.value = true;
+};
+
 const normalizeNumber = (value: string, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+
+const formatPrice = (value: number) => Number(value).toFixed(4);
 
 const submitCreate = async () => {
   formError.value = "";
@@ -146,6 +228,71 @@ const submitEdit = async () => {
     formError.value = t("providers.error.update");
   } finally {
     working.value = false;
+  }
+};
+
+const submitModelCreate = async () => {
+  modelFormError.value = "";
+  if (
+    !modelCreateForm.providerId ||
+    !modelCreateForm.slug.trim() ||
+    !modelCreateForm.upstreamName.trim()
+  ) {
+    modelFormError.value = t("providers.models.validation.required");
+    return;
+  }
+  modelWorking.value = true;
+  try {
+    await gatewayFetch("/admin/models", {
+      method: "POST",
+      body: {
+        providerId: normalizeNumber(modelCreateForm.providerId, 0),
+        slug: modelCreateForm.slug.trim(),
+        upstreamName: modelCreateForm.upstreamName.trim(),
+        inputPrice: normalizeNumber(modelCreateForm.inputPrice, 0),
+        outputPrice: normalizeNumber(modelCreateForm.outputPrice, 0),
+      },
+    });
+    modelCreateOpen.value = false;
+    resetModelCreate();
+    await refreshModels();
+  } catch (err) {
+    modelFormError.value = t("providers.models.error.create");
+  } finally {
+    modelWorking.value = false;
+  }
+};
+
+const submitModelEdit = async () => {
+  if (!modelEditingId.value) return;
+  modelFormError.value = "";
+  if (
+    !modelEditForm.providerId ||
+    !modelEditForm.slug.trim() ||
+    !modelEditForm.upstreamName.trim()
+  ) {
+    modelFormError.value = t("providers.models.validation.required");
+    return;
+  }
+  modelWorking.value = true;
+  try {
+    await gatewayFetch(`/admin/models/${modelEditingId.value}`, {
+      method: "PATCH",
+      body: {
+        providerId: normalizeNumber(modelEditForm.providerId, 0),
+        slug: modelEditForm.slug.trim(),
+        upstreamName: modelEditForm.upstreamName.trim(),
+        inputPrice: normalizeNumber(modelEditForm.inputPrice, 0),
+        outputPrice: normalizeNumber(modelEditForm.outputPrice, 0),
+      },
+    });
+    modelEditOpen.value = false;
+    modelEditingId.value = null;
+    await refreshModels();
+  } catch (err) {
+    modelFormError.value = t("providers.models.error.update");
+  } finally {
+    modelWorking.value = false;
   }
 };
 </script>
@@ -291,6 +438,122 @@ const submitEdit = async () => {
                     size="sm"
                     variant="outline"
                     @click="openEdit(provider)"
+                  >
+                    {{ $t("providers.action.edit") }}
+                  </UButton>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="surface radius-panel divide-y divide-slate-200/60">
+      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
+        <div>
+          <div class="text-sm font-medium text-slate-900">
+            {{ $t("providers.models.title") }}
+          </div>
+          <p class="text-sm text-slate-500">
+            {{ $t("providers.models.hint") }}
+          </p>
+        </div>
+        <UButton
+          class="action-press"
+          color="primary"
+          :disabled="providerOptions.length === 0"
+          @click="openModelCreate"
+        >
+          {{ $t("providers.models.add") }}
+        </UButton>
+      </div>
+
+      <div class="px-6 py-5 md:px-8 md:py-6">
+        <div v-if="modelPending" class="space-y-2">
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
+        </div>
+
+        <div
+          v-else-if="modelError"
+          class="radius-card border border-rose-200 bg-rose-50 p-4"
+        >
+          <div class="text-sm font-medium text-rose-700">
+            {{ $t("providers.models.errorTitle") }}
+          </div>
+          <p class="text-sm text-rose-600">
+            {{ $t("providers.models.errorHint") }}
+          </p>
+        </div>
+
+        <div
+          v-else-if="modelEmpty"
+          class="radius-card border border-slate-200/60 p-5"
+        >
+          <div class="text-sm font-medium text-slate-800">
+            {{ $t("providers.models.emptyTitle") }}
+          </div>
+          <p class="text-sm text-slate-500 mt-2">
+            {{ $t("providers.models.emptyHint") }}
+          </p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-[980px] w-full text-sm">
+            <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
+              <tr class="border-b border-slate-200/60">
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.models.table.provider") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.models.table.slug") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.models.table.upstream") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.models.table.inputPrice") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.models.table.outputPrice") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.models.table.actions") }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(model, index) in modelMappings"
+                :key="model.id"
+                class="border-b border-slate-200/50 staggered"
+                :style="{ '--index': index }"
+              >
+                <td class="py-3">
+                  <div class="font-medium text-slate-900">
+                    {{ model.providerName }}
+                  </div>
+                </td>
+                <td class="py-3 text-slate-700">
+                  {{ model.slug }}
+                </td>
+                <td class="py-3 text-slate-600">
+                  {{ model.upstreamName }}
+                </td>
+                <td class="py-3 mono-numbers text-slate-900">
+                  {{ formatPrice(model.inputPrice) }}
+                </td>
+                <td class="py-3 mono-numbers text-slate-900">
+                  {{ formatPrice(model.outputPrice) }}
+                </td>
+                <td class="py-3">
+                  <UButton
+                    class="action-press"
+                    size="sm"
+                    variant="outline"
+                    @click="openModelEdit(model)"
                   >
                     {{ $t("providers.action.edit") }}
                   </UButton>
@@ -510,6 +773,194 @@ const submitEdit = async () => {
               @click="submitEdit"
             >
               {{ $t("providers.edit.submit") }}
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="modelCreateOpen">
+      <template #content>
+        <div class="surface radius-panel p-6 md:p-7 space-y-5">
+          <div>
+            <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
+              {{ $t("providers.models.create.title") }}
+            </div>
+            <div class="mt-2 text-2xl font-semibold text-slate-900">
+              {{ $t("providers.models.create.subtitle") }}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <UFormGroup
+              :label="$t('providers.models.form.provider')"
+              :help="$t('providers.models.form.help.provider')"
+            >
+              <USelect
+                v-model="modelCreateForm.providerId"
+                :items="providerOptions"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.models.form.slug')"
+              :help="$t('providers.models.form.help.slug')"
+            >
+              <UInput
+                v-model="modelCreateForm.slug"
+                :placeholder="$t('providers.models.form.placeholder.slug')"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.models.form.upstreamName')"
+              :help="$t('providers.models.form.help.upstreamName')"
+            >
+              <UInput
+                v-model="modelCreateForm.upstreamName"
+                :placeholder="$t('providers.models.form.placeholder.upstreamName')"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.models.form.inputPrice')"
+              :help="$t('providers.models.form.help.inputPrice')"
+            >
+              <UInput
+                v-model="modelCreateForm.inputPrice"
+                type="number"
+                min="0"
+                step="0.0001"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.models.form.outputPrice')"
+              :help="$t('providers.models.form.help.outputPrice')"
+            >
+              <UInput
+                v-model="modelCreateForm.outputPrice"
+                type="number"
+                min="0"
+                step="0.0001"
+                class="w-full"
+              />
+            </UFormGroup>
+          </div>
+
+          <p v-if="modelFormError" class="text-sm text-rose-600">
+            {{ modelFormError }}
+          </p>
+
+          <div class="flex items-center justify-between">
+            <UButton
+              class="action-press"
+              variant="outline"
+              @click="modelCreateOpen = false"
+            >
+              {{ $t("providers.cancel") }}
+            </UButton>
+            <UButton
+              class="action-press"
+              color="primary"
+              :loading="modelWorking"
+              @click="submitModelCreate"
+            >
+              {{ $t("providers.models.create.submit") }}
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="modelEditOpen">
+      <template #content>
+        <div class="surface radius-panel p-6 md:p-7 space-y-5">
+          <div>
+            <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
+              {{ $t("providers.models.edit.title") }}
+            </div>
+            <div class="mt-2 text-2xl font-semibold text-slate-900">
+              {{ $t("providers.models.edit.subtitle") }}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <UFormGroup
+              :label="$t('providers.models.form.provider')"
+              :help="$t('providers.models.form.help.provider')"
+            >
+              <USelect
+                v-model="modelEditForm.providerId"
+                :items="providerOptions"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.models.form.slug')"
+              :help="$t('providers.models.form.help.slug')"
+            >
+              <UInput
+                v-model="modelEditForm.slug"
+                :placeholder="$t('providers.models.form.placeholder.slug')"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.models.form.upstreamName')"
+              :help="$t('providers.models.form.help.upstreamName')"
+            >
+              <UInput
+                v-model="modelEditForm.upstreamName"
+                :placeholder="$t('providers.models.form.placeholder.upstreamName')"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.models.form.inputPrice')"
+              :help="$t('providers.models.form.help.inputPrice')"
+            >
+              <UInput
+                v-model="modelEditForm.inputPrice"
+                type="number"
+                min="0"
+                step="0.0001"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.models.form.outputPrice')"
+              :help="$t('providers.models.form.help.outputPrice')"
+            >
+              <UInput
+                v-model="modelEditForm.outputPrice"
+                type="number"
+                min="0"
+                step="0.0001"
+                class="w-full"
+              />
+            </UFormGroup>
+          </div>
+
+          <p v-if="modelFormError" class="text-sm text-rose-600">
+            {{ modelFormError }}
+          </p>
+
+          <div class="flex items-center justify-between">
+            <UButton
+              class="action-press"
+              variant="outline"
+              @click="modelEditOpen = false"
+            >
+              {{ $t("providers.cancel") }}
+            </UButton>
+            <UButton
+              class="action-press"
+              color="primary"
+              :loading="modelWorking"
+              @click="submitModelEdit"
+            >
+              {{ $t("providers.models.edit.submit") }}
             </UButton>
           </div>
         </div>
