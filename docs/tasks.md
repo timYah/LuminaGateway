@@ -473,7 +473,7 @@
 - [x] **T-50.2** 测试覆盖 Provider 删除：服务层与 admin 路由
 - [x] **T-50.3** Admin UI 增加删除操作与确认
 - [x] **T-50.4** 文档更新：补充删除接口说明
-- [ ] **T-50.5** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+- [x] **T-50.5** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
 ---
 
