@@ -4,12 +4,12 @@ import {
   callUpstreamNonStreaming,
   callUpstreamStreaming,
   classifyUpstreamError,
-  isNetworkError,
   type UpstreamUsage,
 } from "./upstreamService";
 import type { UpstreamRequestParams } from "./upstreamService";
 import { deactivateProvider } from "./providerService";
 import { billUsage } from "./billingService";
+import { recordFailure } from "./failureStatsService";
 import type { OpenAIChatCompletionResponse } from "../types/openai";
 import type { AnthropicMessagesResponse } from "../types/anthropic";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -91,6 +91,7 @@ async function handleUpstreamError(
   clientFormat: ClientFormat
 ): Promise<"continue" | GatewayErrorResponse> {
   const errorType = classifyUpstreamError(error);
+  recordFailure(providerId, errorType);
   if (errorType === "quota") {
     gatewayCircuitBreaker.open(providerId, QUOTA_COOLDOWN_MS);
     return "continue";
@@ -106,14 +107,16 @@ async function handleUpstreamError(
     await deactivateProvider(providerId);
     return "continue";
   }
+  if (errorType === "network") {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[gateway] upstream network error; failing over", {
+      providerId,
+      message,
+    });
+    gatewayCircuitBreaker.open(providerId, SERVER_COOLDOWN_MS);
+    return "continue";
+  }
   if (errorType === "server") {
-    if (isNetworkError(error)) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      console.warn("[gateway] upstream network error; failing over", {
-        providerId,
-        message,
-      });
-    }
     gatewayCircuitBreaker.open(providerId, SERVER_COOLDOWN_MS);
     return "continue";
   }

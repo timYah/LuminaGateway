@@ -136,7 +136,7 @@ describe("upstreamService", () => {
     expect(classifyUpstreamError(auth)).toBe("auth");
     expect(classifyUpstreamError(server)).toBe("server");
     expect(classifyUpstreamError(modelMissing)).toBe("model_not_found");
-    expect(classifyUpstreamError(network)).toBe("server");
+    expect(classifyUpstreamError(network)).toBe("network");
     expect(classifyUpstreamError(new Error("other"))).toBe("unknown");
   });
 

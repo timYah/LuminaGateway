@@ -158,6 +158,7 @@ export type UpstreamErrorType =
   | "rate_limit"
   | "auth"
   | "server"
+  | "network"
   | "model_not_found"
   | "unknown";
 
@@ -193,6 +194,7 @@ export function isNetworkError(error: unknown): boolean {
 }
 
 export function classifyUpstreamError(error: unknown): UpstreamErrorType {
+  if (isNetworkError(error)) return "network";
   if (APICallError.isInstance(error)) {
     const status = error.statusCode;
     const message = error.message?.toLowerCase() ?? "";
@@ -209,8 +211,6 @@ export function classifyUpstreamError(error: unknown): UpstreamErrorType {
     if (status === 401) return "auth";
     if (status === 403) return "auth";
     if (status && status >= 500 && status < 600) return "server";
-    if (isNetworkError(error)) return "server";
   }
-  if (isNetworkError(error)) return "server";
   return "unknown";
 }

@@ -17,6 +17,7 @@ import {
   type UpstreamRequestParams,
 } from "../services/upstreamService";
 import { runProvidersHealthCheck } from "../services/healthService";
+import { getFailureStats } from "../services/failureStatsService";
 
 const providerSchema = z.object({
   name: z.string().min(1),
@@ -112,6 +113,10 @@ adminRoutes.post("/admin/providers/health", async (c) => {
   const modelSlug = c.req.query("model")?.trim() || "gpt-4o";
   const results = await runProvidersHealthCheck(modelSlug);
   return c.json({ results });
+});
+
+adminRoutes.get("/admin/failure-stats", (c) => {
+  return c.json(getFailureStats());
 });
 
 adminRoutes.get("/admin/usage", async (c) => {

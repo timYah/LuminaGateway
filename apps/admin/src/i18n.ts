@@ -63,6 +63,16 @@ const messages = {
         unhealthy: "Unhealthy",
         unknown: "Unknown",
       },
+      failures: {
+        title: "Failure mix",
+        quota: "Quota",
+        rate_limit: "Rate limit",
+        server: "Server",
+        auth: "Auth",
+        model_not_found: "Model",
+        network: "Network",
+        unknown: "Unknown",
+      },
       status: {
         active: "Active",
         paused: "Paused",
@@ -247,6 +257,16 @@ const messages = {
         check: "检查健康",
         healthy: "健康",
         unhealthy: "异常",
+        unknown: "未知",
+      },
+      failures: {
+        title: "失败分类",
+        quota: "额度",
+        rate_limit: "限流",
+        server: "服务",
+        auth: "鉴权",
+        model_not_found: "模型",
+        network: "网络",
         unknown: "未知",
       },
       status: {

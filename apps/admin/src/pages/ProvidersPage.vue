@@ -27,9 +27,29 @@ type ProviderResponse = {
   providers: Provider[];
 };
 
+type FailureReason =
+  | "quota"
+  | "rate_limit"
+  | "server"
+  | "auth"
+  | "model_not_found"
+  | "network"
+  | "unknown";
+
+type FailureStats = Record<FailureReason, number>;
+
+type FailureStatsResponse = {
+  total: FailureStats;
+  providers: Record<string, FailureStats>;
+};
+
 const { data, pending, error, refresh } = useGatewayFetch<ProviderResponse>(
   "/admin/providers"
 );
+const {
+  data: failureStatsData,
+  refresh: refreshFailureStats,
+} = useGatewayFetch<FailureStatsResponse>("/admin/failure-stats");
 
 const providers = computed(() => data.value?.providers ?? []);
 const empty = computed(() => !pending.value && providers.value.length === 0);
@@ -42,6 +62,25 @@ const protocolOptions = computed(() => [
   { label: "Google", value: "google" },
   { label: "New API", value: "new-api" },
 ]);
+
+const failureKeys: FailureReason[] = [
+  "quota",
+  "rate_limit",
+  "server",
+  "auth",
+  "model_not_found",
+  "network",
+  "unknown",
+];
+
+const failureSummary = computed(() => {
+  const total = failureStatsData.value?.total;
+  return failureKeys.map((key) => ({
+    key,
+    label: t(`providers.failures.${key}`),
+    value: total?.[key] ?? 0,
+  }));
+});
 
 const apiModeOptions = computed(() => [
   { label: t("providers.form.apiModeResponses"), value: "responses" },
@@ -315,7 +354,7 @@ const checkHealth = async () => {
       method: "POST",
       query: { model: testModel.value.trim() || undefined },
     });
-    await refresh();
+    await Promise.all([refresh(), refreshFailureStats()]);
   } catch {
     // silent: surface via refresh error state if needed
   } finally {
@@ -348,6 +387,10 @@ const healthTone = (provider: Provider) => {
   if (status === "healthy") return "bg-emerald-100 text-emerald-700";
   if (status === "unhealthy") return "bg-rose-100 text-rose-700";
   return "bg-slate-200 text-slate-600";
+};
+
+const refreshAll = async () => {
+  await Promise.all([refresh(), refreshFailureStats()]);
 };
 </script>
 
@@ -388,6 +431,21 @@ const healthTone = (provider: Provider) => {
           <p class="mt-1 text-xs text-slate-500">
             {{ $t("providers.rosterNote") }}
           </p>
+          <div class="mt-4">
+            <div class="text-xs uppercase tracking-[0.25em] text-slate-400">
+              {{ $t("providers.failures.title") }}
+            </div>
+            <div class="mt-2 flex flex-wrap gap-2 text-xs">
+              <span
+                v-for="item in failureSummary"
+                :key="item.key"
+                class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"
+              >
+                <span class="font-medium">{{ item.label }}</span>
+                <span class="mono-numbers text-slate-500">{{ item.value }}</span>
+              </span>
+            </div>
+          </div>
         </div>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div class="w-full sm:w-52">
@@ -410,7 +468,7 @@ const healthTone = (provider: Provider) => {
           >
             {{ $t("providers.health.check") }}
           </UButton>
-          <UButton class="action-press" variant="outline" @click="refresh">
+          <UButton class="action-press" variant="outline" @click="refreshAll">
             {{ $t("providers.refresh") }}
           </UButton>
         </div>
