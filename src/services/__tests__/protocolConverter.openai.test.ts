@@ -29,6 +29,10 @@ describe("protocolConverter (OpenAI)", () => {
       instructions: "Be concise",
       input: [
         {
+          role: "developer",
+          content: [{ type: "input_text", text: "Prefer bullet points" }],
+        },
+        {
           role: "user",
           content: [{ type: "input_text", text: "hello" }],
         },
@@ -45,7 +49,9 @@ describe("protocolConverter (OpenAI)", () => {
     });
 
     expect(universal.model).toBe("gpt-5.2");
-    expect(universal.system).toBe("Be concise");
+    expect(universal.system).toBe(`Be concise
+
+Prefer bullet points`);
     expect(universal.temperature).toBe(0.2);
     expect(universal.maxOutputTokens).toBe(512);
     expect(universal.messages).toMatchObject([

@@ -102,7 +102,7 @@ Content-Type: application/json
 }
 ```
 
-Supported fields match the OpenAI Responses subset used by the validators: `model`, `input` (string or an array of `message` / `function_call_output` items), `instructions`, `stream`, `temperature`, `max_output_tokens`, `tools`, and `tool_choice`.
+Supported fields match the OpenAI Responses subset used by the validators: `model`, `input` (string or an array of `message` / `function_call_output` items), `instructions`, `stream`, `temperature`, `max_output_tokens`, `tools`, and `tool_choice`. `message.role` accepts `system`, `developer`, `user`, and `assistant`; `developer` and `system` inputs are merged into the upstream system prompt for cross-provider compatibility.
 
 ### Anthropic-compatible endpoint
 

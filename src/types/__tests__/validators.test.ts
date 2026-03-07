@@ -28,7 +28,7 @@ describe("validators", () => {
       instructions: "Be concise",
       input: [
         {
-          role: "user",
+          role: "developer",
           content: [{ type: "input_text", text: "hi" }],
         },
       ],

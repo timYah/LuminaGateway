@@ -92,6 +92,10 @@ describe("e2e non-streaming routes", () => {
         instructions: "Be helpful",
         input: [
           {
+            role: "developer",
+            content: [{ type: "input_text", text: "Be concise" }],
+          },
+          {
             role: "user",
             content: [{ type: "input_text", text: "hi" }],
           },
