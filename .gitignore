@@ -30,3 +30,7 @@ pnpm-debug.log*
 # Vitest
 .vitest/
 coverage/
+
+# Local runtime artifacts
+.runtime/test-db/*
+!.runtime/test-db/.gitkeep

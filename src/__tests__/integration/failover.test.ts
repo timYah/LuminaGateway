@@ -18,9 +18,9 @@ import { providers, usageLogs } from "../../db/schema";
 import { createProvider } from "../../services/providerService";
 import { callUpstreamNonStreaming } from "../../services/upstreamService";
 import { gatewayCircuitBreaker } from "../../services/gatewayService";
+import { configureTestDatabase } from "../../test/testDb";
 
-process.env.DATABASE_TYPE = "sqlite";
-process.env.DATABASE_URL = "file:./test-integration-failover.db";
+configureTestDatabase("integration-failover");
 process.env.GATEWAY_API_KEY = "test-key";
 
 const db = getDb() as SqliteDatabase;

@@ -11,9 +11,9 @@ import {
   getProviderById,
   updateProvider,
 } from "../providerService";
+import { configureTestDatabase } from "../../test/testDb";
 
-process.env.DATABASE_TYPE = "sqlite";
-process.env.DATABASE_URL = "file:./test-provider.db";
+configureTestDatabase("provider");
 
 const db = getDb() as SqliteDatabase;
 

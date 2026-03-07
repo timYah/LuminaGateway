@@ -1,3 +1,5 @@
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import Database from "better-sqlite3";
 import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
 import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
@@ -27,6 +29,14 @@ function resolveSqliteFilename(url: string) {
   return url.startsWith("file:") ? url.slice("file:".length) : url;
 }
 
+function ensureSqliteDirectory(filename: string) {
+  if (filename === ":memory:") {
+    return;
+  }
+
+  mkdirSync(dirname(filename), { recursive: true });
+}
+
 export function getSqliteClient(): SqliteDatabase {
   return getDb() as SqliteDatabase;
 }
@@ -46,7 +56,9 @@ export function getDb(): DatabaseClient {
     return db;
   }
 
-  sqliteInstance = new Database(resolveSqliteFilename(dbUrl));
+  const sqliteFilename = resolveSqliteFilename(dbUrl);
+  ensureSqliteDirectory(sqliteFilename);
+  sqliteInstance = new Database(sqliteFilename);
   sqliteInstance.pragma("journal_mode = WAL");
   db = drizzleSqlite(sqliteInstance, { schema });
   return db;

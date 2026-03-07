@@ -16,9 +16,9 @@ import { getDb, type SqliteDatabase } from "../../db";
 import { providers, usageLogs } from "../../db/schema";
 import { createProvider, getProviderById } from "../../services/providerService";
 import { callUpstreamNonStreaming } from "../../services/upstreamService";
+import { configureTestDatabase } from "../../test/testDb";
 
-process.env.DATABASE_TYPE = "sqlite";
-process.env.DATABASE_URL = "file:./test-integration-happy.db";
+configureTestDatabase("integration-happy");
 process.env.GATEWAY_API_KEY = "test-key";
 
 const db = getDb() as SqliteDatabase;

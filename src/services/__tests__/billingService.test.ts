@@ -4,9 +4,9 @@ import { getDb, type SqliteDatabase } from "../../db";
 import { providers, usageLogs } from "../../db/schema";
 import { calculateCost, billUsage } from "../billingService";
 import { createProvider, getProviderById } from "../providerService";
+import { configureTestDatabase } from "../../test/testDb";
 
-process.env.DATABASE_TYPE = "sqlite";
-process.env.DATABASE_URL = "file:./test-billing.db";
+configureTestDatabase("billing");
 
 const db = getDb() as SqliteDatabase;
 

@@ -18,9 +18,9 @@ import { providers, usageLogs } from "../../db/schema";
 import { createProvider } from "../../services/providerService";
 import { APICallError } from "ai";
 import { callUpstreamStreaming } from "../../services/upstreamService";
+import { configureTestDatabase } from "../../test/testDb";
 
-process.env.DATABASE_TYPE = "sqlite";
-process.env.DATABASE_URL = "file:./test-integration-streaming.db";
+configureTestDatabase("integration-streaming");
 process.env.GATEWAY_API_KEY = "test-key";
 
 const db = getDb() as SqliteDatabase;

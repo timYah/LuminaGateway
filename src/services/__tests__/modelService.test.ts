@@ -3,9 +3,9 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { getDb, type SqliteDatabase } from "../../db";
 import { providers } from "../../db/schema";
 import { getActiveProvidersByModel } from "../modelService";
+import { configureTestDatabase } from "../../test/testDb";
 
-process.env.DATABASE_TYPE = "sqlite";
-process.env.DATABASE_URL = "file:./test-model.db";
+configureTestDatabase("model");
 
 const db = getDb() as SqliteDatabase;
 

@@ -3,9 +3,9 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { createApp } from "../../app";
 import { getDb, type SqliteDatabase } from "../../db";
 import { providers } from "../../db/schema";
+import { configureTestDatabase } from "../../test/testDb";
 
-process.env.DATABASE_TYPE = "sqlite";
-process.env.DATABASE_URL = "file:./test-admin-create.db";
+configureTestDatabase("admin-create");
 process.env.GATEWAY_API_KEY = "test-key";
 
 const db = getDb() as SqliteDatabase;

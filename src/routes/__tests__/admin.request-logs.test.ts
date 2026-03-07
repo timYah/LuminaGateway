@@ -4,9 +4,9 @@ import { createApp } from "../../app";
 import { getDb, type SqliteDatabase } from "../../db";
 import { providers, requestLogs } from "../../db/schema";
 import { createProvider } from "../../services/providerService";
+import { configureTestDatabase } from "../../test/testDb";
 
-process.env.DATABASE_TYPE = "sqlite";
-process.env.DATABASE_URL = "file:./test-admin-request-logs.db";
+configureTestDatabase("admin-request-logs");
 process.env.GATEWAY_API_KEY = "test-key";
 
 const db = getDb() as SqliteDatabase;

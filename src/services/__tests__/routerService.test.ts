@@ -4,9 +4,9 @@ import { getDb, type SqliteDatabase } from "../../db";
 import { providers } from "../../db/schema";
 import { CircuitBreaker } from "../circuitBreaker";
 import { NoProviderAvailableError, RouterService } from "../routerService";
+import { configureTestDatabase } from "../../test/testDb";
 
-process.env.DATABASE_TYPE = "sqlite";
-process.env.DATABASE_URL = "file:./test-router.db";
+configureTestDatabase("router");
 
 const db = getDb() as SqliteDatabase;
 
