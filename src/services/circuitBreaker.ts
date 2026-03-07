@@ -15,6 +15,19 @@ export class CircuitBreaker {
     return true;
   }
 
+  getOpenEntries() {
+    const now = Date.now();
+    const entries: { providerId: number; openUntil: number }[] = [];
+    for (const [providerId, until] of this.openUntil.entries()) {
+      if (now >= until) {
+        this.openUntil.delete(providerId);
+        continue;
+      }
+      entries.push({ providerId, openUntil: until });
+    }
+    return entries;
+  }
+
   reset(providerId: number) {
     this.openUntil.delete(providerId);
   }

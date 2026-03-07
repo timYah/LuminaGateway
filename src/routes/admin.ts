@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { and, eq, gte, lte, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getSqliteClient } from "../db";
+import { gatewayCircuitBreaker } from "../services/gatewayService";
 import { providers, requestLogs, usageLogs } from "../db/schema";
 import {
   createProvider,
@@ -124,6 +125,37 @@ adminRoutes.post("/admin/providers/health", async (c) => {
   const modelSlug = c.req.query("model")?.trim() || "gpt-4o";
   const results = await runProvidersHealthCheck(modelSlug);
   return c.json({ results });
+});
+
+adminRoutes.get("/admin/circuit-breakers", async (c) => {
+  const providers = await getAllProviders();
+  const openEntries = gatewayCircuitBreaker.getOpenEntries();
+  const openMap = new Map(openEntries.map((entry) => [entry.providerId, entry.openUntil]));
+  const now = Date.now();
+  const breakers = providers
+    .filter((provider) => openMap.has(provider.id))
+    .map((provider) => {
+      const openUntil = openMap.get(provider.id) ?? now;
+      return {
+        providerId: provider.id,
+        name: provider.name,
+        protocol: provider.protocol,
+        openUntil,
+        remainingMs: Math.max(openUntil - now, 0),
+      };
+    })
+    .sort((a, b) => a.remainingMs - b.remainingMs || a.providerId - b.providerId);
+  return c.json({ breakers });
+});
+
+adminRoutes.post("/admin/providers/:id/reset", async (c) => {
+  const id = Number(c.req.param("id"));
+  const provider = await getProviderById(id);
+  if (!provider) {
+    return c.json({ error: { message: "Provider not found" } }, 404);
+  }
+  gatewayCircuitBreaker.reset(id);
+  return c.json({ ok: true, provider });
 });
 
 adminRoutes.get("/admin/failure-stats", (c) => {

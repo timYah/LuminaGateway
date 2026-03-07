@@ -638,6 +638,16 @@
 - [x] **T-60.3** 将 `POST /codex/responses` 改为原样透传上游 `/responses`，仅在首字节返回前执行 failover，并跳过 usage 计费
 - [x] **T-60.4** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`，确认 Codex 透传链路与 Admin 配置说明一致
 
+## Phase 61 — Circuit Breaker Ops
+
+- [x] **T-61.1** 新增 `/admin/circuit-breakers` 观测端点与 `/admin/providers/:id/reset` 手动复位端点，补充自动化测试
+- [ ] **T-61.2** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
+
+## Phase 62 — Codex Upstream Timeout
+
+- [ ] **T-62.1** 为 `/codex/responses` 增加 `CODEX_UPSTREAM_TIMEOUT_MS` 超时控制，超时视为可重试错误并触发 failover，补充自动化测试
+- [ ] **T-62.2** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -697,4 +707,6 @@
 | Phase 58 | 3 | Codex CLI Compatibility |
 | Phase 59 | 2 | Dedicated Codex Endpoint |
 | Phase 60 | 4 | Codex Passthrough Routing |
-| **合计** | **269** | |
+| Phase 61 | 2 | Circuit Breaker Ops |
+| Phase 62 | 2 | Codex Upstream Timeout |
+| **合计** | **273** | |
