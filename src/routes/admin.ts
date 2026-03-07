@@ -16,6 +16,7 @@ import {
   classifyUpstreamError,
   type UpstreamRequestParams,
 } from "../services/upstreamService";
+import { runProvidersHealthCheck } from "../services/healthService";
 
 const providerSchema = z.object({
   name: z.string().min(1),
@@ -105,6 +106,12 @@ adminRoutes.post("/admin/providers/:id/test", async (c) => {
       message: err instanceof Error ? err.message : "Unknown error",
     });
   }
+});
+
+adminRoutes.post("/admin/providers/health", async (c) => {
+  const modelSlug = c.req.query("model")?.trim() || "gpt-4o";
+  const results = await runProvidersHealthCheck(modelSlug);
+  return c.json({ results });
 });
 
 adminRoutes.get("/admin/usage", async (c) => {

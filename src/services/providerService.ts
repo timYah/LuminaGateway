@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { getSqliteClient } from "../db";
-import { type NewProvider, providers } from "../db/schema";
+import { type NewProvider, type ProviderHealthStatus, providers } from "../db/schema";
 
 export async function getAllProviders() {
   const db = getSqliteClient();
@@ -58,6 +58,24 @@ export async function deleteProvider(id: number) {
   const db = getSqliteClient();
   const rows = await db
     .delete(providers)
+    .where(eq(providers.id, id))
+    .returning();
+  return rows[0] ?? null;
+}
+
+export async function updateProviderHealth(
+  id: number,
+  healthStatus: ProviderHealthStatus,
+  checkedAt: Date = new Date()
+) {
+  const db = getSqliteClient();
+  const rows = await db
+    .update(providers)
+    .set({
+      healthStatus,
+      lastHealthCheckAt: checkedAt,
+      updatedAt: sql`(unixepoch())`,
+    })
     .where(eq(providers.id, id))
     .returning();
   return rows[0] ?? null;

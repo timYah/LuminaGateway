@@ -88,6 +88,21 @@
           "autoincrement": false,
           "default": 0
         },
+        "health_status": {
+          "name": "health_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "unknown"
+        },
+        "last_health_check_at": {
+          "name": "last_health_check_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
