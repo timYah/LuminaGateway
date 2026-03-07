@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import { gatewayFetch, useGatewayFetch } from "../composables/useGatewayFetch";
+import PageHeader from "../components/PageHeader.vue";
 import UFormGroup from "../components/UFormGroup.vue";
 
 type Provider = {
@@ -463,79 +464,68 @@ const refreshAll = async () => {
 </script>
 
 <template>
-  <section class="space-y-5">
-    <header
-      class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+  <section class="space-y-4 md:space-y-5">
+    <PageHeader
+      :eyebrow="$t('nav.providers')"
+      :title="$t('providers.title')"
+      :intro="$t('providers.intro')"
     >
-      <div>
-          <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-            {{ $t("nav.providers") }}
-          </div>
-          <h1 class="mt-3 text-3xl font-semibold text-slate-900">
-            {{ $t("providers.title") }}
-          </h1>
-          <p class="mt-3 text-base text-slate-600 leading-relaxed max-w-[65ch]">
-            {{ $t("providers.intro") }}
-          </p>
-        </div>
-        <div class="flex flex-col items-start gap-2 lg:items-end">
-          <div class="flex flex-wrap items-center gap-2">
-            <UButton
-              class="action-press"
-              variant="outline"
-              :loading="exportWorking"
-              @click="exportConfig"
-            >
-              {{ $t("providers.config.export") }}
-            </UButton>
-            <UButton
-              class="action-press"
-              variant="outline"
-              @click="importOpen = true"
-            >
-              {{ $t("providers.config.import") }}
-            </UButton>
-            <UButton class="action-press" color="primary" @click="createOpen = true">
-              {{ $t("providers.add") }}
-            </UButton>
-          </div>
-          <p v-if="exportError" class="text-xs text-rose-600">
-            {{ exportError }}
-          </p>
-        </div>
-      </header>
+      <template #actions>
+        <UButton
+          class="action-press"
+          variant="outline"
+          :loading="exportWorking"
+          @click="exportConfig"
+        >
+          {{ $t("providers.config.export") }}
+        </UButton>
+        <UButton
+          class="action-press"
+          variant="outline"
+          @click="importOpen = true"
+        >
+          {{ $t("providers.config.import") }}
+        </UButton>
+        <UButton class="action-press" color="primary" @click="createOpen = true">
+          {{ $t("providers.add") }}
+        </UButton>
+      </template>
+      <template #meta>
+        <p v-if="exportError">{{ exportError }}</p>
+      </template>
+    </PageHeader>
 
     <div class="border-b border-slate-200/70"></div>
 
-    <div class="surface radius-panel divide-y divide-slate-200/60">
-      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
-        <div>
-          <div class="text-sm font-medium text-slate-900">
+    <div class="surface radius-panel section-shell divide-y divide-slate-200/60">
+      <div class="section-shell__header">
+        <div class="section-shell__headline">
+          <div class="section-shell__title">
             {{ $t("providers.roster") }}
           </div>
-          <p class="text-sm text-slate-500">
+          <p class="section-shell__subtitle">
             {{ $t("providers.rosterHint") }}
           </p>
-          <p class="mt-1 text-xs text-slate-500">
+          <p class="section-shell__note">
             {{ $t("providers.rosterNote") }}
           </p>
           <div class="mt-4">
             <div class="text-xs uppercase tracking-[0.25em] text-slate-400">
               {{ $t("providers.failures.title") }}
             </div>
-            <div class="mt-2 flex flex-wrap gap-2 text-xs">
+            <div class="summary-strip mt-3">
               <span
                 v-for="item in failureSummary"
                 :key="item.key"
-                class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"
+                class="summary-pill"
               >
-                <span class="font-medium">{{ item.label }}</span>
-                <span class="mono-numbers text-slate-500">{{ item.value }}</span>
+                <span class="summary-pill__label">{{ item.label }}</span>
+                <span class="summary-pill__value">{{ item.value }}</span>
               </span>
             </div>
           </div>
         </div>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div class="section-shell__actions">
           <div class="w-full sm:w-52">
             <UFormGroup
               :label="$t('providers.testModel.label')"

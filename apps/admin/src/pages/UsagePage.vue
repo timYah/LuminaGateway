@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 
 import { gatewayFetch, useGatewayFetch } from "../composables/useGatewayFetch";
 import { useApiKey } from "../composables/useApiKey";
+import PageHeader from "../components/PageHeader.vue";
 import UFormGroup from "../components/UFormGroup.vue";
 
 type Provider = {
@@ -318,31 +319,22 @@ watch(
 </script>
 
 <template>
-  <section class="space-y-5">
-    <header
-      class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+  <section class="space-y-4 md:space-y-5">
+    <PageHeader
+      :eyebrow="$t('nav.usage')"
+      :title="$t('usage.title')"
+      :intro="$t('usage.intro')"
     >
-      <div>
-          <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
-            {{ $t("nav.usage") }}
-          </div>
-          <h1 class="mt-3 text-3xl font-semibold text-slate-900">
-            {{ $t("usage.title") }}
-          </h1>
-          <p class="mt-3 text-base text-slate-600 leading-relaxed max-w-[65ch]">
-            {{ $t("usage.intro") }}
-          </p>
-        </div>
-        <div class="flex items-center gap-3">
-          <UButton class="action-press" variant="outline" @click="refreshAll">
-            {{ $t("usage.refresh") }}
-          </UButton>
-        </div>
-      </header>
+      <template #actions>
+        <UButton class="action-press" variant="outline" @click="refreshAll">
+          {{ $t("usage.refresh") }}
+        </UButton>
+      </template>
+    </PageHeader>
 
     <div class="border-b border-slate-200/70"></div>
 
-    <div class="surface radius-panel divide-y divide-slate-200/60">
+    <div class="surface radius-panel section-shell divide-y divide-slate-200/60">
       <div class="px-6 py-5 md:px-8 md:py-6">
         <div class="text-sm font-medium text-slate-900">
           {{ $t("usage.dashboard.title") }}
@@ -470,14 +462,14 @@ watch(
       </div>
     </div>
 
-    <div class="surface radius-panel divide-y divide-slate-200/60">
+    <div class="surface radius-panel section-shell divide-y divide-slate-200/60">
       <div class="px-6 py-5 md:px-8 md:py-6">
         <div class="text-sm font-medium text-slate-900">
           {{ $t("usage.filters") }}
         </div>
       </div>
       <div class="px-6 py-5 md:px-8 md:py-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+        <div class="toolbar-grid">
           <UFormGroup
             :label="$t('usage.form.provider')"
             :help="$t('usage.form.help.provider')"
@@ -529,7 +521,7 @@ watch(
       </div>
     </div>
 
-    <div class="surface radius-panel divide-y divide-slate-200/60">
+    <div class="surface radius-panel section-shell divide-y divide-slate-200/60">
       <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
         <div>
           <div class="text-sm font-medium text-slate-900">
@@ -644,7 +636,7 @@ watch(
       </div>
     </div>
 
-    <div class="surface radius-panel divide-y divide-slate-200/60">
+    <div class="surface radius-panel section-shell divide-y divide-slate-200/60">
       <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
         <div>
           <div class="text-sm font-medium text-slate-900">
@@ -660,7 +652,7 @@ watch(
       </div>
 
       <div class="px-6 py-5 md:px-8 md:py-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+        <div class="toolbar-grid">
           <UFormGroup
             :label="$t('usage.requests.form.provider')"
             :help="$t('usage.requests.form.help.provider')"
