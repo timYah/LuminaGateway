@@ -31,6 +31,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
 | `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
 | `PORT` | `3000` | Server listen port. |
 | `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
 | `DEFAULT_OUTPUT_PRICE` | *(optional)* | Global output price fallback (USD per 1M tokens). |

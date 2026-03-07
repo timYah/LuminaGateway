@@ -13,6 +13,7 @@ Lumina Gateway runs on Node.js LTS and supports SQLite or PostgreSQL. Use persis
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
 | `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
 | `GATEWAY_BASE_URL` | *(optional)* | Gateway base URL used by the admin dev server proxy. |
 | `PORT` | `3000` | Server listen port. |
 | `HOST` | `127.0.0.1` | Dev host binding for gateway/admin startup. Set `0.0.0.0` to expose on LAN or Docker host networking. |

@@ -116,6 +116,7 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
 | `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, and `/admin/*` routes. |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
 | `PORT` | `3000` | Server listen port. |
 | `LOG_LEVEL` | `info` | Logging threshold: `debug`, `info`, `warn`, `error`. |
 
