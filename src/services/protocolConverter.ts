@@ -1,6 +1,9 @@
 import type {
   OpenAIChatCompletionRequest,
   OpenAIChatCompletionResponse,
+  OpenAIResponsesInputItem,
+  OpenAIResponsesRequest,
+  OpenAIResponsesResponse,
   OpenAIToolChoice,
 } from "../types/openai";
 import type { AnthropicMessagesRequest, AnthropicMessagesResponse } from "../types/anthropic";
@@ -17,6 +20,76 @@ export type UniversalResponse = {
   usage?: UpstreamUsage | null;
 };
 
+function createId(prefix: string) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeResponsesText(
+  value: string | Array<{ text: string }> | undefined
+) {
+  if (typeof value === "string") return value;
+  if (!Array.isArray(value)) return "";
+  return value
+    .flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      if ("text" in item && typeof item.text === "string") {
+        return [item.text];
+      }
+      return [];
+    })
+    .join("\n");
+}
+
+function convertResponsesInputItemsToMessages(input: OpenAIResponsesInputItem[]) {
+  const messages: Array<{
+    role: "system" | "user" | "assistant" | "tool";
+    content: string;
+    tool_call_id?: string;
+  }> = [];
+
+  for (const item of input) {
+    if (item.type === "function_call_output") {
+      messages.push({
+        role: "tool",
+        tool_call_id: item.call_id,
+        content: normalizeResponsesText(item.output),
+      });
+      continue;
+    }
+
+    messages.push({
+      role: item.role,
+      content: normalizeResponsesText(item.content),
+    });
+  }
+
+  return messages;
+}
+
+function convertUsageToOpenAIUsage(usage: UpstreamUsage | null | undefined) {
+  if (!usage) return undefined;
+  return {
+    prompt_tokens: usage.promptTokens,
+    completion_tokens: usage.completionTokens,
+    total_tokens: usage.promptTokens + usage.completionTokens,
+  };
+}
+
+function convertUsageToOpenAIResponsesUsage(usage: UpstreamUsage | null | undefined) {
+  if (!usage) return undefined;
+  return {
+    input_tokens: usage.promptTokens,
+    output_tokens: usage.completionTokens,
+    total_tokens: usage.promptTokens + usage.completionTokens,
+    input_tokens_details: {
+      cached_tokens: 0,
+    },
+    output_tokens_details: {
+      reasoning_tokens: 0,
+    },
+  };
+}
+
 export function convertOpenAIToUniversal(
   request: OpenAIChatCompletionRequest
 ): UniversalRequest {
@@ -30,20 +103,41 @@ export function convertOpenAIToUniversal(
   };
 }
 
+export function convertOpenAIResponsesToUniversal(
+  request: OpenAIResponsesRequest
+): UniversalRequest {
+  const baseRequest = {
+    model: request.model,
+    system: request.instructions,
+    temperature: request.temperature,
+    maxOutputTokens: request.max_output_tokens,
+    tools: request.tools as unknown as UpstreamRequestParams["tools"],
+    toolChoice: request.tool_choice as unknown as UpstreamRequestParams["toolChoice"],
+  };
+
+  if (typeof request.input === "string") {
+    return {
+      ...baseRequest,
+      prompt: request.input,
+    };
+  }
+
+  return {
+    ...baseRequest,
+    messages: convertResponsesInputItemsToMessages(
+      request.input
+    ) as unknown as UpstreamRequestParams["messages"],
+  };
+}
+
 export function convertUniversalToOpenAIResponse(
   result: UniversalResponse
 ): OpenAIChatCompletionResponse {
   const created = Math.floor(Date.now() / 1000);
-  const usage = result.usage
-    ? {
-        prompt_tokens: result.usage.promptTokens,
-        completion_tokens: result.usage.completionTokens,
-        total_tokens: result.usage.promptTokens + result.usage.completionTokens,
-      }
-    : undefined;
+  const usage = convertUsageToOpenAIUsage(result.usage);
 
   return {
-    id: `chatcmpl_${created}_${Math.random().toString(36).slice(2, 8)}`,
+    id: createId("chatcmpl"),
     object: "chat.completion",
     created,
     model: result.model,
@@ -55,6 +149,38 @@ export function convertUniversalToOpenAIResponse(
       },
     ],
     usage,
+  };
+}
+
+export function convertUniversalToOpenAIResponsesResponse(
+  result: UniversalResponse
+): OpenAIResponsesResponse {
+  const createdAt = Math.floor(Date.now() / 1000);
+  const message = {
+    id: createId("msg"),
+    type: "message" as const,
+    role: "assistant" as const,
+    status: "completed" as const,
+    content: [
+      {
+        type: "output_text" as const,
+        text: result.text,
+        annotations: [],
+      },
+    ],
+  };
+
+  return {
+    id: createId("resp"),
+    object: "response",
+    created_at: createdAt,
+    status: "completed",
+    model: result.model,
+    error: null,
+    incomplete_details: null,
+    output: [message],
+    output_text: result.text,
+    usage: convertUsageToOpenAIResponsesUsage(result.usage),
   };
 }
 

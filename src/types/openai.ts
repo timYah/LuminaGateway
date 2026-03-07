@@ -1,4 +1,5 @@
 export type OpenAIRole = "system" | "user" | "assistant" | "tool";
+export type OpenAIResponsesMessageRole = Exclude<OpenAIRole, "tool">;
 
 export interface OpenAIChatMessage {
   role: OpenAIRole;
@@ -75,4 +76,123 @@ export interface OpenAIChatCompletionChunk {
   created: number;
   model: string;
   choices: OpenAIChatCompletionChunkChoice[];
+}
+
+export interface OpenAIResponsesInputTextPart {
+  type: "input_text";
+  text: string;
+}
+
+export interface OpenAIResponsesOutputTextPart {
+  type: "output_text";
+  text: string;
+  annotations?: unknown[];
+}
+
+export type OpenAIResponsesTextPart =
+  | OpenAIResponsesInputTextPart
+  | OpenAIResponsesOutputTextPart;
+
+export interface OpenAIResponsesMessageInput {
+  type?: "message";
+  role: OpenAIResponsesMessageRole;
+  content: string | OpenAIResponsesTextPart[];
+  id?: string;
+  phase?: "commentary" | "final_answer" | null;
+}
+
+export interface OpenAIResponsesFunctionCallOutputInput {
+  type: "function_call_output";
+  call_id: string;
+  output: string | OpenAIResponsesTextPart[];
+}
+
+export type OpenAIResponsesInputItem =
+  | OpenAIResponsesMessageInput
+  | OpenAIResponsesFunctionCallOutputInput;
+
+export interface OpenAIResponsesRequest {
+  model: string;
+  input: string | OpenAIResponsesInputItem[];
+  instructions?: string;
+  stream?: boolean;
+  temperature?: number;
+  max_output_tokens?: number;
+  tools?: OpenAIToolDefinition[];
+  tool_choice?: OpenAIToolChoice;
+}
+
+export interface OpenAIResponsesUsage {
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  input_tokens_details?: {
+    cached_tokens?: number;
+  };
+  output_tokens_details?: {
+    reasoning_tokens?: number;
+  };
+}
+
+export interface OpenAIResponsesMessageOutput {
+  id: string;
+  type: "message";
+  role: "assistant";
+  status: "completed";
+  content: Array<OpenAIResponsesOutputTextPart & { annotations: unknown[] }>;
+}
+
+export interface OpenAIResponsesResponse {
+  id: string;
+  object: "response";
+  created_at: number;
+  status: "completed";
+  model: string;
+  error: null;
+  incomplete_details: null;
+  output: OpenAIResponsesMessageOutput[];
+  output_text: string;
+  usage?: OpenAIResponsesUsage;
+}
+
+export interface OpenAIResponsesCreatedChunk {
+  type: "response.created";
+  response: {
+    id: string;
+    object: "response";
+    created_at: number;
+    status: "in_progress";
+    model: string;
+  };
+}
+
+export interface OpenAIResponsesOutputItemAddedChunk {
+  type: "response.output_item.added";
+  output_index: number;
+  item: {
+    id: string;
+    type: "message";
+    role: "assistant";
+    status: "in_progress";
+    content: [];
+  };
+}
+
+export interface OpenAIResponsesOutputTextDeltaChunk {
+  type: "response.output_text.delta";
+  item_id: string;
+  output_index: number;
+  content_index: number;
+  delta: string;
+}
+
+export interface OpenAIResponsesOutputItemDoneChunk {
+  type: "response.output_item.done";
+  output_index: number;
+  item: OpenAIResponsesMessageOutput;
+}
+
+export interface OpenAIResponsesCompletedChunk {
+  type: "response.completed";
+  response: OpenAIResponsesResponse;
 }

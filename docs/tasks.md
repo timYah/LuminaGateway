@@ -600,6 +600,16 @@
 
 ---
 
+
+## Phase 56 — OpenAI Responses API
+
+- [x] **T-56.1** 新增 OpenAI Responses 请求/响应类型、校验规则与协议转换逻辑，支持将 `input` / `instructions` 转为网关通用请求参数
+- [ ] **T-56.2** 新增 `POST /v1/responses` 路由，并支持与 Chat Completions 并行的非流式 / 流式响应封装
+- [ ] **T-56.3** 补充 `/v1/responses` 的自动化测试与文档，覆盖非流式、流式与 API 概览更新
+- [ ] **T-56.4** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，确认 OpenAI Chat Completions、Responses 与 Anthropic 路由全部通过
+
+---
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -653,5 +663,6 @@
 | Phase 52 | 8 | Repo Hygiene |
 | Phase 53 | 10 | Admin UI Optimization Refresh |
 | Phase 54 | 3 | Provider Probe Consistency |
-| Phase 55 | 5 | Docker Deployment |
-| **合计** | **220** | |
+| Phase 55 | 17 | Docker Deployment |
+| Phase 56 | 4 | OpenAI Responses API |
+| **合计** | **260** | |
