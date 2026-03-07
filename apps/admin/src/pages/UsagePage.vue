@@ -27,6 +27,30 @@ type UsageResponse = {
   offset: number;
 };
 
+type UsageTrendPoint = {
+  date: string;
+  requestCount: number;
+  totalCost: number;
+};
+
+type UsageProviderStat = {
+  providerId: number;
+  requestCount: number;
+  totalCost: number;
+};
+
+type UsageModelStat = {
+  modelSlug: string;
+  requestCount: number;
+  totalCost: number;
+};
+
+type UsageStatsResponse = {
+  trend: UsageTrendPoint[];
+  byProvider: UsageProviderStat[];
+  byModel: UsageModelStat[];
+};
+
 const { t } = useI18n();
 const providers = ref<Provider[]>([]);
 const providerOptions = computed(() => [
@@ -63,6 +87,13 @@ const query = computed(() => {
   return payload;
 });
 
+const statsQuery = computed(() => {
+  const payload: Record<string, string> = {};
+  if (filters.startDate) payload.startDate = filters.startDate;
+  if (filters.endDate) payload.endDate = filters.endDate;
+  return payload;
+});
+
 const { data, pending, error, execute } = useGatewayFetch<UsageResponse>(
   "/admin/usage",
   {
@@ -72,9 +103,43 @@ const { data, pending, error, execute } = useGatewayFetch<UsageResponse>(
   }
 );
 
+const {
+  data: statsData,
+  pending: statsPending,
+  error: statsError,
+  execute: executeStats,
+} = useGatewayFetch<UsageStatsResponse>("/admin/usage/stats", {
+  query: statsQuery,
+  immediate: false,
+  watch: false,
+});
+
 const rows = computed(() => data.value?.usage ?? []);
 const empty = computed(() => !pending.value && rows.value.length === 0);
+const trend = computed(() => statsData.value?.trend ?? []);
+const providerStats = computed(() => statsData.value?.byProvider ?? []);
+const modelStats = computed(() => statsData.value?.byModel ?? []);
 const { authHeader } = useApiKey();
+
+const providerNameMap = computed(() => {
+  return new Map(providers.value.map((provider) => [provider.id, provider.name]));
+});
+
+const maxTrend = computed(() =>
+  trend.value.reduce((max, item) => Math.max(max, item.requestCount), 0)
+);
+const maxProvider = computed(() =>
+  providerStats.value.reduce((max, item) => Math.max(max, item.requestCount), 0)
+);
+const maxModel = computed(() =>
+  modelStats.value.reduce((max, item) => Math.max(max, item.requestCount), 0)
+);
+
+const ratio = (value: number, maxValue: number) => {
+  if (!maxValue) return "0%";
+  const percent = Math.max(6, Math.round((value / maxValue) * 100));
+  return `${percent}%`;
+};
 
 const fetchProviders = async () => {
   try {
@@ -90,6 +155,7 @@ const fetchProviders = async () => {
 const applyFilters = async () => {
   filters.offset = "0";
   await execute();
+  await executeStats();
 };
 
 const nextPage = async () => {
@@ -118,12 +184,29 @@ const formatDate = (value: string) => {
   }).format(parsed);
 };
 
+const formatShortDate = (value: string) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.valueOf())) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(parsed);
+};
+
+const formatCost = (value: number) => value.toFixed(4);
+
+const refreshAll = async () => {
+  await execute();
+  await executeStats();
+};
+
 watch(
   authHeader,
   async (value) => {
     if (!value) return;
     await fetchProviders();
     await execute();
+    await executeStats();
   },
   { immediate: true }
 );
@@ -146,13 +229,141 @@ watch(
           </p>
         </div>
         <div class="flex items-center gap-3">
-          <UButton class="action-press" variant="outline" @click="execute">
+          <UButton class="action-press" variant="outline" @click="refreshAll">
             {{ $t("usage.refresh") }}
           </UButton>
         </div>
       </header>
 
     <div class="border-b border-slate-200/70"></div>
+
+    <div class="surface radius-panel divide-y divide-slate-200/60">
+      <div class="px-6 py-5 md:px-8 md:py-6">
+        <div class="text-sm font-medium text-slate-900">
+          {{ $t("usage.dashboard.title") }}
+        </div>
+        <p class="text-sm text-slate-500">
+          {{ $t("usage.dashboard.subtitle") }}
+        </p>
+      </div>
+      <div class="px-6 py-5 md:px-8 md:py-6">
+        <div v-if="statsPending" class="space-y-3">
+          <div class="h-10 radius-soft skeleton"></div>
+          <div class="h-10 radius-soft skeleton"></div>
+          <div class="h-10 radius-soft skeleton"></div>
+        </div>
+
+        <div
+          v-else-if="statsError"
+          class="radius-card border border-rose-200 bg-rose-50 p-4"
+        >
+          <div class="text-sm font-medium text-rose-700">
+            {{ $t("usage.dashboard.errorTitle") }}
+          </div>
+          <p class="text-sm text-rose-600">
+            {{ $t("usage.dashboard.errorHint") }}
+          </p>
+        </div>
+
+        <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="space-y-3">
+            <div class="text-sm font-medium text-slate-900">
+              {{ $t("usage.dashboard.trend") }}
+            </div>
+            <div v-if="trend.length === 0" class="text-sm text-slate-500">
+              {{ $t("usage.dashboard.empty") }}
+            </div>
+            <div v-else class="space-y-3">
+              <div
+                v-for="item in trend"
+                :key="item.date"
+                class="space-y-1"
+              >
+                <div class="flex items-center justify-between text-xs text-slate-600">
+                  <span>{{ formatShortDate(item.date) }}</span>
+                  <span class="mono-numbers">
+                    {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                  </span>
+                </div>
+                <div class="h-2 rounded-full bg-slate-100">
+                  <div
+                    class="h-2 rounded-full bg-slate-900"
+                    :style="{ width: ratio(item.requestCount, maxTrend) }"
+                  ></div>
+                </div>
+                <div class="text-[11px] text-slate-500 mono-numbers">
+                  ${{ formatCost(item.totalCost) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="text-sm font-medium text-slate-900">
+              {{ $t("usage.dashboard.providers") }}
+            </div>
+            <div v-if="providerStats.length === 0" class="text-sm text-slate-500">
+              {{ $t("usage.dashboard.empty") }}
+            </div>
+            <div v-else class="space-y-3">
+              <div
+                v-for="item in providerStats"
+                :key="item.providerId"
+                class="space-y-1"
+              >
+                <div class="flex items-center justify-between text-xs text-slate-600">
+                  <span>{{ providerNameMap.get(item.providerId) ?? item.providerId }}</span>
+                  <span class="mono-numbers">
+                    {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                  </span>
+                </div>
+                <div class="h-2 rounded-full bg-slate-100">
+                  <div
+                    class="h-2 rounded-full bg-slate-800"
+                    :style="{ width: ratio(item.requestCount, maxProvider) }"
+                  ></div>
+                </div>
+                <div class="text-[11px] text-slate-500 mono-numbers">
+                  ${{ formatCost(item.totalCost) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="text-sm font-medium text-slate-900">
+              {{ $t("usage.dashboard.models") }}
+            </div>
+            <div v-if="modelStats.length === 0" class="text-sm text-slate-500">
+              {{ $t("usage.dashboard.empty") }}
+            </div>
+            <div v-else class="space-y-3">
+              <div
+                v-for="item in modelStats"
+                :key="item.modelSlug"
+                class="space-y-1"
+              >
+                <div class="flex items-center justify-between text-xs text-slate-600">
+                  <span>{{ item.modelSlug }}</span>
+                  <span class="mono-numbers">
+                    {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                  </span>
+                </div>
+                <div class="h-2 rounded-full bg-slate-100">
+                  <div
+                    class="h-2 rounded-full bg-slate-700"
+                    :style="{ width: ratio(item.requestCount, maxModel) }"
+                  ></div>
+                </div>
+                <div class="text-[11px] text-slate-500 mono-numbers">
+                  ${{ formatCost(item.totalCost) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="surface radius-panel divide-y divide-slate-200/60">
       <div class="px-6 py-5 md:px-8 md:py-6">

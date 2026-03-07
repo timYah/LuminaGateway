@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, eq, gte, lte, desc } from "drizzle-orm";
+import { and, eq, gte, lte, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getSqliteClient } from "../db";
 import { usageLogs } from "../db/schema";
@@ -156,4 +156,71 @@ adminRoutes.get("/admin/usage", async (c) => {
     .limit(resolvedLimit)
     .offset(resolvedOffset);
   return c.json({ usage: rows, limit: resolvedLimit, offset: resolvedOffset });
+});
+
+adminRoutes.get("/admin/usage/stats", async (c) => {
+  const db = getSqliteClient();
+  const { startDate, endDate } = c.req.query();
+  const conditions = [];
+
+  if (startDate) {
+    const date = new Date(startDate);
+    if (!Number.isNaN(date.valueOf())) {
+      conditions.push(gte(usageLogs.createdAt, date));
+    }
+  }
+  if (endDate) {
+    const date = new Date(endDate);
+    if (!Number.isNaN(date.valueOf())) {
+      conditions.push(lte(usageLogs.createdAt, date));
+    }
+  }
+
+  const dateExpr = sql<string>`date(${usageLogs.createdAt}, 'unixepoch')`;
+  const totalCost = sql<number>`coalesce(sum(${usageLogs.cost}), 0)`;
+  const requestCount = sql<number>`count(*)`;
+
+  let trendQuery = db
+    .select({
+      date: dateExpr.as("date"),
+      requestCount: requestCount.as("requestCount"),
+      totalCost: totalCost.as("totalCost"),
+    })
+    .from(usageLogs);
+  if (conditions.length > 0) {
+    trendQuery = trendQuery.where(and(...conditions));
+  }
+  const trend = await trendQuery
+    .groupBy(dateExpr)
+    .orderBy(dateExpr);
+
+  let providerQuery = db
+    .select({
+      providerId: usageLogs.providerId,
+      requestCount: requestCount.as("requestCount"),
+      totalCost: totalCost.as("totalCost"),
+    })
+    .from(usageLogs);
+  if (conditions.length > 0) {
+    providerQuery = providerQuery.where(and(...conditions));
+  }
+  const byProvider = await providerQuery
+    .groupBy(usageLogs.providerId)
+    .orderBy(desc(totalCost));
+
+  let modelQuery = db
+    .select({
+      modelSlug: usageLogs.modelSlug,
+      requestCount: requestCount.as("requestCount"),
+      totalCost: totalCost.as("totalCost"),
+    })
+    .from(usageLogs);
+  if (conditions.length > 0) {
+    modelQuery = modelQuery.where(and(...conditions));
+  }
+  const byModel = await modelQuery
+    .groupBy(usageLogs.modelSlug)
+    .orderBy(desc(totalCost));
+
+  return c.json({ trend, byProvider, byModel });
 });
