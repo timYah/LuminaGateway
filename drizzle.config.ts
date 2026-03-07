@@ -6,6 +6,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "sqlite",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "file:./lumina.db",
+    url: process.env.DATABASE_URL ?? "file:./.runtime/lumina.db",
   },
 });

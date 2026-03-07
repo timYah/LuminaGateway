@@ -45,7 +45,7 @@ export function getDb(): DatabaseClient {
   if (db) return db;
 
   const dbType = normalizeDatabaseType(process.env.DATABASE_TYPE);
-  const dbUrl = process.env.DATABASE_URL ?? "file:./lumina.db";
+  const dbUrl = process.env.DATABASE_URL ?? "file:./.runtime/lumina.db";
 
   if (dbType === "postgres") {
     if (!process.env.DATABASE_URL) {
