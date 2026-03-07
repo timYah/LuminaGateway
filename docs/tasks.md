@@ -593,7 +593,7 @@
 - [x] **T-55.11** 支持从根 `.env` 读取 `HOST`，并在 package.json 启动 gateway/admin 时自动传递（支持 `0.0.0.0`）
 - [x] **T-55.12** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build:admin`，并验证 `.env` 中 `HOST=0.0.0.0` 时 `npm run dev` 可同时启动 gateway 与 admin
 - [x] **T-55.13** 修复全新环境安装流程：根目录 `npm install` 自动补装 `apps/admin` 依赖，避免清空 `node_modules` 后缺少前端模块
-- [ ] **T-55.14** ✅ **验证**：在 clean 环境中运行根目录 `npm install`，随后验证 `npm run lint && npm run typecheck && npm run test && npm run build:admin` 通过
+- [x] **T-55.14** ✅ **验证**：在 clean 环境中运行根目录 `npm install`，随后验证 `npm run lint && npm run typecheck && npm run test && npm run build:admin` 通过
 
 ---
 
