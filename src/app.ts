@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 import { authMiddleware } from "./middleware/auth";
 import { errorHandler } from "./middleware/errorHandler";
 import { loggerMiddleware } from "./middleware/logger";
+import { rateLimitMiddleware } from "./middleware/rateLimit";
 import { adminRoutes } from "./routes/admin";
 import { anthropicRoutes } from "./routes/anthropic";
 import { openaiRoutes } from "./routes/openai";
@@ -50,6 +51,9 @@ export function createApp() {
   app.use("/v1/*", cors(corsOptions));
   app.use("/codex/*", cors(corsOptions));
   app.use("/admin/*", cors(corsOptions));
+  app.use("/v1/*", rateLimitMiddleware());
+  app.use("/codex/*", rateLimitMiddleware());
+  app.use("/admin/*", rateLimitMiddleware());
   app.use("/v1/*", authMiddleware());
   app.use("/codex/*", authMiddleware());
   app.use("/admin/*", authMiddleware());
