@@ -32,6 +32,12 @@ export default defineConfig(({ mode }) => {
       ui({
         fonts: false,
         colorMode: false,
+        autoImport: {
+          dts: "src/generated/auto-imports.d.ts",
+        },
+        components: {
+          dts: "src/generated/components.d.ts",
+        },
         theme: {
           colors: ["primary", "neutral", "success", "info", "warning", "error"],
           transitions: true,

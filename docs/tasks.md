@@ -550,6 +550,8 @@
 - [x] **T-52.4** 将默认运行期 SQLite 路径迁移到 `.runtime/lumina.db`，避免主目录生成 `lumina.db*`
 - [x] **T-52.5** 同步 `.env.example`、`README.md`、`docs/documentation.md`、`docs/deployment.md`、`docs/prompt.md` 的数据库路径说明，并清理本地旧的 `lumina.db*`
 - [x] **T-52.6** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并确认默认 SQLite 产物位于 `.runtime/`
+- [x] **T-52.7** 将 `apps/admin` 顶层自动生成声明文件迁移到专用目录，避免 `components.d.ts` / `auto-imports.d.ts` 直接落在应用根目录
+- [ ] **T-52.8** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm --prefix apps/admin run build`，确认声明文件仅生成在专用目录
 
 ---
 
@@ -618,6 +620,6 @@
 | Phase 49 | 2 | Admin UI 适配 |
 | Phase 50 | 5 | Provider 删除 |
 | Phase 51 | 6 | 移除模型映射 |
-| Phase 52 | 6 | Repo Hygiene |
+| Phase 52 | 8 | Repo Hygiene |
 | Phase 53 | 10 | Admin UI Optimization Refresh |
-| **合计** | **210** | |
+| **合计** | **212** | |
