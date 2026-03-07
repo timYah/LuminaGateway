@@ -559,7 +559,7 @@
 - [x] **T-53.6** 文档更新：同步 Admin UI 当前结构与验证方式到 `docs/documentation.md`
 - [x] **T-53.7** ✅ **验证（代码）**：运行 `npm run lint && npm run typecheck && npm run test && npm --prefix apps/admin run build`
 - [x] **T-53.8** ✅ **验证（UI）**：运行 `npm run dev`，使用 agent-browser 验证 `/providers` 与 `/usage` 的桌面端布局与关键交互
-- [ ] **T-53.9** ✅ **验证（响应式）**：使用 agent-browser 验证移动端宽度下的 header、toolbar、table、modal 无明显错位或裁切
+- [x] **T-53.9** ✅ **验证（响应式）**：使用 agent-browser 验证移动端宽度下的 header、toolbar、table、modal 无明显错位或裁切
 
 ---
 
