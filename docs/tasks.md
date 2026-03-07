@@ -651,7 +651,7 @@
 ## Phase 63 — Competitor Parity Enhancements
 
 - [x] **T-63.1** 增加模型 allowlist / blocklist（`MODEL_ALLOWLIST`、`MODEL_BLOCKLIST`），并补充自动化测试
-- [ ] **T-63.2** 支持多个 API key（`GATEWAY_API_KEYS`），并补充自动化测试
+- [x] **T-63.2** 支持多个 API key（`GATEWAY_API_KEYS`），并补充自动化测试
 - [ ] **T-63.3** 增加 API key 级别的限流（`RATE_LIMIT_RPM` / `RATE_LIMIT_BURST` + 可选覆盖），并补充自动化测试
 - [ ] **T-63.4** 支持默认请求参数注入（`DEFAULT_REQUEST_PARAMS`），并补充自动化测试
 - [ ] **T-63.5** 增加 `ROUTING_STRATEGY=round_robin` 轮询路由，并补充自动化测试

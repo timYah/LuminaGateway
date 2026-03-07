@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { Hono } from "hono";
 import { authMiddleware } from "../auth";
 
@@ -12,6 +12,10 @@ function createApp() {
 }
 
 describe("authMiddleware", () => {
+  afterEach(() => {
+    delete process.env.GATEWAY_API_KEYS;
+  });
+
   it("returns 401 when Authorization is missing", async () => {
     const app = createApp();
     const res = await app.request("/protected");
@@ -34,5 +38,23 @@ describe("authMiddleware", () => {
       headers: { Authorization: "Bearer test-key" },
     });
     expect(res.status).toBe(200);
+  });
+
+  it("allows requests with tokens from GATEWAY_API_KEYS", async () => {
+    process.env.GATEWAY_API_KEYS = "alpha,beta";
+    const app = createApp();
+    const res = await app.request("/protected", {
+      headers: { Authorization: "Bearer beta" },
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("rejects tokens not in GATEWAY_API_KEYS", async () => {
+    process.env.GATEWAY_API_KEYS = "alpha,beta";
+    const app = createApp();
+    const res = await app.request("/protected", {
+      headers: { Authorization: "Bearer gamma" },
+    });
+    expect(res.status).toBe(401);
   });
 });
