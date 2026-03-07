@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { getDb, type SqliteDatabase } from "../../db";
 import { providers } from "../../db/schema";
@@ -20,6 +20,8 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.ROUTING_STRATEGY;
+  delete process.env.PROVIDER_WEIGHTS;
+  vi.restoreAllMocks();
 });
 
 async function seed() {
@@ -102,6 +104,24 @@ describe("routerService", () => {
       "Provider C",
       "Provider A",
       "Provider B",
+    ]);
+  });
+
+  it("weighted strategy promotes higher-weight providers", async () => {
+    process.env.ROUTING_STRATEGY = "weighted";
+    process.env.PROVIDER_WEIGHTS = JSON.stringify({
+      "Provider C": 10,
+      "Provider B": 1,
+      "Provider A": 1,
+    });
+    await seed();
+    const router = new RouterService(new CircuitBreaker());
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const ordered = await router.getAllCandidates("gpt-4o");
+    expect(ordered.map((p) => p.name)).toEqual([
+      "Provider C",
+      "Provider B",
+      "Provider A",
     ]);
   });
 

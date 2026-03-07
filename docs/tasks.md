@@ -655,7 +655,7 @@
 - [x] **T-63.3** 增加 API key 级别的限流（`RATE_LIMIT_RPM` / `RATE_LIMIT_BURST` + 可选覆盖），并补充自动化测试
 - [x] **T-63.4** 支持默认请求参数注入（`DEFAULT_REQUEST_PARAMS`），并补充自动化测试
 - [x] **T-63.5** 增加 `ROUTING_STRATEGY=round_robin` 轮询路由，并补充自动化测试
-- [ ] **T-63.6** 增加 `ROUTING_STRATEGY=weighted` 权重路由（`PROVIDER_WEIGHTS`），并补充自动化测试
+- [x] **T-63.6** 增加 `ROUTING_STRATEGY=weighted` 权重路由（`PROVIDER_WEIGHTS`），并补充自动化测试
 - [ ] **T-63.7** 增加 provider 并发上限（`PROVIDER_MAX_INFLIGHT` + 可选覆盖），并补充自动化测试
 - [ ] **T-63.8** 增加非流式响应缓存（`CACHE_TTL_MS` + 请求头覆盖），并补充自动化测试
 - [ ] **T-63.9** 增加 `/metrics` 观测端点（Prometheus 文本格式），并补充自动化测试

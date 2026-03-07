@@ -16,7 +16,32 @@ export class RouterService {
   private resolveStrategy() {
     const raw = process.env.ROUTING_STRATEGY?.toLowerCase().trim();
     if (raw === "round_robin") return "round_robin";
+    if (raw === "weighted") return "weighted";
     return "priority";
+  }
+
+  private resolveWeights(): Record<string, number> {
+    const raw = process.env.PROVIDER_WEIGHTS;
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw) as Record<string, number>;
+      if (!parsed || typeof parsed !== "object") return {};
+      return parsed;
+    } catch (error) {
+      console.warn("[router] invalid PROVIDER_WEIGHTS", error);
+      return {};
+    }
+  }
+
+  private getWeight(
+    provider: { id: number; name: string },
+    weights: Record<string, number>
+  ) {
+    const byId = weights[String(provider.id)];
+    if (typeof byId === "number") return byId;
+    const byName = weights[provider.name];
+    if (typeof byName === "number") return byName;
+    return 1;
   }
 
   private applyRoundRobin<T extends { id: number }>(modelSlug: string, providers: T[]) {
@@ -28,6 +53,28 @@ export class RouterService {
     return providers.slice(index).concat(providers.slice(0, index));
   }
 
+  private applyWeighted<T extends { id: number; name: string }>(providers: T[]) {
+    if (providers.length <= 1) return providers;
+    const weights = this.resolveWeights();
+    const weighted = providers.map((provider) => ({
+      provider,
+      weight: this.getWeight(provider, weights),
+    }));
+    const total = weighted.reduce((sum, item) => sum + Math.max(0, item.weight), 0);
+    if (total <= 0) return providers;
+    let threshold = Math.random() * total;
+    let selected = weighted[0]?.provider ?? providers[0];
+    for (const item of weighted) {
+      threshold -= Math.max(0, item.weight);
+      if (threshold <= 0) {
+        selected = item.provider;
+        break;
+      }
+    }
+    const remaining = providers.filter((provider) => provider.id !== selected.id);
+    return [selected, ...remaining];
+  }
+
 
   async getAllCandidates(modelSlug: string) {
     const providers = await getActiveProvidersByModel(modelSlug);
@@ -36,6 +83,9 @@ export class RouterService {
     const strategy = this.resolveStrategy();
     if (strategy === "round_robin") {
       return this.applyRoundRobin(modelSlug, candidates);
+    }
+    if (strategy === "weighted") {
+      return this.applyWeighted(candidates);
     }
     return candidates;
   }
