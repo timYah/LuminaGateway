@@ -606,7 +606,7 @@
 - [x] **T-56.1** 新增 OpenAI Responses 请求/响应类型、校验规则与协议转换逻辑，支持将 `input` / `instructions` 转为网关通用请求参数
 - [x] **T-56.2** 新增 `POST /v1/responses` 路由，并支持与 Chat Completions 并行的非流式 / 流式响应封装
 - [x] **T-56.3** 补充 `/v1/responses` 的自动化测试与文档，覆盖非流式、流式与 API 概览更新
-- [ ] **T-56.4** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，确认 OpenAI Chat Completions、Responses 与 Anthropic 路由全部通过
+- [x] **T-56.4** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，确认 OpenAI Chat Completions、Responses 与 Anthropic 路由全部通过
 
 ---
 
