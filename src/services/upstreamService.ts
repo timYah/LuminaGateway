@@ -136,6 +136,9 @@ export function callUpstreamStreaming(
     resolveUsage = resolve;
     rejectUsage = reject;
   });
+  // Some callers only observe the stream first and await usage later.
+  // Pre-attaching a noop rejection handler prevents process-level crashes.
+  void usagePromise.catch(() => {});
   const fullParams = {
     ...(params as Record<string, unknown>),
     model: languageModel,

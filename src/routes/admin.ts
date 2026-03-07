@@ -12,7 +12,6 @@ import {
 } from "../services/providerService";
 import {
   callUpstreamNonStreaming,
-  callUpstreamStreaming,
   classifyUpstreamError,
   type UpstreamRequestParams,
 } from "../services/upstreamService";
@@ -107,16 +106,7 @@ adminRoutes.post("/admin/providers/:id/test", async (c) => {
       messages: [{ role: "user", content: "hi" }],
       maxOutputTokens: 1,
     };
-    if (provider.protocol === "new-api") {
-      const upstream = callUpstreamStreaming(provider, modelSlug, testParams);
-      const iterator = upstream.stream[Symbol.asyncIterator]();
-      await iterator.next();
-      if (iterator.return) {
-        await iterator.return();
-      }
-    } else {
-      await callUpstreamNonStreaming(provider, modelSlug, testParams);
-    }
+    await callUpstreamNonStreaming(provider, modelSlug, testParams);
     return c.json({ ok: true, latencyMs: Date.now() - start, model: modelSlug });
   } catch (err) {
     const errorType = classifyUpstreamError(err);

@@ -570,6 +570,14 @@
 
 ---
 
+## Phase 54 — Provider Probe Consistency
+
+- [x] **T-54.1** 修复 `/admin/providers/:id/test` 的 provider 探测逻辑，使单条测试与批量健康检查使用一致的成功判定
+- [ ] **T-54.2** 回归测试：覆盖 new-api provider 在不支持模型时不再被误判为成功，并避免未处理的探测 Promise 拒绝
+- [ ] **T-54.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并用实际 `Right Codes` provider 验证单测与健康检查结果一致
+
+---
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -622,4 +630,5 @@
 | Phase 51 | 6 | 移除模型映射 |
 | Phase 52 | 8 | Repo Hygiene |
 | Phase 53 | 10 | Admin UI Optimization Refresh |
-| **合计** | **212** | |
+| Phase 54 | 3 | Provider Probe Consistency |
+| **合计** | **215** | |
