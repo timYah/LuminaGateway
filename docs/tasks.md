@@ -548,6 +548,21 @@
 
 ---
 
+## Phase 53 — Admin UI Optimization Refresh
+
+- [x] **T-53.0** 写明本轮 Admin UI 优化执行计划（同步到 `docs/plans.md`）
+- [ ] **T-53.1** 调整 Admin 壳层：弱化侧栏存在感、压缩页头、收紧全局 spacing / shadow / radius / decorative background
+- [ ] **T-53.2** 提炼共享 UI 编排：统一页面头部、section shell、filter toolbar、summary strip 的布局模式
+- [ ] **T-53.3** 重构 `/providers`：压缩 hero、重排操作区、优化 provider table 密度与 action 列、统一 modal padding
+- [ ] **T-53.4** 重构 `/usage`：重排 stats / filters / usage log / request log 的层级与密度
+- [ ] **T-53.5** 响应式优化：覆盖 desktop / tablet / mobile，确保按钮、工具栏、表格容器无裁切
+- [ ] **T-53.6** 文档更新：同步 Admin UI 当前结构与验证方式到 `docs/documentation.md`
+- [ ] **T-53.7** ✅ **验证（代码）**：运行 `npm run lint && npm run typecheck && npm run test && npm --prefix apps/admin run build`
+- [ ] **T-53.8** ✅ **验证（UI）**：运行 `npm run dev`，使用 agent-browser 验证 `/providers` 与 `/usage` 的桌面端布局与关键交互
+- [ ] **T-53.9** ✅ **验证（响应式）**：使用 agent-browser 验证移动端宽度下的 header、toolbar、table、modal 无明显错位或裁切
+
+---
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -599,4 +614,5 @@
 | Phase 50 | 5 | Provider 删除 |
 | Phase 51 | 6 | 移除模型映射 |
 | Phase 52 | 1 | Repo Hygiene |
-| **合计** | **195** | |
+| Phase 53 | 10 | Admin UI Optimization Refresh |
+| **合计** | **205** | |

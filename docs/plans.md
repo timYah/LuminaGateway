@@ -567,6 +567,32 @@ This phase adds usage dashboards, request log views, and configuration export/im
 
 ---
 
+## Phase 53 — Admin UI Optimization Refresh
+
+This phase upgrades the admin from a soft, marketing-like shell to a denser operational console. It keeps the current Vue + Nuxt UI stack, emerald accent, and two-route structure, but sharpens hierarchy, compresses wasted space, and fixes layout clipping across desktop and mobile.
+
+**Scope:**
+- Rework the admin shell to reduce sidebar dominance and compact the page header treatment.
+- Extract shared composition patterns for page headers, section shells, filter toolbars, and summary strips.
+- Recompose `/providers` to improve action layout, provider table density, and modal consistency.
+- Recompose `/usage` to improve the stats, filters, and data-table hierarchy.
+- Tighten responsive behavior so toolbars, buttons, tables, and modals remain usable without clipping.
+
+**Acceptance criteria:**
+- Sidebar no longer visually dominates the viewport and main content gets more horizontal priority.
+- Page headers feel compact and operational instead of hero-like.
+- `/providers` action area wraps cleanly, provider actions remain readable, and modals use consistent spacing.
+- `/usage` stats and filter areas are denser, easier to scan, and less vertically wasteful.
+- Desktop and mobile layouts avoid clipped buttons, broken grids, awkward empty space, or unstable table wrappers.
+
+**Verification:**
+- Code: run `npm run lint && npm run typecheck && npm run test && npm --prefix apps/admin run build`.
+- UI desktop: run `npm run dev` and use the agent-browser skill to validate `/providers` and `/usage` layout, actions, and section hierarchy.
+- UI responsive: use the agent-browser skill at mobile width to validate header stacking, toolbar wrapping, table containers, and modal layout.
+- Git submission gate: do not submit this phase until the code verification and both agent-browser verification tasks pass.
+
+---
+
 ## Verification checklist (kept up to date)
 
 - [x] `npm install` succeeds
