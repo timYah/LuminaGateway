@@ -37,9 +37,21 @@ const providerUpdateSchema = providerSchema.partial();
 const configImportSchema = z.object({
   providers: z.array(providerSchema),
   models: z.array(z.unknown()).optional(),
-  settings: z.record(z.unknown()).optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
   mode: z.enum(["replace", "merge"]).optional(),
 });
+
+const requestErrorTypes = [
+  "quota",
+  "rate_limit",
+  "server",
+  "auth",
+  "model_not_found",
+  "network",
+  "unknown",
+] as const;
+type RequestErrorType = (typeof requestErrorTypes)[number];
+const requestErrorTypeSet = new Set<string>(requestErrorTypes);
 
 export const adminRoutes = new Hono();
 
@@ -187,45 +199,42 @@ adminRoutes.get("/admin/usage/stats", async (c) => {
   const totalCost = sql<number>`coalesce(sum(${usageLogs.cost}), 0)`;
   const requestCount = sql<number>`count(*)`;
 
-  let trendQuery = db
+  const trendBase = db
     .select({
       date: dateExpr.as("date"),
       requestCount: requestCount.as("requestCount"),
       totalCost: totalCost.as("totalCost"),
     })
     .from(usageLogs);
-  if (conditions.length > 0) {
-    trendQuery = trendQuery.where(and(...conditions));
-  }
-  const trend = await trendQuery
+  const trend = await (conditions.length > 0
+    ? trendBase.where(and(...conditions))
+    : trendBase)
     .groupBy(dateExpr)
     .orderBy(dateExpr);
 
-  let providerQuery = db
+  const providerBase = db
     .select({
       providerId: usageLogs.providerId,
       requestCount: requestCount.as("requestCount"),
       totalCost: totalCost.as("totalCost"),
     })
     .from(usageLogs);
-  if (conditions.length > 0) {
-    providerQuery = providerQuery.where(and(...conditions));
-  }
-  const byProvider = await providerQuery
+  const byProvider = await (conditions.length > 0
+    ? providerBase.where(and(...conditions))
+    : providerBase)
     .groupBy(usageLogs.providerId)
     .orderBy(desc(totalCost));
 
-  let modelQuery = db
+  const modelBase = db
     .select({
       modelSlug: usageLogs.modelSlug,
       requestCount: requestCount.as("requestCount"),
       totalCost: totalCost.as("totalCost"),
     })
     .from(usageLogs);
-  if (conditions.length > 0) {
-    modelQuery = modelQuery.where(and(...conditions));
-  }
-  const byModel = await modelQuery
+  const byModel = await (conditions.length > 0
+    ? modelBase.where(and(...conditions))
+    : modelBase)
     .groupBy(usageLogs.modelSlug)
     .orderBy(desc(totalCost));
 
@@ -247,8 +256,8 @@ adminRoutes.get("/admin/request-logs", async (c) => {
   if (modelSlug) {
     conditions.push(eq(requestLogs.modelSlug, modelSlug));
   }
-  if (errorType) {
-    conditions.push(eq(requestLogs.errorType, errorType));
+  if (errorType && requestErrorTypeSet.has(errorType)) {
+    conditions.push(eq(requestLogs.errorType, errorType as RequestErrorType));
   }
   if (startDate) {
     const date = new Date(startDate);
