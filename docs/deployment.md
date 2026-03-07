@@ -118,6 +118,13 @@ curl http://localhost:3000/v1/chat/completions \
 ```
 
 ```bash [Terminal]
+curl http://localhost:3000/v1/responses \
+  -H "Authorization: Bearer dev-token" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"gpt-5.2","input":"Hello"}'
+```
+
+```bash [Terminal]
 curl http://localhost:3000/admin/providers \
   -H "Authorization: Bearer dev-token"
 ```

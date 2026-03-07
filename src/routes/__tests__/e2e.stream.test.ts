@@ -80,6 +80,48 @@ describe("e2e streaming routes", () => {
     expect(body).toContain("chat.completion.chunk");
   });
 
+  it("streams OpenAI Responses SSE response", async () => {
+    const stream =
+      (async function* () {
+        yield { type: "text-delta", id: "1", text: "Hi" };
+      })() as unknown as AsyncIterableStream<TextStreamPart<ToolSet>>;
+
+    callUpstreamStreamingMock.mockReturnValue({
+      stream,
+      usagePromise: Promise.resolve({ promptTokens: 2, completionTokens: 3 }),
+    });
+
+    const res = await app.request("/v1/responses", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-5.2",
+        input: "hi",
+        stream: true,
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+
+    const body = await res.text();
+    expect(body).not.toContain("[DONE]");
+
+    const chunks = body
+      .trim()
+      .split("\n\n")
+      .map((part) => JSON.parse(part.replace(/^data: /, "")));
+
+    expect(chunks[0].type).toBe("response.created");
+    expect(chunks[1].type).toBe("response.output_item.added");
+    expect(chunks.some((chunk) => chunk.type === "response.output_text.delta")).toBe(
+      true
+    );
+    expect(chunks.at(-1)?.type).toBe("response.completed");
+    expect(chunks.at(-1)?.response.output_text).toBe("Hi");
+    expect(chunks.at(-1)?.response.usage.total_tokens).toBe(5);
+  });
+
   it("streams Anthropic SSE response", async () => {
     const stream =
       (async function* () {

@@ -1,24 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("../../services/gatewayService", () => ({
   handleRequest: vi.fn().mockImplementation(
-    (_params: unknown, clientFormat: "openai" | "anthropic") => {
-      if (clientFormat === "openai") {
+    (_params: unknown, clientFormat: "openai" | "openai-responses" | "anthropic") => {
+      if (clientFormat === "anthropic") {
         return Promise.resolve({
           status: 503,
           body: {
-            error: {
-              message: "No provider available",
-              type: "gateway_error",
-              code: "gateway_error",
-            },
+            type: "error",
+            error: { type: "gateway_error", message: "No provider available" },
           },
         });
       }
       return Promise.resolve({
         status: 503,
         body: {
-          type: "error",
-          error: { type: "gateway_error", message: "No provider available" },
+          error: {
+            message: "No provider available",
+            type: "gateway_error",
+            code: "gateway_error",
+          },
         },
       });
     }
@@ -50,6 +50,15 @@ describe("route stubs", () => {
     expect(res.status).toBe(400);
   });
 
+  it("validates OpenAI Responses request body", async () => {
+    const res = await app.request("/v1/responses", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({ model: "gpt-5.2" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
   it("returns OpenAI error when no providers are available", async () => {
     const res = await app.request("/v1/chat/completions", {
       method: "POST",
@@ -57,6 +66,20 @@ describe("route stubs", () => {
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error?.message).toBeDefined();
+  });
+
+  it("returns Responses API error when no providers are available", async () => {
+    const res = await app.request("/v1/responses", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-5.2",
+        input: "hi",
       }),
     });
     expect(res.status).toBe(503);

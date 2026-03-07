@@ -1,12 +1,13 @@
 # Lumina Gateway
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI provider accounts behind a single API. It accepts OpenAI and Anthropic request formats, routes requests based on provider balance and health, and fails over when a provider is rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages request formats, routes requests based on provider balance and health, and fails over when a provider is rate limited or out of quota.
 
 ## Features
 
 - OpenAI-compatible chat completions endpoint.
+- OpenAI-compatible responses endpoint.
 - Anthropic-compatible messages endpoint.
-- Streaming SSE relay for both formats.
+- Streaming SSE relay for all supported client formats.
 - Balance-aware routing with automatic failover.
 - Admin routes for provider management and usage queries.
 - Vue + Nuxt UI admin dashboard for providers and usage.
@@ -51,6 +52,13 @@ curl http://localhost:3000/v1/chat/completions \
   -H "Authorization: Bearer dev-token" \
   -H "Content-Type: application/json" \
   -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+```bash
+curl http://localhost:3000/v1/responses \
+  -H "Authorization: Bearer dev-token" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"gpt-5.2","input":"Hello"}'
 ```
 
 ### New API providers
@@ -100,7 +108,8 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 
 ## API overview
 
-- `POST /v1/chat/completions` — OpenAI-compatible endpoint
+- `POST /v1/chat/completions` — OpenAI-compatible chat completions endpoint
+- `POST /v1/responses` — OpenAI-compatible responses endpoint
 - `POST /v1/messages` — Anthropic-compatible endpoint
 - `GET /admin/providers` — list providers
 - `POST /admin/providers` — create provider

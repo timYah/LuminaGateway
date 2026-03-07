@@ -27,6 +27,7 @@ vi.mock("../providerService", () => ({
 
 vi.mock("../streamRelay", () => ({
   relayAsOpenAIStream: vi.fn(() => new ReadableStream()),
+  relayAsOpenAIResponsesStream: vi.fn(() => new ReadableStream()),
   relayAsAnthropicStream: vi.fn(() => new ReadableStream()),
 }));
 
@@ -38,7 +39,10 @@ import {
 } from "../gatewayService";
 import { callUpstreamNonStreaming, callUpstreamStreaming } from "../upstreamService";
 import { billUsage } from "../billingService";
-import { relayAsOpenAIStream } from "../streamRelay";
+import {
+  relayAsOpenAIResponsesStream,
+  relayAsOpenAIStream,
+} from "../streamRelay";
 
 const providerA = {
   id: 1,
@@ -81,6 +85,7 @@ const callUpstreamStreamingMock = vi.mocked(callUpstreamStreaming);
 const billUsageMock = vi.mocked(billUsage);
 const getAllCandidatesSpy = vi.spyOn(gatewayRouter, "getAllCandidates");
 const relayOpenAIMock = vi.mocked(relayAsOpenAIStream);
+const relayOpenAIResponsesMock = vi.mocked(relayAsOpenAIResponsesStream);
 const breakerOpenSpy = vi.spyOn(gatewayCircuitBreaker, "open");
 
 describe("gatewayService", () => {
@@ -91,6 +96,7 @@ describe("gatewayService", () => {
     getAllCandidatesSpy.mockReset();
     getAllCandidatesSpy.mockResolvedValue([providerA]);
     relayOpenAIMock.mockClear();
+    relayOpenAIResponsesMock.mockClear();
     breakerOpenSpy.mockReset();
     gatewayCircuitBreaker.reset(providerA.id);
     gatewayCircuitBreaker.reset(providerB.id);
@@ -120,6 +126,28 @@ describe("gatewayService", () => {
       "gpt-4o",
       { promptTokens: 2, completionTokens: 3 }
     );
+  });
+
+  it("formats Responses API requests with a response object", async () => {
+    callUpstreamMock.mockResolvedValue({
+      result: {
+        text: "Hello Responses",
+        finishReason: "stop",
+      },
+      usage: { promptTokens: 4, completionTokens: 5 },
+    } as unknown as Awaited<ReturnType<typeof callUpstreamNonStreaming>>);
+
+    const response = await handleRequest(
+      { model: "gpt-5.2", messages: [] },
+      "openai-responses"
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      object: "response",
+      model: "gpt-5.2",
+      output_text: "Hello Responses",
+    });
   });
 
   it("falls back when the first provider is exhausted", async () => {
@@ -194,7 +222,7 @@ describe("gatewayService", () => {
     expect(response.body).toMatchObject({ type: "error" });
   });
 
-  it("handles a streaming request and bills after completion", async () => {
+  it("handles a streaming chat request and bills after completion", async () => {
     const stream =
       (async function* () {
         yield { type: "text-delta", id: "1", text: "hi" };
@@ -220,6 +248,32 @@ describe("gatewayService", () => {
       providerA,
       "gpt-4o",
       { promptTokens: 1, completionTokens: 2 }
+    );
+  });
+
+  it("formats a streaming request as OpenAI Responses when requested", async () => {
+    const stream =
+      (async function* () {
+        yield { type: "text-delta", id: "1", text: "hi" };
+      })() as unknown as AsyncIterableStream<TextStreamPart<ToolSet>>;
+
+    const usagePromise = Promise.resolve({ promptTokens: 2, completionTokens: 3 });
+    callUpstreamStreamingMock.mockReturnValue({
+      stream,
+      usagePromise,
+    });
+
+    const response = await handleStreamingRequest(
+      { model: "gpt-5.2", messages: [] },
+      "openai-responses"
+    );
+
+    expect(response.status).toBe(200);
+    expect("stream" in response).toBe(true);
+    expect(relayOpenAIResponsesMock).toHaveBeenCalledWith(
+      stream,
+      "gpt-5.2",
+      usagePromise
     );
   });
 

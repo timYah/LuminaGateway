@@ -75,6 +75,38 @@ describe("e2e non-streaming routes", () => {
     expect(body.choices[0].message.content).toBe("Hello OpenAI");
   });
 
+  it("handles OpenAI Responses non-streaming request", async () => {
+    callUpstreamMock.mockResolvedValue({
+      result: {
+        text: "Hello Responses",
+        finishReason: "stop",
+      },
+      usage: { promptTokens: 4, completionTokens: 5 },
+    } as unknown as Awaited<ReturnType<typeof callUpstreamNonStreaming>>);
+
+    const res = await app.request("/v1/responses", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-5.2",
+        instructions: "Be helpful",
+        input: [
+          {
+            role: "user",
+            content: [{ type: "input_text", text: "hi" }],
+          },
+        ],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.object).toBe("response");
+    expect(body.output_text).toBe("Hello Responses");
+    expect(body.output[0]?.content[0]?.text).toBe("Hello Responses");
+    expect(body.usage?.input_tokens).toBe(4);
+  });
+
   it("handles Anthropic non-streaming request", async () => {
     callUpstreamMock.mockResolvedValue({
       result: {

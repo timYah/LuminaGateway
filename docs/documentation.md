@@ -1,10 +1,10 @@
 # Lumina Gateway — Documentation
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI and Anthropic request formats, routes requests based on provider priority and health, and fails over when providers are rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages request formats, routes requests based on provider priority and health, and fails over when providers are rate limited or out of quota.
 
 ## What Lumina Gateway is
 
-The gateway exposes two client-facing APIs: an OpenAI-compatible chat completions endpoint and an Anthropic-compatible messages endpoint. Each request is validated, converted to a universal AI SDK request format, and executed against the selected upstream provider.
+The gateway exposes three client-facing routes: an OpenAI-compatible chat completions endpoint, an OpenAI-compatible responses endpoint, and an Anthropic-compatible messages endpoint. Each request is validated, converted to a universal AI SDK request format, and executed against the selected upstream provider.
 
 ## Status
 
@@ -78,6 +78,32 @@ Content-Type: application/json
 
 Supported fields match the OpenAI subset used by the validators: `model`, `messages`, `stream`, `temperature`, `max_tokens`, `tools`, and `tool_choice`.
 
+### OpenAI Responses-compatible endpoint
+
+```http [Request]
+POST /v1/responses
+Authorization: Bearer <GATEWAY_API_KEY>
+Content-Type: application/json
+
+{
+  "model": "gpt-5.2",
+  "instructions": "You are a helpful assistant.",
+  "input": [
+    {
+      "role": "user",
+      "content": [{"type": "input_text", "text": "Hello"}]
+    }
+  ],
+  "stream": false,
+  "temperature": 0.7,
+  "max_output_tokens": 1000,
+  "tools": [],
+  "tool_choice": "auto"
+}
+```
+
+Supported fields match the OpenAI Responses subset used by the validators: `model`, `input` (string or an array of `message` / `function_call_output` items), `instructions`, `stream`, `temperature`, `max_output_tokens`, `tools`, and `tool_choice`.
+
 ### Anthropic-compatible endpoint
 
 ```http [Request]
@@ -100,11 +126,21 @@ Supported fields match the Anthropic subset used by the validators: `model`, `me
 
 ### Streaming responses
 
-OpenAI streaming returns `text/event-stream` with chat completion chunks followed by `[DONE]`.
+OpenAI Chat Completions streaming returns `text/event-stream` with chat completion chunks followed by `[DONE]`.
 
 ```text [SSE]
 data: {"id":"chatcmpl_...","object":"chat.completion.chunk","created":...,"model":"gpt-4o","choices":[{"index":0,"delta":{"role":"assistant","content":"Hi"},"finish_reason":null}]}
 data: [DONE]
+```
+
+OpenAI Responses streaming returns `text/event-stream` JSON payloads without a `[DONE]` marker. The gateway emits `response.created`, `response.output_item.added`, `response.output_text.delta`, `response.output_item.done`, and `response.completed` events.
+
+```text [SSE]
+data: {"type":"response.created","response":{"id":"resp_...","object":"response","created_at":...,"status":"in_progress","model":"gpt-5.2"}}
+
+data: {"type":"response.output_text.delta","item_id":"msg_...","output_index":0,"content_index":0,"delta":"Hi"}
+
+data: {"type":"response.completed","response":{"id":"resp_...","object":"response","created_at":...,"status":"completed","model":"gpt-5.2","error":null,"incomplete_details":null,"output":[...],"output_text":"Hi"}}
 ```
 
 Anthropic streaming returns `text/event-stream` events for `content_block_delta` and a final `message_stop` event.
@@ -247,7 +283,7 @@ src/
 │   ├── migrate.ts           # migration runner
 │   └── seed.ts              # demo data seeder
 ├── routes/
-│   ├── openai.ts            # /v1/chat/completions handler
+│   ├── openai.ts            # /v1/chat/completions + /v1/responses handlers
 │   ├── anthropic.ts         # /v1/messages handler
 │   └── admin.ts             # /admin/* management routes
 ├── services/
