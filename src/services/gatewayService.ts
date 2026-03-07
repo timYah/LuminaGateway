@@ -12,16 +12,24 @@ import { deactivateProvider } from "./providerService";
 import { billUsage } from "./billingService";
 import { recordFailure } from "./failureStatsService";
 import { createRequestLog } from "./requestLogService";
-import type { OpenAIChatCompletionResponse } from "../types/openai";
+import type {
+  OpenAIChatCompletionResponse,
+  OpenAIResponsesResponse,
+} from "../types/openai";
 import type { AnthropicMessagesResponse } from "../types/anthropic";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { relayAsAnthropicStream, relayAsOpenAIStream } from "./streamRelay";
+import {
+  relayAsAnthropicStream,
+  relayAsOpenAIResponsesStream,
+  relayAsOpenAIStream,
+} from "./streamRelay";
 import {
   convertUniversalToAnthropicResponse,
   convertUniversalToOpenAIResponse,
+  convertUniversalToOpenAIResponsesResponse,
 } from "./protocolConverter";
 
-export type ClientFormat = "openai" | "anthropic";
+export type ClientFormat = "openai" | "openai-responses" | "anthropic";
 
 export type GatewayRequestParams = UpstreamRequestParams & {
   model: string;
@@ -45,6 +53,7 @@ export type GatewayResponse = {
   status: ContentfulStatusCode;
   body:
     | OpenAIChatCompletionResponse
+    | OpenAIResponsesResponse
     | AnthropicMessagesResponse
     | OpenAIErrorResponse
     | AnthropicErrorResponse;
@@ -70,11 +79,15 @@ function buildUniversalResponse(
   return { model: modelSlug, text, finishReason, usage };
 }
 
+function isAnthropicFormat(clientFormat: ClientFormat) {
+  return clientFormat === "anthropic";
+}
+
 function formatErrorResponse(
   clientFormat: ClientFormat,
   message: string
 ): OpenAIErrorResponse | AnthropicErrorResponse {
-  if (clientFormat === "openai") {
+  if (!isAnthropicFormat(clientFormat)) {
     const body: OpenAIErrorResponse = {
       error: { message, type: "gateway_error", code: "gateway_error" },
     };
@@ -140,6 +153,19 @@ async function handleUpstreamError(
   };
 }
 
+function formatSuccessResponseBody(
+  clientFormat: ClientFormat,
+  universal: ReturnType<typeof buildUniversalResponse>
+) {
+  if (clientFormat === "anthropic") {
+    return convertUniversalToAnthropicResponse(universal);
+  }
+  if (clientFormat === "openai-responses") {
+    return convertUniversalToOpenAIResponsesResponse(universal);
+  }
+  return convertUniversalToOpenAIResponse(universal);
+}
+
 export async function handleRequest(
   requestParams: GatewayRequestParams,
   clientFormat: ClientFormat
@@ -176,13 +202,9 @@ export async function handleRequest(
         finishReason,
         usage
       );
-      const body =
-        clientFormat === "openai"
-          ? convertUniversalToOpenAIResponse(universal)
-          : convertUniversalToAnthropicResponse(universal);
       return {
         status: 200,
-        body,
+        body: formatSuccessResponseBody(clientFormat, universal),
       };
     } catch (error) {
       const errorType = classifyUpstreamError(error);
@@ -254,9 +276,15 @@ export async function handleStreamingRequest(
           console.error("Streaming failed", err);
         });
       const stream =
-        clientFormat === "openai"
-          ? relayAsOpenAIStream(upstream.stream, modelSlug)
-          : relayAsAnthropicStream(upstream.stream);
+        clientFormat === "anthropic"
+          ? relayAsAnthropicStream(upstream.stream)
+          : clientFormat === "openai-responses"
+            ? relayAsOpenAIResponsesStream(
+                upstream.stream,
+                modelSlug,
+                upstream.usagePromise
+              )
+            : relayAsOpenAIStream(upstream.stream, modelSlug);
       return { status: 200, stream };
     } catch (error) {
       const errorType = classifyUpstreamError(error);

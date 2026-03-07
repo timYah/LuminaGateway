@@ -1,10 +1,34 @@
-import { openaiChatCompletionSchema } from "../types/validators";
-import { convertOpenAIToUniversal } from "../services/protocolConverter";
+import { Hono } from "hono";
+import {
+  convertOpenAIResponsesToUniversal,
+  convertOpenAIToUniversal,
+} from "../services/protocolConverter";
+import {
+  openaiChatCompletionSchema,
+  openaiResponsesSchema,
+} from "../types/validators";
 import { createProtocolRoute } from "./protocolRoute";
 
-export const openaiRoutes = createProtocolRoute({
-  path: "/v1/chat/completions",
-  schema: openaiChatCompletionSchema,
-  converter: convertOpenAIToUniversal,
-  clientFormat: "openai",
-});
+const app = new Hono();
+
+app.route(
+  "/",
+  createProtocolRoute({
+    path: "/v1/chat/completions",
+    schema: openaiChatCompletionSchema,
+    converter: convertOpenAIToUniversal,
+    clientFormat: "openai",
+  })
+);
+
+app.route(
+  "/",
+  createProtocolRoute({
+    path: "/v1/responses",
+    schema: openaiResponsesSchema,
+    converter: convertOpenAIResponsesToUniversal,
+    clientFormat: "openai-responses",
+  })
+);
+
+export const openaiRoutes = app;
