@@ -335,15 +335,17 @@ watch(
     <div class="border-b border-slate-200/70"></div>
 
     <div class="surface radius-panel section-shell divide-y divide-slate-200/60">
-      <div class="px-6 py-5 md:px-8 md:py-6">
-        <div class="text-sm font-medium text-slate-900">
-          {{ $t("usage.dashboard.title") }}
+      <div class="section-shell__header">
+        <div class="section-shell__headline">
+          <div class="section-shell__title">
+            {{ $t("usage.dashboard.title") }}
+          </div>
+          <p class="section-shell__subtitle">
+            {{ $t("usage.dashboard.subtitle") }}
+          </p>
         </div>
-        <p class="text-sm text-slate-500">
-          {{ $t("usage.dashboard.subtitle") }}
-        </p>
       </div>
-      <div class="px-6 py-5 md:px-8 md:py-6">
+      <div class="section-shell__body pt-0">
         <div v-if="statsPending" class="space-y-3">
           <div class="h-10 radius-soft skeleton"></div>
           <div class="h-10 radius-soft skeleton"></div>
@@ -362,8 +364,8 @@ watch(
           </p>
         </div>
 
-        <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="space-y-3">
+        <div v-else class="grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_0.95fr_0.95fr]">
+          <div class="radius-card border border-slate-200/70 bg-slate-50/70 p-4 space-y-3">
             <div class="text-sm font-medium text-slate-900">
               {{ $t("usage.dashboard.trend") }}
             </div>
@@ -395,7 +397,7 @@ watch(
             </div>
           </div>
 
-          <div class="space-y-3">
+          <div class="radius-card border border-slate-200/70 bg-slate-50/70 p-4 space-y-3">
             <div class="text-sm font-medium text-slate-900">
               {{ $t("usage.dashboard.providers") }}
             </div>
@@ -427,7 +429,7 @@ watch(
             </div>
           </div>
 
-          <div class="space-y-3">
+          <div class="radius-card border border-slate-200/70 bg-slate-50/70 p-4 space-y-3">
             <div class="text-sm font-medium text-slate-900">
               {{ $t("usage.dashboard.models") }}
             </div>
@@ -463,12 +465,14 @@ watch(
     </div>
 
     <div class="surface radius-panel section-shell divide-y divide-slate-200/60">
-      <div class="px-6 py-5 md:px-8 md:py-6">
-        <div class="text-sm font-medium text-slate-900">
-          {{ $t("usage.filters") }}
+      <div class="section-shell__header">
+        <div class="section-shell__headline">
+          <div class="section-shell__title">
+            {{ $t("usage.filters") }}
+          </div>
         </div>
       </div>
-      <div class="px-6 py-5 md:px-8 md:py-6">
+      <div class="section-shell__body pt-0">
         <div class="toolbar-grid">
           <UFormGroup
             :label="$t('usage.form.provider')"
@@ -511,7 +515,7 @@ watch(
           </UFormGroup>
         </div>
       </div>
-      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
+      <div class="section-shell__footer">
         <UButton class="action-press" color="primary" @click="applyFilters">
           {{ $t("usage.apply") }}
         </UButton>
@@ -522,12 +526,12 @@ watch(
     </div>
 
     <div class="surface radius-panel section-shell divide-y divide-slate-200/60">
-      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
-        <div>
-          <div class="text-sm font-medium text-slate-900">
+      <div class="section-shell__header">
+        <div class="section-shell__headline">
+          <div class="section-shell__title">
             {{ $t("usage.log") }}
           </div>
-          <p class="text-sm text-slate-500">
+          <p class="section-shell__subtitle">
             {{ $t("usage.logHint") }}
           </p>
         </div>
@@ -553,7 +557,7 @@ watch(
         </div>
       </div>
 
-      <div class="px-6 py-5 md:px-8 md:py-6">
+      <div class="section-shell__body pt-0">
         <div v-if="pending" class="space-y-2">
           <div class="h-9 radius-soft skeleton"></div>
           <div class="h-9 radius-soft skeleton"></div>
@@ -588,22 +592,22 @@ watch(
           <table class="min-w-[900px] w-full text-sm">
             <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
               <tr class="border-b border-slate-200/60">
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.table.time") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.table.provider") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.table.model") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.table.input") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.table.output") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.table.cost") }}
                 </th>
               </tr>
@@ -615,18 +619,18 @@ watch(
                 class="border-b border-slate-200/50 staggered"
                 :style="{ '--index': index }"
               >
-                <td class="py-3 text-slate-700">
+                <td class="py-2.5 pr-4 align-top text-slate-700">
                   {{ formatDate(row.createdAt) }}
                 </td>
-                <td class="py-3 text-slate-700">{{ row.providerId }}</td>
-                <td class="py-3 text-slate-900">{{ row.modelSlug }}</td>
-                <td class="py-3 mono-numbers text-slate-900">
+                <td class="py-2.5 pr-4 align-top text-slate-700">{{ row.providerId }}</td>
+                <td class="py-2.5 pr-4 align-top text-slate-900">{{ row.modelSlug }}</td>
+                <td class="py-2.5 pr-4 align-top mono-numbers text-slate-900">
                   {{ row.inputTokens }}
                 </td>
-                <td class="py-3 mono-numbers text-slate-900">
+                <td class="py-2.5 pr-4 align-top mono-numbers text-slate-900">
                   {{ row.outputTokens }}
                 </td>
-                <td class="py-3 mono-numbers text-slate-900">
+                <td class="py-2.5 pr-4 align-top mono-numbers text-slate-900">
                   {{ row.cost.toFixed(4) }}
                 </td>
               </tr>
@@ -637,12 +641,12 @@ watch(
     </div>
 
     <div class="surface radius-panel section-shell divide-y divide-slate-200/60">
-      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
-        <div>
-          <div class="text-sm font-medium text-slate-900">
+      <div class="section-shell__header">
+        <div class="section-shell__headline">
+          <div class="section-shell__title">
             {{ $t("usage.requests.title") }}
           </div>
-          <p class="text-sm text-slate-500">
+          <p class="section-shell__subtitle">
             {{ $t("usage.requests.subtitle") }}
           </p>
         </div>
@@ -651,7 +655,7 @@ watch(
         </UButton>
       </div>
 
-      <div class="px-6 py-5 md:px-8 md:py-6">
+      <div class="section-shell__body pt-0">
         <div class="toolbar-grid">
           <UFormGroup
             :label="$t('usage.requests.form.provider')"
@@ -701,7 +705,7 @@ watch(
         </div>
       </div>
 
-      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
+      <div class="section-shell__footer">
         <UButton class="action-press" color="primary" @click="applyRequestFilters">
           {{ $t("usage.requests.apply") }}
         </UButton>
@@ -710,7 +714,7 @@ watch(
         </div>
       </div>
 
-      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
+      <div class="section-shell__footer">
         <div class="text-sm font-medium text-slate-900">
           {{ $t("usage.requests.log") }}
         </div>
@@ -736,7 +740,7 @@ watch(
         </div>
       </div>
 
-      <div class="px-6 py-5 md:px-8 md:py-6">
+      <div class="section-shell__body pt-0">
         <div v-if="requestPending" class="space-y-2">
           <div class="h-9 radius-soft skeleton"></div>
           <div class="h-9 radius-soft skeleton"></div>
@@ -771,22 +775,22 @@ watch(
           <table class="min-w-[980px] w-full text-sm">
             <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
               <tr class="border-b border-slate-200/60">
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.requests.table.time") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.requests.table.provider") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.requests.table.model") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.requests.table.result") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.requests.table.error") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("usage.requests.table.latency") }}
                 </th>
               </tr>
@@ -798,16 +802,16 @@ watch(
                 class="border-b border-slate-200/50 staggered"
                 :style="{ '--index': index }"
               >
-                <td class="py-3 text-slate-700">
+                <td class="py-2.5 pr-4 align-top text-slate-700">
                   {{ formatDate(row.createdAt) }}
                 </td>
-                <td class="py-3 text-slate-700">
+                <td class="py-2.5 pr-4 align-top text-slate-700">
                   {{ providerNameMap.get(row.providerId) ?? row.providerId }}
                 </td>
-                <td class="py-3 text-slate-900">{{ row.modelSlug }}</td>
-                <td class="py-3">
+                <td class="py-2.5 pr-4 align-top text-slate-900">{{ row.modelSlug }}</td>
+                <td class="py-2.5 align-top">
                   <span
-                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
+                    class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap"
                     :class="row.result === 'success'
                       ? 'bg-emerald-100 text-emerald-700'
                       : 'bg-rose-100 text-rose-700'"
@@ -815,10 +819,10 @@ watch(
                     {{ requestResultLabel(row.result) }}
                   </span>
                 </td>
-                <td class="py-3 text-slate-700">
+                <td class="py-2.5 pr-4 align-top text-slate-700">
                   {{ row.errorType || "—" }}
                 </td>
-                <td class="py-3 mono-numbers text-slate-700">
+                <td class="py-2.5 align-top mono-numbers text-slate-700">
                   {{ formatLatency(row.latencyMs) }}
                 </td>
               </tr>
