@@ -61,7 +61,7 @@ The dashboard will run on `http://localhost:3001` and connect to the gateway at 
 
 ## Deployment and usage
 
-See `docs/deployment.md` for deployment steps, environment variables, and usage examples.
+See `docs/deployment.md` for deployment steps, environment variables, Docker usage, and request examples.
 
 ## Scripts
 

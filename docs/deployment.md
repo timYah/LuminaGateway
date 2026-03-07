@@ -31,7 +31,7 @@ npm run db:seed
 
 ## Run the stack
 
-Use `npm run dev` for local development to start both the gateway and the admin dashboard together. In production, run each service under your process manager.
+Use `npm run dev` for local development to start both the gateway and the admin dashboard together. In production, you can run the gateway directly or ship a single Docker image that also serves the built admin dashboard.
 
 ```bash [Terminal]
 # Development (gateway + admin)
@@ -39,9 +39,12 @@ npm run dev
 ```
 
 ```bash [Terminal]
-# Production example
-node --import tsx src/index.ts
+# Build and run the Docker image (gateway + admin UI)
+docker build -t lumina-gateway .
+docker run --rm -p 3000:3000   -e GATEWAY_API_KEY=dev-token   -e DATABASE_TYPE=sqlite   -e DATABASE_URL=file:./.runtime/lumina.db   lumina-gateway
 ```
+
+The Docker image serves the admin dashboard from the same origin as the gateway. After the container starts, open `http://localhost:3000/` for the UI and use `http://localhost:3000/v1/*` / `http://localhost:3000/admin/*` for the APIs.
 
 Verify the service:
 
@@ -58,7 +61,7 @@ npm run dev:admin
 
 ## Admin dashboard
 
-The admin dashboard lives in `apps/admin`. It is a Vue + Nuxt UI app powered by Vite, connects to the gateway through the `/admin/*` APIs, and stores the API key locally in the browser.
+The admin dashboard lives in `apps/admin`. It is a Vue + Nuxt UI app powered by Vite, connects to the gateway through the `/admin/*` APIs, and stores the API key locally in the browser. In the Docker image, the built dashboard is served directly by the gateway on `/`, `/providers`, and `/usage`.
 
 ```bash [Terminal]
 cd apps/admin

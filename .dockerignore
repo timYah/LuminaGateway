@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.env.*
+node_modules
+apps/admin/node_modules
+apps/admin/dist
+coverage
+.vitest
+.runtime
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
