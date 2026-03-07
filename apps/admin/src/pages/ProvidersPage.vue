@@ -525,8 +525,8 @@ const refreshAll = async () => {
             </div>
           </div>
         </div>
-        <div class="section-shell__actions">
-          <div class="w-full sm:w-52">
+        <div class="w-full max-w-sm space-y-3 lg:max-w-[22rem]">
+          <div class="radius-card border border-slate-200/70 bg-slate-50/80 p-3.5">
             <UFormGroup
               :label="$t('providers.testModel.label')"
               :help="$t('providers.testModel.help')"
@@ -538,21 +538,23 @@ const refreshAll = async () => {
               />
             </UFormGroup>
           </div>
-          <UButton
-            class="action-press"
-            variant="outline"
-            :loading="healthWorking"
-            @click="checkHealth"
-          >
-            {{ $t("providers.health.check") }}
-          </UButton>
-          <UButton class="action-press" variant="outline" @click="refreshAll">
-            {{ $t("providers.refresh") }}
-          </UButton>
+          <div class="flex flex-wrap items-center gap-2">
+            <UButton
+              class="action-press"
+              variant="outline"
+              :loading="healthWorking"
+              @click="checkHealth"
+            >
+              {{ $t("providers.health.check") }}
+            </UButton>
+            <UButton class="action-press" variant="outline" @click="refreshAll">
+              {{ $t("providers.refresh") }}
+            </UButton>
+          </div>
         </div>
       </div>
 
-      <div class="px-6 py-5 md:px-8 md:py-6">
+      <div class="section-shell__body pt-0 md:pt-0">
         <div v-if="pending" class="space-y-2">
           <div class="h-9 radius-soft skeleton"></div>
           <div class="h-9 radius-soft skeleton"></div>
@@ -584,28 +586,28 @@ const refreshAll = async () => {
         </div>
 
         <div v-else class="overflow-x-auto">
-          <table class="min-w-[860px] w-full text-sm">
-            <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
+          <table class="min-w-[920px] w-full text-sm">
+            <thead class="text-[11px] uppercase tracking-[0.22em] text-slate-500">
               <tr class="border-b border-slate-200/60">
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("providers.table.name") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("providers.table.protocol") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("providers.table.balance") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("providers.table.priority") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("providers.table.health") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-left font-medium">
                   {{ $t("providers.table.status") }}
                 </th>
-                <th class="py-2.5 text-left font-medium">
+                <th class="py-2 text-right font-medium">
                   {{ $t("providers.table.actions") }}
                 </th>
               </tr>
@@ -614,44 +616,44 @@ const refreshAll = async () => {
               <tr
                 v-for="(provider, index) in providers"
                 :key="provider.id"
-                class="border-b border-slate-200/50 staggered"
+                class="group border-b border-slate-200/50 staggered hover:bg-slate-50/70"
                 :style="{ '--index': index }"
               >
-                <td class="py-3">
+                <td class="py-3.5 pr-4 align-top">
                   <div class="font-medium text-slate-900">
                     {{ provider.name }}
                   </div>
-                  <div class="text-xs text-slate-500">
+                  <div class="mt-1 max-w-[30rem] break-all text-xs text-slate-500">
                     {{ provider.baseUrl }}
                   </div>
                   <div
                     v-if="testResults.has(provider.id)"
-                    class="mt-1 text-xs font-medium"
+                    class="mt-2 text-xs font-medium"
                     :class="testResults.get(provider.id)?.ok ? 'text-emerald-600' : 'text-rose-600'"
                   >
                     {{ testResultLabel(testResults.get(provider.id)!) }}
                   </div>
                 </td>
-                <td class="py-3 text-slate-600 capitalize">
+                <td class="py-3.5 pr-4 align-top text-slate-600 capitalize">
                   {{ provider.protocol }}
                 </td>
-                <td class="py-3 mono-numbers text-slate-900">
+                <td class="py-3.5 pr-4 align-top mono-numbers text-slate-900">
                   {{ provider.balance.toFixed(4) }}
                 </td>
-                <td class="py-3 mono-numbers text-slate-900">
+                <td class="py-3.5 pr-4 align-top mono-numbers text-slate-900">
                   {{ provider.priority }}
                 </td>
-                <td class="py-3">
+                <td class="py-3.5 align-top">
                   <span
-                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
+                    class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap"
                     :class="healthTone(provider)"
                   >
                     {{ healthLabel(provider) }}
                   </span>
                 </td>
-                <td class="py-3">
+                <td class="py-3.5 align-top">
                   <span
-                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
+                    class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap"
                     :class="
                       provider.isActive
                         ? 'bg-emerald-100 text-emerald-700'
@@ -665,11 +667,11 @@ const refreshAll = async () => {
                     }}
                   </span>
                 </td>
-                <td class="py-3">
-                  <div class="flex items-center gap-2">
+                <td class="py-3.5 align-top">
+                  <div class="flex flex-wrap justify-end gap-1.5">
                     <UButton
                       class="action-press"
-                      size="sm"
+                      size="xs"
                       variant="outline"
                       :loading="testingId === provider.id"
                       @click="testProvider(provider)"
@@ -678,7 +680,7 @@ const refreshAll = async () => {
                     </UButton>
                     <UButton
                       class="action-press"
-                      size="sm"
+                      size="xs"
                       variant="outline"
                       @click="openEdit(provider)"
                     >
@@ -686,7 +688,7 @@ const refreshAll = async () => {
                     </UButton>
                     <UButton
                       class="action-press text-rose-600 hover:text-rose-700"
-                      size="sm"
+                      size="xs"
                       variant="outline"
                       @click="openDelete(provider)"
                     >
@@ -703,12 +705,12 @@ const refreshAll = async () => {
 
     <UModal v-model:open="createOpen">
       <template #content>
-        <div class="surface radius-panel p-6 md:p-7 space-y-5">
+        <div class="surface radius-panel p-5 md:p-6 space-y-4">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
               {{ $t("providers.create.title") }}
             </div>
-            <div class="mt-2 text-2xl font-semibold text-slate-900">
+            <div class="mt-2 text-xl font-semibold tracking-tight text-slate-900">
               {{ $t("providers.create.subtitle") }}
             </div>
           </div>
@@ -826,7 +828,7 @@ const refreshAll = async () => {
             {{ createError }}
           </p>
 
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-end gap-2">
             <UButton class="action-press" variant="outline" @click="createOpen = false">
               {{ $t("providers.cancel") }}
             </UButton>
@@ -845,12 +847,12 @@ const refreshAll = async () => {
 
     <UModal v-model:open="editOpen">
       <template #content>
-        <div class="surface radius-panel p-6 md:p-7 space-y-5">
+        <div class="surface radius-panel p-5 md:p-6 space-y-4">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
               {{ $t("providers.edit.title") }}
             </div>
-            <div class="mt-2 text-2xl font-semibold text-slate-900">
+            <div class="mt-2 text-xl font-semibold tracking-tight text-slate-900">
               {{ $t("providers.edit.subtitle") }}
             </div>
           </div>
@@ -968,7 +970,7 @@ const refreshAll = async () => {
             {{ editError }}
           </p>
 
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-end gap-2">
             <UButton class="action-press" variant="outline" @click="editOpen = false">
               {{ $t("providers.cancel") }}
             </UButton>
@@ -987,12 +989,12 @@ const refreshAll = async () => {
 
     <UModal v-model:open="deleteOpen">
       <template #content>
-        <div class="surface radius-panel p-6 md:p-7 space-y-5">
+        <div class="surface radius-panel p-5 md:p-6 space-y-4">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
               {{ $t("providers.delete.title") }}
             </div>
-            <div class="mt-2 text-2xl font-semibold text-slate-900">
+            <div class="mt-2 text-xl font-semibold tracking-tight text-slate-900">
               {{ deleteTarget?.name ?? "" }}
             </div>
             <p class="mt-2 text-sm text-slate-600">
@@ -1019,7 +1021,7 @@ const refreshAll = async () => {
             {{ deleteError }}
           </p>
 
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-end gap-2">
             <UButton class="action-press" variant="outline" @click="closeDelete">
               {{ $t("providers.cancel") }}
             </UButton>
@@ -1037,7 +1039,7 @@ const refreshAll = async () => {
 
     <UModal v-model:open="importOpen">
       <template #content>
-        <div class="surface radius-panel p-6 md:p-7 space-y-5">
+        <div class="surface radius-panel p-5 md:p-6 space-y-4">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
               {{ $t("providers.config.importTitle") }}
@@ -1053,7 +1055,7 @@ const refreshAll = async () => {
             </div>
             <textarea
               v-model="importPayload"
-              class="w-full min-h-[180px] rounded-2xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none"
+              class="w-full min-h-[180px] radius-card border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none"
               :placeholder="$t('providers.config.importPlaceholder')"
             ></textarea>
           </div>
@@ -1071,7 +1073,7 @@ const refreshAll = async () => {
             {{ importError }}
           </p>
 
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-end gap-2">
             <UButton
               class="action-press"
               variant="outline"
