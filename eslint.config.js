@@ -14,6 +14,7 @@ export default [
       "apps/**/.nuxt",
       "apps/**/.output",
       "apps/**/node_modules",
+      "apps/**/dist",
     ],
   },
   {

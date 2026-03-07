@@ -17,6 +17,8 @@ Set `GATEWAY_API_KEY` before you start the server because `/v1/*` and `/admin/*`
 
 ```bash
 npm install
+# root install now also installs apps/admin dependencies
+# admin install intentionally resolves platform-specific optional modules per machine
 npm run db:migrate
 npm run db:seed
 cp .env.example .env
@@ -78,6 +80,7 @@ See `docs/deployment.md` for deployment steps, environment variables, Docker usa
 - `npm run build:gateway` — compile the gateway into `dist/`
 - `npm run build:admin` — build the admin UI bundle
 - `npm run docker:build` — build the local Docker image (`lumina-gateway:local`)
+- `npm run install:admin` — install admin dependencies explicitly when needed
 - `npm run lint` — run ESLint
 - `npm run typecheck` — run `tsc` without emitting
 - `npm run test` — run Vitest

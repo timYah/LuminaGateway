@@ -6,8 +6,9 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
+COPY scripts/postinstall.mjs ./scripts/postinstall.mjs
 COPY apps/admin/package.json ./apps/admin/package.json
-RUN npm ci && npm --prefix apps/admin install --include=optional
+RUN SKIP_ADMIN_POSTINSTALL=1 npm ci && npm run install:admin
 
 FROM deps AS build
 WORKDIR /app

@@ -26,6 +26,8 @@ Run migrations before starting the gateway. Seed data is optional and intended f
 
 ```bash [Terminal]
 npm install
+# root install also installs apps/admin dependencies
+# admin install resolves platform-specific optional modules for the current machine
 npm run db:migrate
 npm run db:seed
 ```
