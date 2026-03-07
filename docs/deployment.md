@@ -49,8 +49,26 @@ npm run dev:admin -- --host 0.0.0.0
 
 ```bash [Terminal]
 # Build and run the Docker image (gateway + admin UI)
+# Default build mirrors: Nanjing University for apt, mainland npm mirror for packages
 npm run docker:build
-docker run --rm -p 3000:3000   -e GATEWAY_API_KEY=dev-token   -e DATABASE_TYPE=sqlite   -e DATABASE_URL=file:./.runtime/lumina.db   lumina-gateway:local
+docker run --rm -p 3000:3000 \
+  -e GATEWAY_API_KEY=dev-token \
+  -e DATABASE_TYPE=sqlite \
+  -e DATABASE_URL=file:./.runtime/lumina.db \
+  lumina-gateway:local
+```
+
+During validation, the NJU npm proxy did not provide `@tiptap/suggestion@3.20.1`, so the Dockerfile keeps the npm registry as a separate mainland mirror while still exposing it as an override.
+
+Override the mirrors when needed:
+
+```bash [Terminal]
+docker build \
+  --build-arg APT_DEBIAN_MIRROR=https://deb.debian.org/debian \
+  --build-arg APT_SECURITY_MIRROR=https://security.debian.org/debian-security \
+  --build-arg NPM_REGISTRY=https://registry.npmjs.org/ \
+  -t lumina-gateway:local \
+  .
 ```
 
 ```bash [Terminal]

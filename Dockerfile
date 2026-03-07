@@ -1,14 +1,26 @@
 # syntax=docker/dockerfile:1.7
 
+ARG APT_DEBIAN_MIRROR=http://mirrors.nju.edu.cn/debian
+ARG APT_SECURITY_MIRROR=http://mirrors.nju.edu.cn/debian-security
+ARG NPM_REGISTRY=https://registry.npmmirror.com/
+
 FROM node:22-bookworm-slim AS deps
+ARG APT_DEBIAN_MIRROR
+ARG APT_SECURITY_MIRROR
+ARG NPM_REGISTRY
 WORKDIR /app
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
+ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY}
+ENV NPM_CONFIG_FUND=false
+ENV NPM_CONFIG_AUDIT=false
+RUN set -eux; \
+  find /etc/apt -maxdepth 2 -type f \( -name 'sources.list' -o -name '*.list' -o -name '*.sources' \) \
+    -exec sed -Ei "s|https?://deb.debian.org/debian|${APT_DEBIAN_MIRROR}|g; s|https?://deb.debian.org/debian-security|${APT_SECURITY_MIRROR}|g; s|https?://security.debian.org/debian-security|${APT_SECURITY_MIRROR}|g" '{}' +; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends python3 make g++; \
+  rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
-COPY scripts/postinstall.mjs ./scripts/postinstall.mjs
 COPY apps/admin/package.json ./apps/admin/package.json
-RUN SKIP_ADMIN_POSTINSTALL=1 npm ci && npm run install:admin
+RUN npm ci
 
 FROM deps AS build
 WORKDIR /app

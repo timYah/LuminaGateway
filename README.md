@@ -72,6 +72,8 @@ The dashboard will run on `http://localhost:3001` and connect to the gateway at 
 
 See `docs/deployment.md` for deployment steps, environment variables, Docker usage, Docker Compose persistence, and request examples. The Docker image build compiles both the gateway and the admin UI before packaging the runtime image.
 
+The Docker build now defaults to the Nanjing University Debian mirror for `apt`, plus a mainland npm mirror for package installs. During validation, the NJU npm proxy was missing `@tiptap/suggestion@3.20.1`, so the npm registry remains independently overridable via `--build-arg NPM_REGISTRY=...`.
+
 ## Scripts
 
 - `npm run dev` — start the dev server
