@@ -6,6 +6,7 @@ import {
   type ClientFormat,
   type GatewayRequestParams,
 } from "../services/gatewayService";
+import { responseCache, resolveCacheTtlMs } from "../services/cacheService";
 
 type ProtocolRouteOptions<T extends z.ZodTypeAny> = {
   path: string;
@@ -34,6 +35,21 @@ function isModelAllowed(model: string) {
     return false;
   }
   return true;
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+  const entries = Object.keys(value as Record<string, unknown>)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(
+      (value as Record<string, unknown>)[key]
+    )}`);
+  return `{${entries.join(",")}}`;
 }
 
 let cachedDefaultsRaw: string | undefined;
@@ -99,10 +115,28 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
       return c.json(response.body, response.status);
     }
 
+    const cacheTtlMs = resolveCacheTtlMs(c.req.header("x-cache-ttl-ms"));
+    const cacheKey = cacheTtlMs
+      ? `${options.clientFormat}:${options.path}:${stableStringify(merged)}`
+      : null;
+    if (cacheTtlMs && cacheKey) {
+      const cached = responseCache.get(cacheKey);
+      if (cached) {
+        return c.json(cached.body, cached.status);
+      }
+    }
+
     const response = await handleRequest(
       options.converter(merged),
       options.clientFormat
     );
+    if (cacheTtlMs && cacheKey && response.status === 200) {
+      responseCache.set(cacheKey, {
+        status: response.status,
+        body: response.body,
+        expiresAt: Date.now() + cacheTtlMs,
+      });
+    }
     return c.json(response.body, response.status);
   });
 
