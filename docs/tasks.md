@@ -582,7 +582,7 @@
 
 - [x] **T-55.1** 补充单镜像部署所需的 admin 静态托管能力，使生产环境可由 gateway 直接提供后台页面
 - [x] **T-55.2** 新增 `Dockerfile` 与 `.dockerignore`，并补充 Docker 部署说明
-- [ ] **T-55.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并验证 `docker build` 通过
+- [x] **T-55.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并验证 `docker build` 通过
 - [x] **T-55.4** 新增 `docker-compose.yml`，提供单命令启动与 `.runtime` 持久化目录挂载
 - [x] **T-55.5** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并校验 `docker-compose.yml` 的 YAML 结构与关键字段
 
