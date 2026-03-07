@@ -4,12 +4,14 @@ import {
   callUpstreamNonStreaming,
   callUpstreamStreaming,
   classifyUpstreamError,
+  type UpstreamErrorType,
   type UpstreamUsage,
 } from "./upstreamService";
 import type { UpstreamRequestParams } from "./upstreamService";
 import { deactivateProvider } from "./providerService";
 import { billUsage } from "./billingService";
 import { recordFailure } from "./failureStatsService";
+import { createRequestLog } from "./requestLogService";
 import type { OpenAIChatCompletionResponse } from "../types/openai";
 import type { AnthropicMessagesResponse } from "../types/anthropic";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -85,12 +87,21 @@ function formatErrorResponse(
   return body;
 }
 
+async function recordRequestLogSafe(input: Parameters<typeof createRequestLog>[0]) {
+  try {
+    await createRequestLog(input);
+  } catch (error) {
+    console.error("[gateway] request log failed", error);
+  }
+}
+
 async function handleUpstreamError(
   error: unknown,
   providerId: number,
-  clientFormat: ClientFormat
+  clientFormat: ClientFormat,
+  errorTypeOverride?: UpstreamErrorType
 ): Promise<"continue" | GatewayErrorResponse> {
-  const errorType = classifyUpstreamError(error);
+  const errorType = errorTypeOverride ?? classifyUpstreamError(error);
   recordFailure(providerId, errorType);
   if (errorType === "quota") {
     gatewayCircuitBreaker.open(providerId, QUOTA_COOLDOWN_MS);
@@ -143,6 +154,7 @@ export async function handleRequest(
   }
 
   for (const provider of candidates) {
+    const start = Date.now();
     try {
       const { result, usage } = await callUpstreamNonStreaming(
         provider,
@@ -150,6 +162,12 @@ export async function handleRequest(
         params
       );
       await billUsage(provider, modelSlug, usage);
+      await recordRequestLogSafe({
+        providerId: provider.id,
+        modelSlug,
+        result: "success",
+        latencyMs: Date.now() - start,
+      });
       const finishReason =
         typeof result.finishReason === "string" ? result.finishReason : null;
       const universal = buildUniversalResponse(
@@ -167,7 +185,20 @@ export async function handleRequest(
         body,
       };
     } catch (error) {
-      const result = await handleUpstreamError(error, provider.id, clientFormat);
+      const errorType = classifyUpstreamError(error);
+      await recordRequestLogSafe({
+        providerId: provider.id,
+        modelSlug,
+        result: "failure",
+        errorType,
+        latencyMs: Date.now() - start,
+      });
+      const result = await handleUpstreamError(
+        error,
+        provider.id,
+        clientFormat,
+        errorType
+      );
       if (result === "continue") continue;
       return result;
     }
@@ -193,18 +224,55 @@ export async function handleStreamingRequest(
   }
 
   for (const provider of candidates) {
+    const start = Date.now();
     try {
       const upstream = await callUpstreamStreaming(provider, modelSlug, params);
       void upstream.usagePromise
-        .then((usage) => billUsage(provider, modelSlug, usage))
-        .catch((err) => console.error("Billing failed", err));
+        .then(async (usage) => {
+          await recordRequestLogSafe({
+            providerId: provider.id,
+            modelSlug,
+            result: "success",
+            latencyMs: Date.now() - start,
+          });
+          try {
+            await billUsage(provider, modelSlug, usage);
+          } catch (err) {
+            console.error("Billing failed", err);
+          }
+        })
+        .catch(async (err) => {
+          const errorType = classifyUpstreamError(err);
+          recordFailure(provider.id, errorType);
+          await recordRequestLogSafe({
+            providerId: provider.id,
+            modelSlug,
+            result: "failure",
+            errorType,
+            latencyMs: Date.now() - start,
+          });
+          console.error("Streaming failed", err);
+        });
       const stream =
         clientFormat === "openai"
           ? relayAsOpenAIStream(upstream.stream, modelSlug)
           : relayAsAnthropicStream(upstream.stream);
       return { status: 200, stream };
     } catch (error) {
-      const result = await handleUpstreamError(error, provider.id, clientFormat);
+      const errorType = classifyUpstreamError(error);
+      await recordRequestLogSafe({
+        providerId: provider.id,
+        modelSlug,
+        result: "failure",
+        errorType,
+        latencyMs: Date.now() - start,
+      });
+      const result = await handleUpstreamError(
+        error,
+        provider.id,
+        clientFormat,
+        errorType
+      );
       if (result === "continue") continue;
       return result;
     }

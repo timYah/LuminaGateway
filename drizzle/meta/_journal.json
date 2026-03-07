@@ -29,6 +29,13 @@
       "when": 1778160000000,
       "tag": "0003_add_provider_health",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1778163600000,
+      "tag": "0004_add_request_logs",
+      "breakpoints": true
     }
   ]
 }
