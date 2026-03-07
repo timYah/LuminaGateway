@@ -588,6 +588,8 @@
 - [x] **T-55.6** 新增 `npm run docker:build` 脚本，并同步 Docker 构建文档
 - [x] **T-55.7** 调整 Docker 构建流程：在镜像构建阶段编译 gateway 与 admin，并在运行镜像时执行 gateway 编译产物
 - [x] **T-55.8** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build && npm run docker:build`，确认镜像基于编译产物运行
+- [x] **T-55.9** 调整 `package.json` 开发脚本：gateway 与 admin 支持通过 `--host` / `HOST` 传递监听地址（如 `0.0.0.0`）
+- [ ] **T-55.10** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build`，并验证 `npm run dev:gateway -- --host 0.0.0.0` 与 `npm run dev:admin -- --host 0.0.0.0` 可启动
 
 ---
 

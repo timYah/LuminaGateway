@@ -34,6 +34,14 @@ curl http://localhost:3000/health
 
 `npm run dev` starts both the gateway and the admin dashboard. Use `npm run dev:gateway` or `npm run dev:admin` to start them separately.
 
+To expose the dev servers on all interfaces, pass a host through the npm scripts:
+
+```bash
+HOST=0.0.0.0 npm run dev
+npm run dev:gateway -- --host 0.0.0.0
+npm run dev:admin -- --host 0.0.0.0
+```
+
 Send a request:
 
 ```bash

@@ -39,6 +39,13 @@ npm run dev
 ```
 
 ```bash [Terminal]
+# Development with public host binding
+HOST=0.0.0.0 npm run dev
+npm run dev:gateway -- --host 0.0.0.0
+npm run dev:admin -- --host 0.0.0.0
+```
+
+```bash [Terminal]
 # Build and run the Docker image (gateway + admin UI)
 npm run docker:build
 docker run --rm -p 3000:3000   -e GATEWAY_API_KEY=dev-token   -e DATABASE_TYPE=sqlite   -e DATABASE_URL=file:./.runtime/lumina.db   lumina-gateway:local

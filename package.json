@@ -8,8 +8,8 @@
   "scripts": {
     "test": "vitest run",
     "dev": "concurrently -k -n gateway,admin -c cyan,magenta \"npm run dev:gateway\" \"npm run dev:admin\"",
-    "dev:gateway": "tsx watch src/index.ts",
-    "dev:admin": "npm --prefix apps/admin run dev",
+    "dev:gateway": "node scripts/run-dev.mjs gateway",
+    "dev:admin": "node scripts/run-dev.mjs admin",
     "build": "npm run build:gateway",
     "docker:build": "docker build -t lumina-gateway:local .",
     "lint": "eslint .",
