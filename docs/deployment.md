@@ -44,7 +44,12 @@ docker build -t lumina-gateway .
 docker run --rm -p 3000:3000   -e GATEWAY_API_KEY=dev-token   -e DATABASE_TYPE=sqlite   -e DATABASE_URL=file:./.runtime/lumina.db   lumina-gateway
 ```
 
-The Docker image serves the admin dashboard from the same origin as the gateway. After the container starts, open `http://localhost:3000/` for the UI and use `http://localhost:3000/v1/*` / `http://localhost:3000/admin/*` for the APIs.
+```bash [Terminal]
+# Or start with docker compose and persist SQLite under ./.runtime/docker
+docker compose up --build -d
+```
+
+The Docker image serves the admin dashboard from the same origin as the gateway. After the container starts, open `http://localhost:3000/` for the UI and use `http://localhost:3000/v1/*` / `http://localhost:3000/admin/*` for the APIs. The compose file bind-mounts `./.runtime/docker` to `/app/.runtime`, so SQLite data survives container restarts.
 
 Verify the service:
 

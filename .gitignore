@@ -34,3 +34,6 @@ coverage/
 # Local runtime artifacts
 .runtime/test-db/*
 !.runtime/test-db/.gitkeep
+
+# Docker runtime data
+.runtime/docker/
