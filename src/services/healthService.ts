@@ -15,7 +15,9 @@ export type ProviderHealthCheckResult = {
   message?: string;
 };
 
-const HEALTHCHECK_MESSAGE = [{ role: "user", content: "ping" }];
+const HEALTHCHECK_MESSAGE: NonNullable<UpstreamRequestParams["messages"]> = [
+  { role: "user", content: "ping" },
+];
 
 export async function checkProviderHealth(
   provider: Provider,

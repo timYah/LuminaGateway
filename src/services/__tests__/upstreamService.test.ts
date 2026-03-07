@@ -38,6 +38,8 @@ const baseProvider = {
   outputPrice: null,
   isActive: true,
   priority: 1,
+  healthStatus: "unknown" as const,
+  lastHealthCheckAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };

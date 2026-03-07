@@ -52,6 +52,8 @@ const providerA = {
   outputPrice: null,
   isActive: true,
   priority: 1,
+  healthStatus: "unknown" as const,
+  lastHealthCheckAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -68,6 +70,8 @@ const providerB = {
   outputPrice: null,
   isActive: true,
   priority: 2,
+  healthStatus: "unknown" as const,
+  lastHealthCheckAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
