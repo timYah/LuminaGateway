@@ -586,25 +586,25 @@ const refreshAll = async () => {
         </div>
 
         <div v-else class="overflow-x-auto">
-          <table class="min-w-[920px] w-full text-sm">
+          <table class="w-full min-w-0 text-sm md:min-w-[920px]">
             <thead class="text-[11px] uppercase tracking-[0.22em] text-slate-500">
               <tr class="border-b border-slate-200/60">
                 <th class="py-2 text-left font-medium">
                   {{ $t("providers.table.name") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium md:table-cell">
                   {{ $t("providers.table.protocol") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium lg:table-cell">
                   {{ $t("providers.table.balance") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium md:table-cell">
                   {{ $t("providers.table.priority") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium md:table-cell">
                   {{ $t("providers.table.health") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium md:table-cell">
                   {{ $t("providers.table.status") }}
                 </th>
                 <th class="py-2 text-right font-medium">
@@ -626,6 +626,25 @@ const refreshAll = async () => {
                   <div class="mt-1 max-w-[30rem] break-all text-xs text-slate-500">
                     {{ provider.baseUrl }}
                   </div>
+                  <div class="mt-2 flex flex-wrap gap-1.5 md:hidden">
+                    <span class="summary-pill">
+                      <span class="summary-pill__label">{{ provider.protocol }}</span>
+                    </span>
+                    <span class="summary-pill">
+                      <span class="summary-pill__label">P{{ provider.priority }}</span>
+                    </span>
+                    <span class="summary-pill" :class="healthTone(provider)">
+                      <span class="summary-pill__label">{{ healthLabel(provider) }}</span>
+                    </span>
+                    <span
+                      class="summary-pill"
+                      :class="provider.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
+                    >
+                      <span class="summary-pill__label">
+                        {{ provider.isActive ? $t("providers.status.active") : $t("providers.status.paused") }}
+                      </span>
+                    </span>
+                  </div>
                   <div
                     v-if="testResults.has(provider.id)"
                     class="mt-2 text-xs font-medium"
@@ -634,16 +653,16 @@ const refreshAll = async () => {
                     {{ testResultLabel(testResults.get(provider.id)!) }}
                   </div>
                 </td>
-                <td class="py-3.5 pr-4 align-top text-slate-600 capitalize">
+                <td class="hidden py-3.5 pr-4 align-top text-slate-600 capitalize md:table-cell">
                   {{ provider.protocol }}
                 </td>
-                <td class="py-3.5 pr-4 align-top mono-numbers text-slate-900">
+                <td class="hidden py-3.5 pr-4 align-top mono-numbers text-slate-900 lg:table-cell">
                   {{ provider.balance.toFixed(4) }}
                 </td>
-                <td class="py-3.5 pr-4 align-top mono-numbers text-slate-900">
+                <td class="hidden py-3.5 pr-4 align-top mono-numbers text-slate-900 md:table-cell">
                   {{ provider.priority }}
                 </td>
-                <td class="py-3.5 align-top">
+                <td class="hidden py-3.5 align-top md:table-cell">
                   <span
                     class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap"
                     :class="healthTone(provider)"
@@ -651,7 +670,7 @@ const refreshAll = async () => {
                     {{ healthLabel(provider) }}
                   </span>
                 </td>
-                <td class="py-3.5 align-top">
+                <td class="hidden py-3.5 align-top md:table-cell">
                   <span
                     class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap"
                     :class="
@@ -668,7 +687,7 @@ const refreshAll = async () => {
                   </span>
                 </td>
                 <td class="py-3.5 align-top">
-                  <div class="flex flex-wrap justify-end gap-1.5">
+                  <div class="flex flex-wrap justify-start gap-1.5 md:justify-end">
                     <UButton
                       class="action-press"
                       size="xs"

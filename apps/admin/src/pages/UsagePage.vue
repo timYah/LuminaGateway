@@ -589,22 +589,22 @@ watch(
         </div>
 
         <div v-else class="overflow-x-auto">
-          <table class="min-w-[900px] w-full text-sm">
+          <table class="w-full min-w-0 text-sm md:min-w-[900px]">
             <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
               <tr class="border-b border-slate-200/60">
                 <th class="py-2 text-left font-medium">
                   {{ $t("usage.table.time") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium md:table-cell">
                   {{ $t("usage.table.provider") }}
                 </th>
                 <th class="py-2 text-left font-medium">
                   {{ $t("usage.table.model") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium lg:table-cell">
                   {{ $t("usage.table.input") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium lg:table-cell">
                   {{ $t("usage.table.output") }}
                 </th>
                 <th class="py-2 text-left font-medium">
@@ -621,13 +621,16 @@ watch(
               >
                 <td class="py-2.5 pr-4 align-top text-slate-700">
                   {{ formatDate(row.createdAt) }}
+                  <div class="mt-1 text-xs text-slate-500 md:hidden">
+                    {{ providerNameMap.get(row.providerId) ?? row.providerId }}
+                  </div>
                 </td>
-                <td class="py-2.5 pr-4 align-top text-slate-700">{{ row.providerId }}</td>
+                <td class="hidden py-2.5 pr-4 align-top text-slate-700 md:table-cell">{{ row.providerId }}</td>
                 <td class="py-2.5 pr-4 align-top text-slate-900">{{ row.modelSlug }}</td>
-                <td class="py-2.5 pr-4 align-top mono-numbers text-slate-900">
+                <td class="hidden py-2.5 pr-4 align-top mono-numbers text-slate-900 lg:table-cell">
                   {{ row.inputTokens }}
                 </td>
-                <td class="py-2.5 pr-4 align-top mono-numbers text-slate-900">
+                <td class="hidden py-2.5 pr-4 align-top mono-numbers text-slate-900 lg:table-cell">
                   {{ row.outputTokens }}
                 </td>
                 <td class="py-2.5 pr-4 align-top mono-numbers text-slate-900">
@@ -772,13 +775,13 @@ watch(
         </div>
 
         <div v-else class="overflow-x-auto">
-          <table class="min-w-[980px] w-full text-sm">
+          <table class="w-full min-w-0 text-sm md:min-w-[980px]">
             <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
               <tr class="border-b border-slate-200/60">
                 <th class="py-2 text-left font-medium">
                   {{ $t("usage.requests.table.time") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium md:table-cell">
                   {{ $t("usage.requests.table.provider") }}
                 </th>
                 <th class="py-2 text-left font-medium">
@@ -787,10 +790,10 @@ watch(
                 <th class="py-2 text-left font-medium">
                   {{ $t("usage.requests.table.result") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium lg:table-cell">
                   {{ $t("usage.requests.table.error") }}
                 </th>
-                <th class="py-2 text-left font-medium">
+                <th class="hidden py-2 text-left font-medium lg:table-cell">
                   {{ $t("usage.requests.table.latency") }}
                 </th>
               </tr>
@@ -804,11 +807,18 @@ watch(
               >
                 <td class="py-2.5 pr-4 align-top text-slate-700">
                   {{ formatDate(row.createdAt) }}
+                  <div class="mt-1 text-xs text-slate-500 md:hidden">
+                    {{ providerNameMap.get(row.providerId) ?? row.providerId }}
+                  </div>
                 </td>
-                <td class="py-2.5 pr-4 align-top text-slate-700">
+                <td class="hidden py-2.5 pr-4 align-top text-slate-700 md:table-cell">
                   {{ providerNameMap.get(row.providerId) ?? row.providerId }}
                 </td>
-                <td class="py-2.5 pr-4 align-top text-slate-900">{{ row.modelSlug }}</td>
+                <td class="py-2.5 pr-4 align-top text-slate-900">{{ row.modelSlug }}
+                  <div class="mt-1 text-xs text-slate-500 lg:hidden">
+                    {{ row.errorType || formatLatency(row.latencyMs) }}
+                  </div>
+                </td>
                 <td class="py-2.5 align-top">
                   <span
                     class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap"
@@ -819,10 +829,10 @@ watch(
                     {{ requestResultLabel(row.result) }}
                   </span>
                 </td>
-                <td class="py-2.5 pr-4 align-top text-slate-700">
+                <td class="hidden py-2.5 pr-4 align-top text-slate-700 lg:table-cell">
                   {{ row.errorType || "—" }}
                 </td>
-                <td class="py-2.5 align-top mono-numbers text-slate-700">
+                <td class="hidden py-2.5 align-top mono-numbers text-slate-700 lg:table-cell">
                   {{ formatLatency(row.latencyMs) }}
                 </td>
               </tr>
