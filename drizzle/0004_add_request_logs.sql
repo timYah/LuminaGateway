@@ -8,4 +8,5 @@ CREATE TABLE `request_logs` (
   `created_at` integer NOT NULL DEFAULT (unixepoch()),
   FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`) ON UPDATE no action ON DELETE cascade
 );
+--> statement-breakpoint
 CREATE INDEX `request_logs_created_at_idx` ON `request_logs` (`created_at`);
