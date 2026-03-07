@@ -549,7 +549,7 @@
 - [x] **T-52.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，确认根目录不再生成 `test-*.db*` 文件
 - [x] **T-52.4** 将默认运行期 SQLite 路径迁移到 `.runtime/lumina.db`，避免主目录生成 `lumina.db*`
 - [x] **T-52.5** 同步 `.env.example`、`README.md`、`docs/documentation.md`、`docs/deployment.md`、`docs/prompt.md` 的数据库路径说明，并清理本地旧的 `lumina.db*`
-- [ ] **T-52.6** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并确认默认 SQLite 产物位于 `.runtime/`
+- [x] **T-52.6** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并确认默认 SQLite 产物位于 `.runtime/`
 
 ---
 
