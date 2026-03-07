@@ -67,6 +67,7 @@ See `docs/deployment.md` for deployment steps, environment variables, Docker usa
 
 - `npm run dev` — start the dev server
 - `npm run build` — compile TypeScript
+- `npm run docker:build` — build the local Docker image (`lumina-gateway:local`)
 - `npm run lint` — run ESLint
 - `npm run typecheck` — run `tsc` without emitting
 - `npm run test` — run Vitest

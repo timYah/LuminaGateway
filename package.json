@@ -11,6 +11,7 @@
     "dev:gateway": "tsx watch src/index.ts",
     "dev:admin": "npm --prefix apps/admin run dev",
     "build": "tsc -p tsconfig.json",
+    "docker:build": "docker build -t lumina-gateway:local .",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json",
     "db:generate": "drizzle-kit generate",

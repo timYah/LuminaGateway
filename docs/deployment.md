@@ -40,8 +40,8 @@ npm run dev
 
 ```bash [Terminal]
 # Build and run the Docker image (gateway + admin UI)
-docker build -t lumina-gateway .
-docker run --rm -p 3000:3000   -e GATEWAY_API_KEY=dev-token   -e DATABASE_TYPE=sqlite   -e DATABASE_URL=file:./.runtime/lumina.db   lumina-gateway
+npm run docker:build
+docker run --rm -p 3000:3000   -e GATEWAY_API_KEY=dev-token   -e DATABASE_TYPE=sqlite   -e DATABASE_URL=file:./.runtime/lumina.db   lumina-gateway:local
 ```
 
 ```bash [Terminal]

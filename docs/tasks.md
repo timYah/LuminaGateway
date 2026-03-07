@@ -585,6 +585,7 @@
 - [x] **T-55.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并验证 `docker build` 通过
 - [x] **T-55.4** 新增 `docker-compose.yml`，提供单命令启动与 `.runtime` 持久化目录挂载
 - [x] **T-55.5** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并校验 `docker-compose.yml` 的 YAML 结构与关键字段
+- [x] **T-55.6** 新增 `npm run docker:build` 脚本，并同步 Docker 构建文档
 
 ---
 
