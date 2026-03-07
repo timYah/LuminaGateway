@@ -1,3 +1,4 @@
+import { asSchema } from "ai";
 import { describe, expect, it } from "vitest";
 import {
   convertOpenAIResponsesToUniversal,
@@ -13,7 +14,18 @@ describe("protocolConverter (OpenAI)", () => {
       messages: [{ role: "user", content: "hi" }],
       temperature: 0.3,
       max_tokens: 256,
-      tools: [{ type: "function", function: { name: "test" } }],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "test",
+            parameters: {
+              type: "object",
+              properties: {},
+            },
+          },
+        },
+      ],
       tool_choice: "auto",
     });
 
@@ -21,11 +33,21 @@ describe("protocolConverter (OpenAI)", () => {
     expect(universal.temperature).toBe(0.3);
     expect(universal.maxOutputTokens).toBe(256);
     expect(universal.messages).toHaveLength(1);
+    expect(universal.tools).toMatchObject({
+      test: {
+        type: "function",
+      },
+    });
+    expect(asSchema(universal.tools?.test?.inputSchema).jsonSchema).toMatchObject({
+      type: "object",
+      properties: {},
+    });
+    expect(universal.toolChoice).toBe("auto");
   });
 
-  it("converts OpenAI Responses request to universal format", () => {
+  it("converts Codex CLI OpenAI Responses requests to universal format", () => {
     const universal = convertOpenAIResponsesToUniversal({
-      model: "gpt-5.2",
+      model: "gpt-5.3-codex",
       instructions: "Be concise",
       input: [
         {
@@ -44,11 +66,39 @@ describe("protocolConverter (OpenAI)", () => {
       ],
       temperature: 0.2,
       max_output_tokens: 512,
-      tools: [{ type: "function", function: { name: "lookup" } }],
-      tool_choice: { type: "function", function: { name: "lookup" } },
+      tools: [
+        {
+          type: "function",
+          name: "exec_command",
+          description: "Run a shell command",
+          strict: false,
+          parameters: {
+            type: "object",
+            properties: {
+              cmd: { type: "string" },
+            },
+            required: ["cmd"],
+          },
+        },
+        {
+          type: "custom",
+          name: "apply_patch",
+          description: "Patch files",
+          format: {
+            type: "grammar",
+            syntax: "lark",
+            definition: "start: /.+/",
+          },
+        },
+        {
+          type: "web_search",
+          external_web_access: false,
+        },
+      ],
+      tool_choice: { type: "custom", name: "apply_patch" },
     });
 
-    expect(universal.model).toBe("gpt-5.2");
+    expect(universal.model).toBe("gpt-5.3-codex");
     expect(universal.system).toBe(`Be concise
 
 Prefer bullet points`);
@@ -58,6 +108,44 @@ Prefer bullet points`);
       { role: "user", content: "hello" },
       { role: "tool", tool_call_id: "call_123", content: '{"ok":true}' },
     ]);
+    expect(universal.tools).toMatchObject({
+      exec_command: {
+        type: "function",
+        description: "Run a shell command",
+        strict: false,
+      },
+      apply_patch: {
+        type: "provider",
+        id: "openai.custom",
+        args: {
+          name: "apply_patch",
+          description: "Patch files",
+          format: {
+            type: "grammar",
+            syntax: "lark",
+            definition: "start: /.+/",
+          },
+        },
+      },
+      web_search: {
+        type: "provider",
+        id: "openai.web_search",
+        args: {
+          externalWebAccess: false,
+        },
+      },
+    });
+    expect(asSchema(universal.tools?.exec_command?.inputSchema).jsonSchema).toMatchObject({
+      type: "object",
+      properties: {
+        cmd: { type: "string" },
+      },
+      required: ["cmd"],
+    });
+    expect(universal.toolChoice).toEqual({
+      type: "tool",
+      toolName: "apply_patch",
+    });
   });
 
   it("converts universal response to OpenAI response", () => {
@@ -87,7 +175,11 @@ Prefer bullet points`);
     expect(response.object).toBe("response");
     expect(response.model).toBe("gpt-5.2");
     expect(response.output_text).toBe("Hello Responses");
-    expect(response.output[0]?.content[0]?.text).toBe("Hello Responses");
+    const firstOutput = response.output[0];
+    expect(firstOutput?.type).toBe("message");
+    if (firstOutput?.type === "message") {
+      expect(firstOutput.content[0]?.text).toBe("Hello Responses");
+    }
     expect(response.usage?.input_tokens).toBe(4);
     expect(response.usage?.output_tokens).toBe(6);
     expect(response.usage?.total_tokens).toBe(10);

@@ -282,7 +282,8 @@ export async function handleStreamingRequest(
             ? relayAsOpenAIResponsesStream(
                 upstream.stream,
                 modelSlug,
-                upstream.usagePromise
+                upstream.usagePromise,
+                params.tools
               )
             : relayAsOpenAIStream(upstream.stream, modelSlug);
       return { status: 200, stream };

@@ -8,6 +8,7 @@ import { loggerMiddleware } from "./middleware/logger";
 import { adminRoutes } from "./routes/admin";
 import { anthropicRoutes } from "./routes/anthropic";
 import { openaiRoutes } from "./routes/openai";
+import { codexRoutes } from "./routes/codex";
 
 function registerAdminUi(app: Hono) {
   const adminDistRoot = process.env.ADMIN_DIST_ROOT || "./apps/admin/dist";
@@ -47,10 +48,13 @@ export function createApp() {
   };
 
   app.use("/v1/*", cors(corsOptions));
+  app.use("/codex/*", cors(corsOptions));
   app.use("/admin/*", cors(corsOptions));
   app.use("/v1/*", authMiddleware());
+  app.use("/codex/*", authMiddleware());
   app.use("/admin/*", authMiddleware());
   app.route("/", openaiRoutes);
+  app.route("/", codexRoutes);
   app.route("/", anthropicRoutes);
   app.route("/", adminRoutes);
   registerAdminUi(app);

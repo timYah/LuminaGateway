@@ -1,5 +1,9 @@
 export type OpenAIRole = "system" | "user" | "assistant" | "tool";
-export type OpenAIResponsesMessageRole = "system" | "developer" | "user" | "assistant";
+export type OpenAIResponsesMessageRole =
+  | "system"
+  | "developer"
+  | "user"
+  | "assistant";
 
 export interface OpenAIChatMessage {
   role: OpenAIRole;
@@ -25,6 +29,70 @@ export type OpenAIToolChoice =
       function: {
         name: string;
       };
+    };
+
+export interface OpenAIResponsesFunctionToolDefinition {
+  type: "function";
+  name: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+  strict?: boolean;
+}
+
+export interface OpenAIResponsesCustomToolDefinition {
+  type: "custom";
+  name: string;
+  description?: string;
+  format: Record<string, unknown>;
+}
+
+export interface OpenAIResponsesWebSearchToolDefinition {
+  type: "web_search";
+  external_web_access?: boolean;
+  filters?: {
+    allowed_domains?: string[];
+  };
+  search_context_size?: string;
+  user_location?: Record<string, unknown>;
+}
+
+export interface OpenAIResponsesWebSearchPreviewToolDefinition {
+  type: "web_search_preview";
+  search_context_size?: string;
+  user_location?: Record<string, unknown>;
+}
+
+export interface OpenAIResponsesApplyPatchToolDefinition {
+  type: "apply_patch";
+}
+
+export type OpenAIResponsesToolDefinition =
+  | OpenAIToolDefinition
+  | OpenAIResponsesFunctionToolDefinition
+  | OpenAIResponsesCustomToolDefinition
+  | OpenAIResponsesWebSearchToolDefinition
+  | OpenAIResponsesWebSearchPreviewToolDefinition
+  | OpenAIResponsesApplyPatchToolDefinition;
+
+export type OpenAIResponsesToolChoice =
+  | OpenAIToolChoice
+  | "required"
+  | {
+      type: "function";
+      name: string;
+    }
+  | {
+      type: "custom";
+      name: string;
+    }
+  | {
+      type: "web_search";
+    }
+  | {
+      type: "web_search_preview";
+    }
+  | {
+      type: "apply_patch";
     };
 
 export interface OpenAIChatCompletionRequest {
@@ -118,8 +186,8 @@ export interface OpenAIResponsesRequest {
   stream?: boolean;
   temperature?: number;
   max_output_tokens?: number;
-  tools?: OpenAIToolDefinition[];
-  tool_choice?: OpenAIToolChoice;
+  tools?: OpenAIResponsesToolDefinition[];
+  tool_choice?: OpenAIResponsesToolChoice;
 }
 
 export interface OpenAIResponsesUsage {
@@ -134,13 +202,67 @@ export interface OpenAIResponsesUsage {
   };
 }
 
+export interface OpenAIResponsesMessageAddedItem {
+  id: string;
+  type: "message";
+  role: "assistant";
+  status: "in_progress";
+  phase?: "commentary" | "final_answer" | null;
+  content: [];
+}
+
 export interface OpenAIResponsesMessageOutput {
   id: string;
   type: "message";
   role: "assistant";
   status: "completed";
+  phase?: "commentary" | "final_answer" | null;
   content: Array<OpenAIResponsesOutputTextPart & { annotations: unknown[] }>;
 }
+
+export interface OpenAIResponsesFunctionCallAddedItem {
+  id: string;
+  type: "function_call";
+  call_id: string;
+  name: string;
+  arguments: string;
+}
+
+export interface OpenAIResponsesFunctionCallOutput {
+  id: string;
+  type: "function_call";
+  call_id: string;
+  name: string;
+  arguments: string;
+  status: "completed";
+}
+
+export interface OpenAIResponsesCustomToolCallAddedItem {
+  id: string;
+  type: "custom_tool_call";
+  call_id: string;
+  name: string;
+  input: string;
+}
+
+export interface OpenAIResponsesCustomToolCallOutput {
+  id: string;
+  type: "custom_tool_call";
+  call_id: string;
+  name: string;
+  input: string;
+  status: "completed";
+}
+
+export type OpenAIResponsesOutputItemAdded =
+  | OpenAIResponsesMessageAddedItem
+  | OpenAIResponsesFunctionCallAddedItem
+  | OpenAIResponsesCustomToolCallAddedItem;
+
+export type OpenAIResponsesOutputItem =
+  | OpenAIResponsesMessageOutput
+  | OpenAIResponsesFunctionCallOutput
+  | OpenAIResponsesCustomToolCallOutput;
 
 export interface OpenAIResponsesResponse {
   id: string;
@@ -150,7 +272,7 @@ export interface OpenAIResponsesResponse {
   model: string;
   error: null;
   incomplete_details: null;
-  output: OpenAIResponsesMessageOutput[];
+  output: OpenAIResponsesOutputItem[];
   output_text: string;
   usage?: OpenAIResponsesUsage;
 }
@@ -169,13 +291,7 @@ export interface OpenAIResponsesCreatedChunk {
 export interface OpenAIResponsesOutputItemAddedChunk {
   type: "response.output_item.added";
   output_index: number;
-  item: {
-    id: string;
-    type: "message";
-    role: "assistant";
-    status: "in_progress";
-    content: [];
-  };
+  item: OpenAIResponsesOutputItemAdded;
 }
 
 export interface OpenAIResponsesOutputTextDeltaChunk {
@@ -186,10 +302,24 @@ export interface OpenAIResponsesOutputTextDeltaChunk {
   delta: string;
 }
 
+export interface OpenAIResponsesFunctionCallArgumentsDeltaChunk {
+  type: "response.function_call_arguments.delta";
+  item_id: string;
+  output_index: number;
+  delta: string;
+}
+
+export interface OpenAIResponsesCustomToolCallInputDeltaChunk {
+  type: "response.custom_tool_call_input.delta";
+  item_id: string;
+  output_index: number;
+  delta: string;
+}
+
 export interface OpenAIResponsesOutputItemDoneChunk {
   type: "response.output_item.done";
   output_index: number;
-  item: OpenAIResponsesMessageOutput;
+  item: OpenAIResponsesOutputItem;
 }
 
 export interface OpenAIResponsesCompletedChunk {

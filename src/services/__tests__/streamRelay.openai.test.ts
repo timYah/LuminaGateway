@@ -39,7 +39,7 @@ describe("streamRelay (OpenAI)", () => {
     expect(secondChunk.choices[0].delta.content).toBe(" world");
   });
 
-  it("formats Responses API chunks without a done marker", async () => {
+  it("formats Responses API text chunks without a done marker", async () => {
     const input: AsyncIterable<TextStreamPart<ToolSet>> = (async function* () {
       yield { type: "text-delta", id: "1", text: "Hello" } as TextStreamPart<ToolSet>;
       yield { type: "text-delta", id: "1", text: " world" } as TextStreamPart<ToolSet>;
@@ -65,5 +65,80 @@ describe("streamRelay (OpenAI)", () => {
     expect(completedChunk?.type).toBe("response.completed");
     expect(completedChunk?.response.output_text).toBe("Hello world");
     expect(completedChunk?.response.usage.total_tokens).toBe(5);
+  });
+
+  it("relays Codex tool calls as Responses SSE chunks", async () => {
+    const input: AsyncIterable<TextStreamPart<ToolSet>> = (async function* () {
+      yield {
+        type: "tool-input-start",
+        id: "call_1",
+        toolName: "exec_command",
+      } as TextStreamPart<ToolSet>;
+      yield {
+        type: "tool-input-delta",
+        id: "call_1",
+        delta: '{"cmd":"pwd"}',
+      } as TextStreamPart<ToolSet>;
+      yield {
+        type: "tool-call",
+        toolCallId: "call_1",
+        toolName: "exec_command",
+        input: '{"cmd":"pwd"}',
+      } as TextStreamPart<ToolSet>;
+      yield {
+        type: "tool-input-start",
+        id: "call_2",
+        toolName: "apply_patch",
+      } as TextStreamPart<ToolSet>;
+      yield {
+        type: "tool-input-delta",
+        id: "call_2",
+        delta: "*** Begin Patch",
+      } as TextStreamPart<ToolSet>;
+      yield {
+        type: "tool-call",
+        toolCallId: "call_2",
+        toolName: "apply_patch",
+        input: "*** Begin Patch",
+      } as TextStreamPart<ToolSet>;
+    })();
+
+    const stream = relayAsOpenAIResponsesStream(
+      input,
+      "gpt-5.3-codex",
+      Promise.resolve({ promptTokens: 2, completionTokens: 3 }),
+      {
+        exec_command: {
+          type: "function",
+          description: "Run a shell command",
+          inputSchema: { type: "object", properties: { cmd: { type: "string" } } },
+        },
+        apply_patch: {
+          type: "provider",
+          id: "openai.custom",
+          inputSchema: { type: "object", properties: {} },
+          args: {
+            name: "apply_patch",
+            format: { type: "grammar" },
+          },
+        },
+      } as unknown as ToolSet
+    );
+
+    const output = await readStream(stream);
+    const chunks = output
+      .trim()
+      .split("\n\n")
+      .map((part) => JSON.parse(part.replace(/^data: /, "")));
+
+    expect(chunks[1].item.type).toBe("function_call");
+    expect(chunks[2].type).toBe("response.function_call_arguments.delta");
+    expect(chunks[3].item.type).toBe("function_call");
+    expect(chunks[3].item.arguments).toBe('{"cmd":"pwd"}');
+    expect(chunks[4].item.type).toBe("custom_tool_call");
+    expect(chunks[5].type).toBe("response.custom_tool_call_input.delta");
+    expect(chunks[6].item.type).toBe("custom_tool_call");
+    expect(chunks[6].item.input).toBe("*** Begin Patch");
+    expect(chunks.at(-1)?.response.output).toHaveLength(2);
   });
 });

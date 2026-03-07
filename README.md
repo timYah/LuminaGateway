@@ -61,6 +61,16 @@ curl http://localhost:3000/v1/responses \
   -d '{"model":"gpt-5.2","input":"Hello"}'
 ```
 
+For Codex CLI, point the provider base URL at `/codex`:
+
+```bash
+codex exec \
+  -c model_provider='gateway' \
+  -c model='gpt-5.3-codex' \
+  -c 'model_providers.gateway={name="gateway",base_url="http://localhost:3000/codex",wire_api="responses",requires_openai_auth=true}' \
+  'Say hello in one word.'
+```
+
 ### New API providers
 
 When adding a new-api provider, set `protocol` to `new-api` and use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`).

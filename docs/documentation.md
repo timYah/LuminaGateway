@@ -104,6 +104,8 @@ Content-Type: application/json
 
 Supported fields match the OpenAI Responses subset used by the validators: `model`, `input` (string or an array of `message` / `function_call_output` items), `instructions`, `stream`, `temperature`, `max_output_tokens`, `tools`, and `tool_choice`. `message.role` accepts `system`, `developer`, `user`, and `assistant`; `developer` and `system` inputs are merged into the upstream system prompt for cross-provider compatibility.
 
+Codex CLI can use either `POST /v1/responses` or the dedicated `POST /codex/responses` alias. For a dedicated Codex base URL, set `base_url` to `http://<host>:<port>/codex` and keep `wire_api="responses"`.
+
 ### Anthropic-compatible endpoint
 
 ```http [Request]
@@ -284,6 +286,7 @@ src/
 │   └── seed.ts              # demo data seeder
 ├── routes/
 │   ├── openai.ts            # /v1/chat/completions + /v1/responses handlers
+│   ├── codex.ts             # /codex/responses dedicated Codex handler
 │   ├── anthropic.ts         # /v1/messages handler
 │   └── admin.ts             # /admin/* management routes
 ├── services/

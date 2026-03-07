@@ -80,7 +80,7 @@ describe("e2e streaming routes", () => {
     expect(body).toContain("chat.completion.chunk");
   });
 
-  it("streams OpenAI Responses SSE response", async () => {
+  it("streams Codex-compatible OpenAI Responses SSE responses", async () => {
     const stream =
       (async function* () {
         yield { type: "text-delta", id: "1", text: "Hi" };
@@ -91,18 +91,77 @@ describe("e2e streaming routes", () => {
       usagePromise: Promise.resolve({ promptTokens: 2, completionTokens: 3 }),
     });
 
-    const res = await app.request("/v1/responses", {
+    const res = await app.request("/codex/responses", {
       method: "POST",
       headers: authHeader,
       body: JSON.stringify({
-        model: "gpt-5.2",
-        input: "hi",
+        model: "gpt-5.3-codex",
+        instructions: "Be concise",
+        input: [
+          {
+            role: "developer",
+            content: [{ type: "input_text", text: "Use tools when needed" }],
+          },
+          {
+            role: "user",
+            content: [{ type: "input_text", text: "hi" }],
+          },
+        ],
         stream: true,
+        tools: [
+          {
+            type: "function",
+            name: "exec_command",
+            description: "Run a shell command",
+            strict: false,
+            parameters: {
+              type: "object",
+              properties: {
+                cmd: { type: "string" },
+              },
+              required: ["cmd"],
+            },
+          },
+          {
+            type: "custom",
+            name: "apply_patch",
+            description: "Patch files",
+            format: {
+              type: "grammar",
+              syntax: "lark",
+              definition: "start: /.+/",
+            },
+          },
+          {
+            type: "web_search",
+            external_web_access: false,
+          },
+        ],
+        tool_choice: "auto",
+        parallel_tool_calls: true,
+        text: { format: { type: "text" } },
       }),
     });
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/event-stream");
+
+    const upstreamParams = callUpstreamStreamingMock.mock.calls[0]?.[2];
+    expect(upstreamParams?.system).toBe("Be concise\n\nUse tools when needed");
+    expect(upstreamParams?.tools).toMatchObject({
+      exec_command: {
+        type: "function",
+      },
+      apply_patch: {
+        type: "provider",
+        id: "openai.custom",
+      },
+      web_search: {
+        type: "provider",
+        id: "openai.web_search",
+      },
+    });
+    expect(upstreamParams?.toolChoice).toBe("auto");
 
     const body = await res.text();
     expect(body).not.toContain("[DONE]");

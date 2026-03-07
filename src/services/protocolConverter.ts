@@ -1,12 +1,19 @@
+import { jsonSchema } from "ai";
 import type {
   OpenAIChatCompletionRequest,
   OpenAIChatCompletionResponse,
   OpenAIResponsesInputItem,
   OpenAIResponsesRequest,
   OpenAIResponsesResponse,
+  OpenAIResponsesToolChoice,
+  OpenAIResponsesToolDefinition,
   OpenAIToolChoice,
+  OpenAIToolDefinition,
 } from "../types/openai";
-import type { AnthropicMessagesRequest, AnthropicMessagesResponse } from "../types/anthropic";
+import type {
+  AnthropicMessagesRequest,
+  AnthropicMessagesResponse,
+} from "../types/anthropic";
 import type { UpstreamRequestParams, UpstreamUsage } from "./upstreamService";
 
 export type UniversalRequest = UpstreamRequestParams & {
@@ -26,8 +33,31 @@ type UniversalMessage = {
   tool_call_id?: string;
 };
 
+type UpstreamToolSet = NonNullable<UpstreamRequestParams["tools"]>;
+type UpstreamToolChoice = UpstreamRequestParams["toolChoice"];
+
 function createId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function buildDefaultToolInputSchemaDefinition() {
+  return {
+    type: "object",
+    properties: {},
+    additionalProperties: true,
+  } as const;
+}
+
+function compactRecord<T extends Record<string, unknown>>(value: T) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item !== undefined)
+  ) as T;
+}
+
+function toUpstreamInputSchema(schema?: Record<string, unknown>) {
+  return jsonSchema(
+    (schema ?? buildDefaultToolInputSchemaDefinition()) as Record<string, unknown>
+  );
 }
 
 function normalizeResponsesText(
@@ -87,6 +117,129 @@ function convertResponsesInputItemsToMessages(input: OpenAIResponsesInputItem[])
   };
 }
 
+function convertOpenAIToolsToUpstream(
+  tools: Array<OpenAIToolDefinition | OpenAIResponsesToolDefinition> | undefined
+): UpstreamRequestParams["tools"] {
+  if (!tools || tools.length === 0) return undefined;
+
+  const entries = tools.map((tool): [string, Record<string, unknown>] => {
+    if ("function" in tool) {
+      return [
+        tool.function.name,
+        compactRecord({
+          type: "function",
+          description: tool.function.description,
+          inputSchema: toUpstreamInputSchema(tool.function.parameters),
+        }),
+      ];
+    }
+
+    switch (tool.type) {
+      case "function":
+        return [
+          tool.name,
+          compactRecord({
+            type: "function",
+            description: tool.description,
+            inputSchema: toUpstreamInputSchema(tool.parameters),
+            strict: tool.strict,
+          }),
+        ];
+      case "custom":
+        return [
+          tool.name,
+          {
+            type: "provider",
+            id: "openai.custom",
+            inputSchema: toUpstreamInputSchema(),
+            args: compactRecord({
+              name: tool.name,
+              description: tool.description,
+              format: tool.format,
+            }),
+          },
+        ];
+      case "web_search":
+        return [
+          "web_search",
+          {
+            type: "provider",
+            id: "openai.web_search",
+            inputSchema: toUpstreamInputSchema(),
+            args: compactRecord({
+              externalWebAccess: tool.external_web_access,
+              filters: tool.filters
+                ? compactRecord({
+                    allowedDomains: tool.filters.allowed_domains,
+                  })
+                : undefined,
+              searchContextSize: tool.search_context_size,
+              userLocation: tool.user_location,
+            }),
+          },
+        ];
+      case "web_search_preview":
+        return [
+          "web_search_preview",
+          {
+            type: "provider",
+            id: "openai.web_search_preview",
+            inputSchema: toUpstreamInputSchema(),
+            args: compactRecord({
+              searchContextSize: tool.search_context_size,
+              userLocation: tool.user_location,
+            }),
+          },
+        ];
+      case "apply_patch":
+        return [
+          "apply_patch",
+          {
+            type: "provider",
+            id: "openai.apply_patch",
+            inputSchema: toUpstreamInputSchema(),
+            args: {},
+          },
+        ];
+    }
+  });
+
+  return Object.fromEntries(entries) as UpstreamToolSet;
+}
+
+function convertOpenAIToolChoiceToUpstream(
+  toolChoice: OpenAIToolChoice | OpenAIResponsesToolChoice | undefined
+): UpstreamToolChoice {
+  if (!toolChoice) return undefined;
+
+  if (typeof toolChoice === "string") {
+    return toolChoice;
+  }
+
+  if ("function" in toolChoice) {
+    return {
+      type: "tool",
+      toolName: toolChoice.function.name,
+    };
+  }
+
+  switch (toolChoice.type) {
+    case "function":
+    case "custom":
+      return {
+        type: "tool",
+        toolName: toolChoice.name,
+      };
+    case "web_search":
+    case "web_search_preview":
+    case "apply_patch":
+      return {
+        type: "tool",
+        toolName: toolChoice.type,
+      };
+  }
+}
+
 function convertUsageToOpenAIUsage(usage: UpstreamUsage | null | undefined) {
   if (!usage) return undefined;
   return {
@@ -96,7 +249,9 @@ function convertUsageToOpenAIUsage(usage: UpstreamUsage | null | undefined) {
   };
 }
 
-function convertUsageToOpenAIResponsesUsage(usage: UpstreamUsage | null | undefined) {
+function convertUsageToOpenAIResponsesUsage(
+  usage: UpstreamUsage | null | undefined
+) {
   if (!usage) return undefined;
   return {
     input_tokens: usage.promptTokens,
@@ -119,8 +274,8 @@ export function convertOpenAIToUniversal(
     messages: request.messages as unknown as UpstreamRequestParams["messages"],
     temperature: request.temperature,
     maxOutputTokens: request.max_tokens,
-    tools: request.tools as unknown as UpstreamRequestParams["tools"],
-    toolChoice: request.tool_choice as unknown as UpstreamRequestParams["toolChoice"],
+    tools: convertOpenAIToolsToUpstream(request.tools),
+    toolChoice: convertOpenAIToolChoiceToUpstream(request.tool_choice),
   };
 }
 
@@ -131,8 +286,8 @@ export function convertOpenAIResponsesToUniversal(
     model: request.model,
     temperature: request.temperature,
     maxOutputTokens: request.max_output_tokens,
-    tools: request.tools as unknown as UpstreamRequestParams["tools"],
-    toolChoice: request.tool_choice as unknown as UpstreamRequestParams["toolChoice"],
+    tools: convertOpenAIToolsToUpstream(request.tools),
+    toolChoice: convertOpenAIToolChoiceToUpstream(request.tool_choice),
   };
 
   if (typeof request.input === "string") {

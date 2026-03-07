@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const jsonObjectSchema = z.record(z.string(), z.unknown());
+
 const openaiMessageSchema = z.object({
   role: z.enum(["system", "user", "assistant", "tool"]),
   content: z.string(),
@@ -12,7 +14,7 @@ const openaiToolSchema = z.object({
   function: z.object({
     name: z.string(),
     description: z.string().optional(),
-    parameters: z.record(z.string(), z.unknown()).optional(),
+    parameters: jsonObjectSchema.optional(),
   }),
 });
 
@@ -24,6 +26,92 @@ const openaiToolChoiceSchema = z.union([
     function: z.object({
       name: z.string(),
     }),
+  }),
+]);
+
+const openaiResponsesFunctionToolSchema = z
+  .object({
+    type: z.literal("function"),
+    name: z.string(),
+    description: z.string().optional(),
+    parameters: jsonObjectSchema.optional(),
+    strict: z.boolean().optional(),
+  })
+  .passthrough();
+
+const openaiResponsesCustomToolSchema = z
+  .object({
+    type: z.literal("custom"),
+    name: z.string(),
+    description: z.string().optional(),
+    format: jsonObjectSchema,
+  })
+  .passthrough();
+
+const openaiResponsesWebSearchToolSchema = z
+  .object({
+    type: z.literal("web_search"),
+    external_web_access: z.boolean().optional(),
+    filters: z
+      .object({
+        allowed_domains: z.array(z.string()).optional(),
+      })
+      .passthrough()
+      .optional(),
+    search_context_size: z.string().optional(),
+    user_location: jsonObjectSchema.optional(),
+  })
+  .passthrough();
+
+const openaiResponsesWebSearchPreviewToolSchema = z
+  .object({
+    type: z.literal("web_search_preview"),
+    search_context_size: z.string().optional(),
+    user_location: jsonObjectSchema.optional(),
+  })
+  .passthrough();
+
+const openaiResponsesApplyPatchToolSchema = z
+  .object({
+    type: z.literal("apply_patch"),
+  })
+  .passthrough();
+
+const openaiResponsesToolSchema = z.union([
+  openaiToolSchema,
+  openaiResponsesFunctionToolSchema,
+  openaiResponsesCustomToolSchema,
+  openaiResponsesWebSearchToolSchema,
+  openaiResponsesWebSearchPreviewToolSchema,
+  openaiResponsesApplyPatchToolSchema,
+]);
+
+const openaiResponsesToolChoiceSchema = z.union([
+  z.literal("auto"),
+  z.literal("none"),
+  z.literal("required"),
+  z.object({
+    type: z.literal("function"),
+    function: z.object({
+      name: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal("function"),
+    name: z.string(),
+  }),
+  z.object({
+    type: z.literal("custom"),
+    name: z.string(),
+  }),
+  z.object({
+    type: z.literal("web_search"),
+  }),
+  z.object({
+    type: z.literal("web_search_preview"),
+  }),
+  z.object({
+    type: z.literal("apply_patch"),
   }),
 ]);
 
@@ -71,8 +159,8 @@ export const openaiResponsesSchema = z.object({
   stream: z.boolean().optional(),
   temperature: z.number().optional(),
   max_output_tokens: z.number().int().optional(),
-  tools: z.array(openaiToolSchema).optional(),
-  tool_choice: openaiToolChoiceSchema.optional(),
+  tools: z.array(openaiResponsesToolSchema).optional(),
+  tool_choice: openaiResponsesToolChoiceSchema.optional(),
 });
 
 const anthropicMessageSchema = z.object({

@@ -125,6 +125,14 @@ curl http://localhost:3000/v1/responses \
 ```
 
 ```bash [Terminal]
+codex exec \
+  -c model_provider='gateway' \
+  -c model='gpt-5.3-codex' \
+  -c 'model_providers.gateway={name="gateway",base_url="http://localhost:3000/codex",wire_api="responses",requires_openai_auth=true}' \
+  'Say hello in one word.'
+```
+
+```bash [Terminal]
 curl http://localhost:3000/admin/providers \
   -H "Authorization: Bearer dev-token"
 ```

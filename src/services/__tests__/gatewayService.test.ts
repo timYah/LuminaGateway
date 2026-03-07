@@ -273,7 +273,8 @@ describe("gatewayService", () => {
     expect(relayOpenAIResponsesMock).toHaveBeenCalledWith(
       stream,
       "gpt-5.2",
-      usagePromise
+      usagePromise,
+      undefined
     );
   });
 

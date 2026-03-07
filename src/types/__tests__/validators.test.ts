@@ -22,17 +22,54 @@ describe("validators", () => {
     expect(result.success).toBe(false);
   });
 
-  it("validates OpenAI Responses request", () => {
+  it("validates Codex CLI OpenAI Responses requests", () => {
     const result = openaiResponsesSchema.safeParse({
-      model: "gpt-5.2",
+      model: "gpt-5.3-codex",
       instructions: "Be concise",
       input: [
         {
           role: "developer",
-          content: [{ type: "input_text", text: "hi" }],
+          content: [{ type: "input_text", text: "Use tools when needed" }],
+        },
+        {
+          role: "user",
+          content: [{ type: "input_text", text: "hello" }],
         },
       ],
-      max_output_tokens: 128,
+      stream: true,
+      tools: [
+        {
+          type: "function",
+          name: "exec_command",
+          description: "Run a shell command",
+          strict: false,
+          parameters: {
+            type: "object",
+            properties: {
+              cmd: { type: "string" },
+            },
+            required: ["cmd"],
+          },
+        },
+        {
+          type: "custom",
+          name: "apply_patch",
+          description: "Patch files",
+          format: {
+            type: "grammar",
+            syntax: "lark",
+            definition: "start: /.+/",
+          },
+        },
+        {
+          type: "web_search",
+          external_web_access: false,
+        },
+      ],
+      tool_choice: { type: "custom", name: "apply_patch" },
+      parallel_tool_calls: true,
+      prompt_cache_key: "req_test",
+      text: { format: { type: "text" } },
     });
     expect(result.success).toBe(true);
   });
