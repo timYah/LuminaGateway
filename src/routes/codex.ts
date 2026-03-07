@@ -4,8 +4,10 @@ import type { Provider } from "../db/schema/providers";
 import { normalizeOpenAiBaseUrl } from "../services/aiSdkFactory";
 import { recordFailure } from "../services/failureStatsService";
 import { gatewayCircuitBreaker, gatewayRouter } from "../services/gatewayService";
+import { gatewayInflightLimiter } from "../services/inflightService";
 import { deactivateProvider } from "../services/providerService";
 import { createRequestLog } from "../services/requestLogService";
+import { wrapStreamWithFinalizer } from "../services/streamUtils";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 
 const RATE_LIMIT_COOLDOWN_MS = 60_000;
@@ -196,6 +198,9 @@ codexRoutes.post("/codex/responses", async (c) => {
   const timeoutMs = resolveCodexTimeoutMs();
 
   for (const provider of candidates) {
+    if (!gatewayInflightLimiter.tryAcquire(provider.id, provider.name)) {
+      continue;
+    }
     const start = Date.now();
     const upstreamUrl = buildUpstreamUrl(provider, c.req.url);
     const abortController = timeoutMs ? new AbortController() : null;
@@ -205,6 +210,7 @@ codexRoutes.post("/codex/responses", async (c) => {
             abortController.abort();
           }, timeoutMs)
         : null;
+    const release = () => gatewayInflightLimiter.release(provider.id);
     try {
       const upstreamResponse = await fetch(upstreamUrl, {
         method: c.req.method,
@@ -221,7 +227,15 @@ codexRoutes.post("/codex/responses", async (c) => {
           result: "success",
           latencyMs: Date.now() - start,
         });
-        return new Response(upstreamResponse.body, {
+        const responseBody = upstreamResponse.body;
+        if (!responseBody) {
+          release();
+          return new Response(null, {
+            status: upstreamResponse.status,
+            headers: filterResponseHeaders(upstreamResponse.headers),
+          });
+        }
+        return new Response(wrapStreamWithFinalizer(responseBody, release), {
           status: upstreamResponse.status,
           headers: filterResponseHeaders(upstreamResponse.headers),
         });
@@ -254,6 +268,7 @@ codexRoutes.post("/codex/responses", async (c) => {
         headers: filterResponseHeaders(upstreamResponse.headers),
       };
 
+      release();
       const shouldFailover = await applyRetryableFailurePolicy(provider, errorType);
       if (shouldFailover) continue;
 
@@ -283,6 +298,7 @@ codexRoutes.post("/codex/responses", async (c) => {
         message,
       });
 
+      release();
       const shouldFailover = await applyRetryableFailurePolicy(provider, errorType);
       if (shouldFailover) continue;
 

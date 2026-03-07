@@ -12,6 +12,7 @@ import { deactivateProvider } from "./providerService";
 import { billUsage } from "./billingService";
 import { recordFailure } from "./failureStatsService";
 import { createRequestLog } from "./requestLogService";
+import { gatewayInflightLimiter } from "./inflightService";
 import type {
   OpenAIChatCompletionResponse,
   OpenAIResponsesResponse,
@@ -23,6 +24,7 @@ import {
   relayAsOpenAIResponsesStream,
   relayAsOpenAIStream,
 } from "./streamRelay";
+import { wrapStreamWithFinalizer } from "./streamUtils";
 import {
   convertUniversalToAnthropicResponse,
   convertUniversalToOpenAIResponse,
@@ -180,6 +182,9 @@ export async function handleRequest(
   }
 
   for (const provider of candidates) {
+    if (!gatewayInflightLimiter.tryAcquire(provider.id, provider.name)) {
+      continue;
+    }
     const start = Date.now();
     try {
       const { result, usage } = await callUpstreamNonStreaming(
@@ -223,6 +228,8 @@ export async function handleRequest(
       );
       if (result === "continue") continue;
       return result;
+    } finally {
+      gatewayInflightLimiter.release(provider.id);
     }
   }
 
@@ -246,7 +253,11 @@ export async function handleStreamingRequest(
   }
 
   for (const provider of candidates) {
+    if (!gatewayInflightLimiter.tryAcquire(provider.id, provider.name)) {
+      continue;
+    }
     const start = Date.now();
+    const release = () => gatewayInflightLimiter.release(provider.id);
     try {
       const upstream = await callUpstreamStreaming(provider, modelSlug, params);
       void upstream.usagePromise
@@ -286,8 +297,12 @@ export async function handleStreamingRequest(
                 params.tools
               )
             : relayAsOpenAIStream(upstream.stream, modelSlug);
-      return { status: 200, stream };
+      return {
+        status: 200,
+        stream: wrapStreamWithFinalizer(stream, release),
+      };
     } catch (error) {
+      release();
       const errorType = classifyUpstreamError(error);
       await recordRequestLogSafe({
         providerId: provider.id,

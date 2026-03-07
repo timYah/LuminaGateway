@@ -37,6 +37,7 @@ import {
   gatewayCircuitBreaker,
   gatewayRouter,
 } from "../gatewayService";
+import { gatewayInflightLimiter } from "../inflightService";
 import { callUpstreamNonStreaming, callUpstreamStreaming } from "../upstreamService";
 import { billUsage } from "../billingService";
 import {
@@ -102,6 +103,9 @@ describe("gatewayService", () => {
     breakerOpenSpy.mockReset();
     gatewayCircuitBreaker.reset(providerA.id);
     gatewayCircuitBreaker.reset(providerB.id);
+    gatewayInflightLimiter.reset();
+    delete process.env.PROVIDER_MAX_INFLIGHT;
+    delete process.env.PROVIDER_MAX_INFLIGHT_OVERRIDES;
   });
 
   it("handles a successful request", async () => {
@@ -222,6 +226,41 @@ describe("gatewayService", () => {
 
     expect(response.status).toBe(503);
     expect(response.body).toMatchObject({ type: "error" });
+  });
+
+  it("skips providers that exceed inflight limits", async () => {
+    process.env.PROVIDER_MAX_INFLIGHT = "1";
+    let resolveUpstream!: (
+      value: Awaited<ReturnType<typeof callUpstreamNonStreaming>>
+    ) => void;
+    callUpstreamMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveUpstream = resolve as typeof resolveUpstream;
+        }) as ReturnType<typeof callUpstreamNonStreaming>
+    );
+
+    const first = handleRequest(
+      { model: "gpt-4o", messages: [] },
+      "openai"
+    );
+
+    await Promise.resolve();
+
+    const second = await handleRequest(
+      { model: "gpt-4o", messages: [] },
+      "openai"
+    );
+
+    expect(second.status).toBe(503);
+
+    resolveUpstream({
+      result: { text: "ok", finishReason: "stop" },
+      usage: { promptTokens: 1, completionTokens: 1 },
+    } as Awaited<ReturnType<typeof callUpstreamNonStreaming>>);
+
+    const firstResponse = await first;
+    expect(firstResponse.status).toBe(200);
   });
 
   it("handles a streaming chat request and bills after completion", async () => {
