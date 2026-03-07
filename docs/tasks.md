@@ -469,6 +469,7 @@
 - [x] **T-50.4** ✅ **验证**：编写 API 测试覆盖统计接口与日志查询
 - [ ] **T-50.5** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 - [ ] **T-50.6** ✅ **验证（Admin）**：运行 `npm run dev` 并使用 agent-browser skill 验证仪表盘与日志视图
+- [x] **T-50.7** 文档更新：补充健康检查、失败统计、请求日志与配置导入导出说明
 
 ---
 

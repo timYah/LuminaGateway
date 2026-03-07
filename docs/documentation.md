@@ -124,16 +124,28 @@ POST   /admin/providers          — create a provider
 PATCH  /admin/providers/:id      — update provider fields
 POST   /admin/providers/:id/test — test provider connectivity
 DELETE /admin/providers/:id      — delete provider (also removes usage logs)
+POST   /admin/providers/health   — run a health check for all providers
+GET    /admin/failure-stats      — get error type distribution for recent requests
 GET    /admin/usage              — query usage logs
+GET    /admin/usage/stats        — trend + provider/model distribution
+GET    /admin/request-logs       — query request-level logs
+GET    /admin/config/export      — export providers + settings
+POST   /admin/config/import      — import providers + settings
 ```
 
 `POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
 
 `POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug.
 
+`POST /admin/providers/health` accepts an optional `model` query parameter and returns the health results for each provider. `GET /admin/failure-stats` aggregates recent request failures by error type.
+
 For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 
 `GET /admin/usage` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `limit`, and `offset`. The response includes `{ usage, limit, offset }` sorted by `createdAt` descending.
+
+`GET /admin/usage/stats` returns `{ trend, byProvider, byModel }` for the selected date range. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first.
+
+`GET /admin/config/export` returns `{ providers, models, settings }`. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode? }`, where `mode` is `replace` or `merge`.
 
 ### Admin dashboard
 
@@ -143,8 +155,11 @@ The admin dashboard provides a web UI for provider management and usage visibili
 
 - Providers list with create and update flows.
 - Usage log querying with filters and pagination.
-- API key input stored in the browser and sent as `Authorization: Bearer ...` on every request.
+- API key injected from `.env` when available, otherwise stored in the browser and sent as `Authorization: Bearer ...` on every request.
 - Provider connectivity tests can target a custom model slug from the UI.
+- Health status and failure mix visibility for providers.
+- Usage trends and request log visibility.
+- Config export/import for provider portability.
 
 **Setup**
 
@@ -156,7 +171,7 @@ npm run dev
 
 The dashboard will run on `http://localhost:3001` and connect to the gateway at `http://localhost:3000` by default.
 
-Set `VITE_API_BASE_URL` before starting the dashboard to target a different gateway URL.
+Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at build time. Set `GATEWAY_BASE_URL` or `VITE_API_BASE_URL` to target a different gateway URL.
 
 **UI optimization plan**
 

@@ -13,7 +13,10 @@ Lumina Gateway runs on Node.js LTS and supports SQLite or PostgreSQL. Use persis
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
 | `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
+| `GATEWAY_BASE_URL` | *(optional)* | Gateway base URL used by the admin dev server proxy. |
 | `PORT` | `3000` | Server listen port. |
+| `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
+| `DEFAULT_OUTPUT_PRICE` | *(optional)* | Global output price fallback (USD per 1M tokens). |
 | `LOG_LEVEL` | `info` | Logging threshold: `debug`, `info`, `warn`, `error`. |
 
 ## Database setup
@@ -65,6 +68,8 @@ npm run dev
 
 Set `VITE_API_BASE_URL` to point to a non-default gateway URL. If the dashboard is hosted on a different origin, ensure the gateway allows CORS or place both behind the same reverse proxy.
 
+The admin UI can load credentials from the root `.env` file. Set `GATEWAY_API_KEY` (or `VITE_GATEWAY_API_KEY` for a build-time override) to avoid manual entry. Set `GATEWAY_BASE_URL` (or `VITE_API_BASE_URL`) when the gateway is not on `http://localhost:3000`.
+
 ## Usage examples
 
 All `/v1/*` and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`.
@@ -79,6 +84,40 @@ curl http://localhost:3000/v1/chat/completions \
 ```bash [Terminal]
 curl http://localhost:3000/admin/providers \
   -H "Authorization: Bearer dev-token"
+```
+
+Health and observability endpoints:
+
+```bash [Terminal]
+curl -X POST "http://localhost:3000/admin/providers/health?model=gpt-4o" \
+  -H "Authorization: Bearer dev-token"
+```
+
+```bash [Terminal]
+curl "http://localhost:3000/admin/failure-stats" \
+  -H "Authorization: Bearer dev-token"
+```
+
+```bash [Terminal]
+curl "http://localhost:3000/admin/usage/stats?startDate=2025-01-01" \
+  -H "Authorization: Bearer dev-token"
+```
+
+```bash [Terminal]
+curl "http://localhost:3000/admin/request-logs?errorType=rate_limit&limit=20" \
+  -H "Authorization: Bearer dev-token"
+```
+
+```bash [Terminal]
+curl "http://localhost:3000/admin/config/export" \
+  -H "Authorization: Bearer dev-token"
+```
+
+```bash [Terminal]
+curl -X POST "http://localhost:3000/admin/config/import" \
+  -H "Authorization: Bearer dev-token" \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"replace","providers":[{"name":"Primary","protocol":"openai","baseUrl":"https://api.openai.com/v1","apiKey":"sk-...","priority":1}]}'
 ```
 
 ## Operations
