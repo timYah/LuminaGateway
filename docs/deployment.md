@@ -31,7 +31,7 @@ npm run db:seed
 
 ## Run the stack
 
-Use `npm run dev` for local development to start both the gateway and the admin dashboard together. In production, you can run the gateway directly or ship a single Docker image that also serves the built admin dashboard.
+Use `npm run dev` for local development to start both the gateway and the admin dashboard together. In production, you can run the gateway directly or ship a single Docker image that also serves the built admin dashboard. The Docker build compiles both the gateway and the admin UI before producing the runtime image.
 
 ```bash [Terminal]
 # Development (gateway + admin)
@@ -62,6 +62,8 @@ Start only the gateway or admin if needed:
 ```bash [Terminal]
 npm run dev:gateway
 npm run dev:admin
+npm run build:gateway
+npm run build:admin
 ```
 
 ## Admin dashboard

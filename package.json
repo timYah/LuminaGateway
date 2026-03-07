@@ -10,13 +10,15 @@
     "dev": "concurrently -k -n gateway,admin -c cyan,magenta \"npm run dev:gateway\" \"npm run dev:admin\"",
     "dev:gateway": "tsx watch src/index.ts",
     "dev:admin": "npm --prefix apps/admin run dev",
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build:gateway",
     "docker:build": "docker build -t lumina-gateway:local .",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "build:gateway": "tsc -p tsconfig.build.json",
+    "build:admin": "npm --prefix apps/admin run build"
   },
   "keywords": [],
   "author": "",

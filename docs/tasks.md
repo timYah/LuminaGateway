@@ -586,6 +586,8 @@
 - [x] **T-55.4** 新增 `docker-compose.yml`，提供单命令启动与 `.runtime` 持久化目录挂载
 - [x] **T-55.5** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并校验 `docker-compose.yml` 的 YAML 结构与关键字段
 - [x] **T-55.6** 新增 `npm run docker:build` 脚本，并同步 Docker 构建文档
+- [x] **T-55.7** 调整 Docker 构建流程：在镜像构建阶段编译 gateway 与 admin，并在运行镜像时执行 gateway 编译产物
+- [ ] **T-55.8** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build && npm run docker:build`，确认镜像基于编译产物运行
 
 ---
 

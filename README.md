@@ -61,12 +61,14 @@ The dashboard will run on `http://localhost:3001` and connect to the gateway at 
 
 ## Deployment and usage
 
-See `docs/deployment.md` for deployment steps, environment variables, Docker usage, Docker Compose persistence, and request examples.
+See `docs/deployment.md` for deployment steps, environment variables, Docker usage, Docker Compose persistence, and request examples. The Docker image build compiles both the gateway and the admin UI before packaging the runtime image.
 
 ## Scripts
 
 - `npm run dev` — start the dev server
-- `npm run build` — compile TypeScript
+- `npm run build` — compile the gateway into `dist/`
+- `npm run build:gateway` — compile the gateway into `dist/`
+- `npm run build:admin` — build the admin UI bundle
 - `npm run docker:build` — build the local Docker image (`lumina-gateway:local`)
 - `npm run lint` — run ESLint
 - `npm run typecheck` — run `tsc` without emitting

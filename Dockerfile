@@ -13,8 +13,9 @@ FROM deps AS build
 WORKDIR /app
 COPY . .
 ENV VITE_API_BASE_URL=/
-RUN node -e "require('fs').rmSync('apps/admin/dist',{recursive:true,force:true})" \
-  && npm --prefix apps/admin run build
+RUN node -e "require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('apps/admin/dist',{recursive:true,force:true})" \
+  && npm run build:gateway \
+  && npm run build:admin
 
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
@@ -23,9 +24,9 @@ ENV PORT=3000
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/package-lock.json ./package-lock.json
-COPY --from=build /app/src ./src
+COPY --from=build /app/dist ./dist
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/apps/admin/dist ./apps/admin/dist
 RUN mkdir -p .runtime
 EXPOSE 3000
-CMD ["node", "--import", "tsx", "src/index.ts"]
+CMD ["node", "--import", "tsx", "dist/index.js"]
