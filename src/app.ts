@@ -10,6 +10,7 @@ import { adminRoutes } from "./routes/admin";
 import { anthropicRoutes } from "./routes/anthropic";
 import { openaiRoutes } from "./routes/openai";
 import { codexRoutes } from "./routes/codex";
+import { renderMetrics } from "./services/metricsService";
 
 function registerAdminUi(app: Hono) {
   const adminDistRoot = process.env.ADMIN_DIST_ROOT || "./apps/admin/dist";
@@ -41,6 +42,10 @@ export function createApp() {
 
   app.use("*", loggerMiddleware());
   app.get("/health", (c) => c.json({ status: "ok" }));
+  app.get("/metrics", (c) => {
+    c.header("Content-Type", "text/plain; version=0.0.4");
+    return c.text(renderMetrics());
+  });
 
   const corsOptions = {
     origin: "*",

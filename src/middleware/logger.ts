@@ -1,5 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 import { generateRequestId } from "../utils/requestId";
+import { recordRequestMetric } from "../services/metricsService";
 
 export const loggerMiddleware = (): MiddlewareHandler => {
   return async (c, next) => {
@@ -17,6 +18,7 @@ export const loggerMiddleware = (): MiddlewareHandler => {
       status: c.res.status,
       durationMs,
     };
+    recordRequestMetric(entry);
     const level =
       (process.env.LOG_LEVEL?.toLowerCase() as
         | "debug"
