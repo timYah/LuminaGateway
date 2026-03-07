@@ -17,6 +17,8 @@ type Provider = {
   outputPrice: number | null;
   isActive: boolean;
   priority: number;
+  healthStatus?: "healthy" | "unhealthy" | "unknown";
+  lastHealthCheckAt?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -80,6 +82,7 @@ const deleteError = ref("");
 const deleteTarget = ref<Provider | null>(null);
 
 const testingId = ref<number | null>(null);
+const healthWorking = ref(false);
 const testResults = reactive<
   Map<number, { ok: boolean; latencyMs?: number; errorType?: string; message?: string }>
 >(new Map());
@@ -305,6 +308,21 @@ const testProvider = async (provider: Provider) => {
   }
 };
 
+const checkHealth = async () => {
+  healthWorking.value = true;
+  try {
+    await gatewayFetch("/admin/providers/health", {
+      method: "POST",
+      query: { model: testModel.value.trim() || undefined },
+    });
+    await refresh();
+  } catch {
+    // silent: surface via refresh error state if needed
+  } finally {
+    healthWorking.value = false;
+  }
+};
+
 const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: string }) => {
   if (result.ok) return t("providers.test.success", { latency: result.latencyMs ?? 0 });
   const map: Record<string, string> = {
@@ -313,8 +331,23 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
     quota: t("providers.test.quotaError"),
     rate_limit: t("providers.test.rateLimitError"),
     server: t("providers.test.serverError"),
+    network: t("providers.test.networkError"),
   };
   return map[result.errorType ?? ""] ?? t("providers.test.unknownError");
+};
+
+const healthLabel = (provider: Provider) => {
+  const status = provider.healthStatus ?? "unknown";
+  if (status === "healthy") return t("providers.health.healthy");
+  if (status === "unhealthy") return t("providers.health.unhealthy");
+  return t("providers.health.unknown");
+};
+
+const healthTone = (provider: Provider) => {
+  const status = provider.healthStatus ?? "unknown";
+  if (status === "healthy") return "bg-emerald-100 text-emerald-700";
+  if (status === "unhealthy") return "bg-rose-100 text-rose-700";
+  return "bg-slate-200 text-slate-600";
 };
 </script>
 
@@ -369,6 +402,14 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
               />
             </UFormGroup>
           </div>
+          <UButton
+            class="action-press"
+            variant="outline"
+            :loading="healthWorking"
+            @click="checkHealth"
+          >
+            {{ $t("providers.health.check") }}
+          </UButton>
           <UButton class="action-press" variant="outline" @click="refresh">
             {{ $t("providers.refresh") }}
           </UButton>
@@ -423,6 +464,9 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
                   {{ $t("providers.table.priority") }}
                 </th>
                 <th class="py-2.5 text-left font-medium">
+                  {{ $t("providers.table.health") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
                   {{ $t("providers.table.status") }}
                 </th>
                 <th class="py-2.5 text-left font-medium">
@@ -460,6 +504,14 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
                 </td>
                 <td class="py-3 mono-numbers text-slate-900">
                   {{ provider.priority }}
+                </td>
+                <td class="py-3">
+                  <span
+                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
+                    :class="healthTone(provider)"
+                  >
+                    {{ healthLabel(provider) }}
+                  </span>
                 </td>
                 <td class="py-3">
                   <span

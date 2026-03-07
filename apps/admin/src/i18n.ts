@@ -53,8 +53,15 @@ const messages = {
         protocol: "Protocol",
         balance: "Balance (info)",
         priority: "Priority",
+        health: "Health",
         status: "Status",
         actions: "Actions",
+      },
+      health: {
+        check: "Check health",
+        healthy: "Healthy",
+        unhealthy: "Unhealthy",
+        unknown: "Unknown",
       },
       status: {
         active: "Active",
@@ -72,6 +79,7 @@ const messages = {
         quotaError: "Quota exceeded",
         rateLimitError: "Rate limited",
         serverError: "Server error",
+        networkError: "Network error",
         unknownError: "Connection failed",
       },
       delete: {
@@ -231,8 +239,15 @@ const messages = {
         protocol: "协议",
         balance: "余额（仅参考）",
         priority: "优先级",
+        health: "健康度",
         status: "状态",
         actions: "操作",
+      },
+      health: {
+        check: "检查健康",
+        healthy: "健康",
+        unhealthy: "异常",
+        unknown: "未知",
       },
       status: {
         active: "启用",
@@ -250,6 +265,7 @@ const messages = {
         quotaError: "配额耗尽",
         rateLimitError: "频率受限",
         serverError: "服务端错误",
+        networkError: "网络异常",
         unknownError: "连接失败",
       },
       delete: {
