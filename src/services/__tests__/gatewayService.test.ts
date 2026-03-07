@@ -106,6 +106,8 @@ describe("gatewayService", () => {
     gatewayInflightLimiter.reset();
     delete process.env.PROVIDER_MAX_INFLIGHT;
     delete process.env.PROVIDER_MAX_INFLIGHT_OVERRIDES;
+    delete process.env.UPSTREAM_RETRY_ATTEMPTS;
+    delete process.env.UPSTREAM_RETRY_BASE_MS;
   });
 
   it("handles a successful request", async () => {
@@ -226,6 +228,28 @@ describe("gatewayService", () => {
 
     expect(response.status).toBe(503);
     expect(response.body).toMatchObject({ type: "error" });
+  });
+
+  it("retries upstream requests on retryable errors", async () => {
+    process.env.UPSTREAM_RETRY_ATTEMPTS = "1";
+    process.env.UPSTREAM_RETRY_BASE_MS = "0";
+    callUpstreamMock
+      .mockRejectedValueOnce(new Error("fetch failed"))
+      .mockResolvedValueOnce({
+        result: {
+          text: "Hello",
+          finishReason: "stop",
+        },
+        usage: { promptTokens: 2, completionTokens: 3 },
+      } as unknown as Awaited<ReturnType<typeof callUpstreamNonStreaming>>);
+
+    const response = await handleRequest(
+      { model: "gpt-4o", messages: [] },
+      "openai"
+    );
+
+    expect(response.status).toBe(200);
+    expect(callUpstreamMock).toHaveBeenCalledTimes(2);
   });
 
   it("skips providers that exceed inflight limits", async () => {

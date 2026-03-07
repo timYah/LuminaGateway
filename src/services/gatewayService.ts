@@ -5,6 +5,7 @@ import {
   callUpstreamStreaming,
   classifyUpstreamError,
   type UpstreamErrorType,
+  type UpstreamStreamingResponse,
   type UpstreamUsage,
 } from "./upstreamService";
 import type { UpstreamRequestParams } from "./upstreamService";
@@ -68,6 +69,50 @@ export type GatewayStreamingResponse =
 const RATE_LIMIT_COOLDOWN_MS = 60_000;
 const SERVER_COOLDOWN_MS = 30_000;
 const QUOTA_COOLDOWN_MS = 300_000;
+const DEFAULT_RETRY_BASE_MS = 200;
+
+function parseRetryValue(value: string | undefined) {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.floor(parsed));
+}
+
+function resolveRetryConfig() {
+  const attempts = parseRetryValue(process.env.UPSTREAM_RETRY_ATTEMPTS) ?? 0;
+  const baseMs = parseRetryValue(process.env.UPSTREAM_RETRY_BASE_MS) ?? DEFAULT_RETRY_BASE_MS;
+  return { attempts, baseMs };
+}
+
+function isRetryableErrorType(errorType: UpstreamErrorType) {
+  return errorType === "network" || errorType === "server";
+}
+
+async function sleep(ms: number) {
+  if (ms <= 0) return;
+  await new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+async function callWithRetries<T>(
+  fn: () => Promise<T> | T,
+  attempts: number,
+  baseMs: number
+) {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (error) {
+      const errorType = classifyUpstreamError(error);
+      if (!isRetryableErrorType(errorType) || attempt >= attempts) {
+        throw error;
+      }
+      const delayMs = baseMs * Math.pow(2, attempt);
+      attempt += 1;
+      await sleep(delayMs);
+    }
+  }
+}
 
 export const gatewayCircuitBreaker = new CircuitBreaker();
 export const gatewayRouter = new RouterService(gatewayCircuitBreaker);
@@ -181,16 +226,18 @@ export async function handleRequest(
     };
   }
 
+  const retryConfig = resolveRetryConfig();
+
   for (const provider of candidates) {
     if (!gatewayInflightLimiter.tryAcquire(provider.id, provider.name)) {
       continue;
     }
     const start = Date.now();
     try {
-      const { result, usage } = await callUpstreamNonStreaming(
-        provider,
-        modelSlug,
-        params
+      const { result, usage } = await callWithRetries(
+        () => callUpstreamNonStreaming(provider, modelSlug, params),
+        retryConfig.attempts,
+        retryConfig.baseMs
       );
       await billUsage(provider, modelSlug, usage);
       await recordRequestLogSafe({
@@ -252,6 +299,8 @@ export async function handleStreamingRequest(
     };
   }
 
+  const retryConfig = resolveRetryConfig();
+
   for (const provider of candidates) {
     if (!gatewayInflightLimiter.tryAcquire(provider.id, provider.name)) {
       continue;
@@ -259,9 +308,13 @@ export async function handleStreamingRequest(
     const start = Date.now();
     const release = () => gatewayInflightLimiter.release(provider.id);
     try {
-      const upstream = await callUpstreamStreaming(provider, modelSlug, params);
+      const upstream = await callWithRetries<UpstreamStreamingResponse>(
+        () => callUpstreamStreaming(provider, modelSlug, params),
+        retryConfig.attempts,
+        retryConfig.baseMs
+      );
       void upstream.usagePromise
-        .then(async (usage) => {
+        .then(async (usage: UpstreamUsage) => {
           await recordRequestLogSafe({
             providerId: provider.id,
             modelSlug,
@@ -270,11 +323,11 @@ export async function handleStreamingRequest(
           });
           try {
             await billUsage(provider, modelSlug, usage);
-          } catch (err) {
+          } catch (err: unknown) {
             console.error("Billing failed", err);
           }
         })
-        .catch(async (err) => {
+        .catch(async (err: unknown) => {
           const errorType = classifyUpstreamError(err);
           recordFailure(provider.id, errorType);
           await recordRequestLogSafe({
