@@ -645,7 +645,7 @@
 
 ## Phase 62 — Codex Upstream Timeout
 
-- [ ] **T-62.1** 为 `/codex/responses` 增加 `CODEX_UPSTREAM_TIMEOUT_MS` 超时控制，超时视为可重试错误并触发 failover，补充自动化测试
+- [x] **T-62.1** 为 `/codex/responses` 增加 `CODEX_UPSTREAM_TIMEOUT_MS` 超时控制，超时视为可重试错误并触发 failover，补充自动化测试
 - [ ] **T-62.2** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
 
 ## 任务统计

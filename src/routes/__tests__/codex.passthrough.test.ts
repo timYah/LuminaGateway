@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../services/requestLogService", () => ({
   createRequestLog: vi.fn(async () => null),
@@ -114,6 +114,10 @@ describe("codex passthrough route", () => {
     deactivateProviderMock.mockClear();
     billUsageMock.mockClear();
     getAllCandidatesSpy.mockResolvedValue([providerA]);
+  });
+
+  afterEach(() => {
+    delete process.env.CODEX_UPSTREAM_TIMEOUT_MS;
   });
 
   it("rejects invalid JSON bodies", async () => {
@@ -266,6 +270,41 @@ describe("codex passthrough route", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(recordFailureMock).toHaveBeenCalledWith(1, "rate_limit");
     expect(openCircuitSpy).toHaveBeenCalledWith(1, 60_000);
+  });
+
+  it("fails over when the upstream request times out", async () => {
+    process.env.CODEX_UPSTREAM_TIMEOUT_MS = "5";
+    getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
+    fetchMock
+      .mockImplementationOnce((_url, init) => {
+        const signal = init?.signal as AbortSignal | undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          if (!signal) {
+            reject(new Error("Missing abort signal"));
+            return;
+          }
+          signal.addEventListener("abort", () => {
+            const abortError = new Error("The operation was aborted");
+            abortError.name = "AbortError";
+            reject(abortError);
+          });
+        });
+      })
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "resp_ok" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      );
+
+    const res = await app.request("/codex/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "gpt-5.2", input: [] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(openCircuitSpy).toHaveBeenCalledWith(1, 30_000);
   });
 
   it("returns the last retryable upstream response if every candidate fails", async () => {

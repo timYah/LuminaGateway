@@ -57,6 +57,24 @@ function parseJson(text: string) {
   }
 }
 
+function resolveCodexTimeoutMs() {
+  const raw = process.env.CODEX_UPSTREAM_TIMEOUT_MS;
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function buildTimeoutError() {
+  const error = new Error("Upstream request timed out");
+  (error as { code?: string }).code = "UND_ERR_REQUEST_TIMEOUT";
+  return error;
+}
+
 function isCodexPassthroughCandidate(provider: Provider) {
   return (
     (provider.protocol === "openai" || provider.protocol === "new-api") &&
@@ -175,15 +193,26 @@ codexRoutes.post("/codex/responses", async (c) => {
 
   let lastFailureResponse: StoredFailureResponse | null = null;
 
+  const timeoutMs = resolveCodexTimeoutMs();
+
   for (const provider of candidates) {
     const start = Date.now();
     const upstreamUrl = buildUpstreamUrl(provider, c.req.url);
+    const abortController = timeoutMs ? new AbortController() : null;
+    const timeoutId =
+      timeoutMs && abortController
+        ? setTimeout(() => {
+            abortController.abort();
+          }, timeoutMs)
+        : null;
     try {
       const upstreamResponse = await fetch(upstreamUrl, {
         method: c.req.method,
         headers: buildUpstreamHeaders(c.req.raw.headers, provider.apiKey),
         body: rawBody,
+        signal: abortController?.signal,
       });
+      if (timeoutId) clearTimeout(timeoutId);
 
       if (upstreamResponse.ok) {
         await recordRequestLogSafe({
@@ -233,8 +262,11 @@ codexRoutes.post("/codex/responses", async (c) => {
         headers: lastFailureResponse.headers,
       });
     } catch (error) {
-      const errorType = classifyUpstreamError(error);
-      const message = getUpstreamErrorMessage(error);
+      if (timeoutId) clearTimeout(timeoutId);
+      const normalizedError =
+        timeoutMs && isAbortError(error) ? buildTimeoutError() : error;
+      const errorType = classifyUpstreamError(normalizedError);
+      const message = getUpstreamErrorMessage(normalizedError);
 
       await recordRequestLogSafe({
         providerId: provider.id,
