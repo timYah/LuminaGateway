@@ -89,6 +89,14 @@ function buildSyntheticResult(
   } as GenerateTextResult;
 }
 
+function unwrapStreamError(error: unknown) {
+  if (error && typeof error === "object" && "error" in error) {
+    return (error as { error: unknown }).error;
+  }
+  return error;
+}
+
+
 export async function callUpstreamNonStreaming(
   provider: Provider,
   modelSlug: string,
@@ -146,7 +154,7 @@ export function callUpstreamStreaming(
       resolveUsage(normalizeUsage(event.totalUsage));
     },
     onError: (error: unknown) => {
-      rejectUsage(error);
+      rejectUsage(unwrapStreamError(error));
     },
   } as unknown as Parameters<typeof streamText>[0];
   const streamResult = streamText(fullParams);
