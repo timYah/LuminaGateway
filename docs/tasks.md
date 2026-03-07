@@ -660,7 +660,7 @@
 - [x] **T-63.8** 增加非流式响应缓存（`CACHE_TTL_MS` + 请求头覆盖），并补充自动化测试
 - [x] **T-63.9** 增加 `/metrics` 观测端点（Prometheus 文本格式），并补充自动化测试
 - [x] **T-63.10** 增加 upstream 重试退避（`UPSTREAM_RETRY_ATTEMPTS` / `UPSTREAM_RETRY_BASE_MS`），并补充自动化测试
-- [ ] **T-63.11** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
+- [x] **T-63.11** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
 
 ## 任务统计
 

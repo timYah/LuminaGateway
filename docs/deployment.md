@@ -13,6 +13,20 @@ Lumina Gateway runs on Node.js LTS and supports SQLite or PostgreSQL. Use persis
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
 | `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
+| `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
+| `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. |
+| `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
+| `RATE_LIMIT_RPM` | *(optional)* | Per-API-key requests-per-minute limit (enables rate limiting). |
+| `RATE_LIMIT_BURST` | *(optional)* | Burst capacity for rate limiting (defaults to `RATE_LIMIT_RPM`). |
+| `RATE_LIMIT_OVERRIDES` | *(optional)* | JSON map of per-key limits. |
+| `DEFAULT_REQUEST_PARAMS` | *(optional)* | JSON object merged into each `/v1/*` request when fields are missing. |
+| `ROUTING_STRATEGY` | `priority` | Routing strategy: `priority`, `round_robin`, or `weighted`. |
+| `PROVIDER_WEIGHTS` | *(optional)* | JSON map of provider weights for weighted routing. |
+| `PROVIDER_MAX_INFLIGHT` | *(optional)* | Max concurrent requests per provider. |
+| `PROVIDER_MAX_INFLIGHT_OVERRIDES` | *(optional)* | JSON map of per-provider inflight limits. |
+| `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
+| `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
+| `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
 | `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
 | `GATEWAY_BASE_URL` | *(optional)* | Gateway base URL used by the admin dev server proxy. |
 | `PORT` | `3000` | Server listen port. |
@@ -110,6 +124,8 @@ The admin UI can load credentials from the root `.env` file. Set `GATEWAY_API_KE
 ## Usage examples
 
 All `/v1/*`, `/codex/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`.
+
+The `/metrics` endpoint exposes Prometheus-compatible counters for request volume and latency.
 
 ```bash [Terminal]
 curl http://localhost:3000/v1/chat/completions \

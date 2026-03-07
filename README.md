@@ -116,6 +116,20 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
 | `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, and `/admin/*` routes. |
+| `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
+| `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
+| `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
+| `RATE_LIMIT_RPM` | *(optional)* | Per-API-key requests-per-minute limit (enables rate limiting). |
+| `RATE_LIMIT_BURST` | *(optional)* | Burst capacity for rate limiting (defaults to `RATE_LIMIT_RPM`). |
+| `RATE_LIMIT_OVERRIDES` | *(optional)* | JSON map of per-key limits, e.g. `{"key-1":{"rpm":120,"burst":30}}`. |
+| `DEFAULT_REQUEST_PARAMS` | *(optional)* | JSON object merged into each `/v1/*` request when fields are missing. |
+| `ROUTING_STRATEGY` | `priority` | Routing strategy: `priority`, `round_robin`, or `weighted`. |
+| `PROVIDER_WEIGHTS` | *(optional)* | JSON map of provider weights for weighted routing (by id or name). |
+| `PROVIDER_MAX_INFLIGHT` | *(optional)* | Max concurrent requests per provider (skips providers at capacity). |
+| `PROVIDER_MAX_INFLIGHT_OVERRIDES` | *(optional)* | JSON map of per-provider inflight limits (by id or name). |
+| `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
+| `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
+| `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
 | `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
 | `PORT` | `3000` | Server listen port. |
 | `LOG_LEVEL` | `info` | Logging threshold: `debug`, `info`, `warn`, `error`. |
@@ -132,5 +146,6 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 - `POST /admin/providers/:id/reset` — reset circuit breaker state
 - `GET /admin/circuit-breakers` — list open circuit breakers
 - `GET /admin/usage` — usage query
+- `GET /metrics` — Prometheus-compatible metrics
 
 For full details, see `docs/documentation.md`.

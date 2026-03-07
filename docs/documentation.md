@@ -31,6 +31,20 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
 | `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
+| `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
+| `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
+| `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
+| `RATE_LIMIT_RPM` | *(optional)* | Per-API-key requests-per-minute limit (enables rate limiting). |
+| `RATE_LIMIT_BURST` | *(optional)* | Burst capacity for rate limiting (defaults to `RATE_LIMIT_RPM`). |
+| `RATE_LIMIT_OVERRIDES` | *(optional)* | JSON map of per-key limits, e.g. `{"key-1":{"rpm":120,"burst":30}}`. |
+| `DEFAULT_REQUEST_PARAMS` | *(optional)* | JSON object merged into each `/v1/*` request when fields are missing. |
+| `ROUTING_STRATEGY` | `priority` | Routing strategy: `priority`, `round_robin`, or `weighted`. |
+| `PROVIDER_WEIGHTS` | *(optional)* | JSON map of provider weights for weighted routing (by id or name). |
+| `PROVIDER_MAX_INFLIGHT` | *(optional)* | Max concurrent requests per provider (skips providers at capacity). |
+| `PROVIDER_MAX_INFLIGHT_OVERRIDES` | *(optional)* | JSON map of per-provider inflight limits (by id or name). |
+| `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
+| `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
+| `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
 | `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
 | `PORT` | `3000` | Server listen port. |
 | `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
@@ -57,6 +71,14 @@ All `/v1/*` and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KE
 ```http [Response]
 GET /health
 { "status": "ok" }
+```
+
+### Metrics
+
+```http [Response]
+GET /metrics
+# Prometheus metrics
+gateway_requests_total{method="GET",path="/health",status="200"} 1
 ```
 
 ### OpenAI-compatible endpoint
@@ -108,6 +130,10 @@ Supported fields match the OpenAI Responses subset used by the validators: `mode
 Codex CLI can use either `POST /v1/responses` or the dedicated `POST /codex/responses` alias. For a dedicated Codex base URL, set `base_url` to `http://<host>:<port>/codex` and keep `wire_api="responses"`.
 
 `POST /codex/responses` requires a JSON request body with a string `model`. The gateway forwards the raw request body to the selected upstream `/responses` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Once streaming starts, the gateway never replays the request to a second provider.
+
+### Caching
+
+Set `CACHE_TTL_MS` to enable in-memory caching for non-streaming `/v1/*` responses. You can override (or disable) caching per request with the `x-cache-ttl-ms` header. A value of `0` disables caching for that request.
 
 ### Anthropic-compatible endpoint
 
