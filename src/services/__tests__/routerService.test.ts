@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { getDb, type SqliteDatabase } from "../../db";
 import { providers } from "../../db/schema";
@@ -16,6 +16,10 @@ beforeAll(() => {
 
 beforeEach(() => {
   db.delete(providers).run();
+});
+
+afterEach(() => {
+  delete process.env.ROUTING_STRATEGY;
 });
 
 async function seed() {
@@ -80,6 +84,24 @@ describe("routerService", () => {
       "Provider B",
       "Provider C",
       "Provider A",
+    ]);
+  });
+
+  it("round robin rotates candidates", async () => {
+    process.env.ROUTING_STRATEGY = "round_robin";
+    await seed();
+    const router = new RouterService(new CircuitBreaker());
+    const first = await router.getAllCandidates("gpt-4o");
+    const second = await router.getAllCandidates("gpt-4o");
+    expect(first.map((p) => p.name)).toEqual([
+      "Provider B",
+      "Provider C",
+      "Provider A",
+    ]);
+    expect(second.map((p) => p.name)).toEqual([
+      "Provider C",
+      "Provider A",
+      "Provider B",
     ]);
   });
 
