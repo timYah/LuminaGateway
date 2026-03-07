@@ -108,7 +108,7 @@ The admin UI can load credentials from the root `.env` file. Set `GATEWAY_API_KE
 
 ## Usage examples
 
-All `/v1/*` and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`.
+All `/v1/*`, `/codex/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`.
 
 ```bash [Terminal]
 curl http://localhost:3000/v1/chat/completions \
@@ -131,6 +131,8 @@ codex exec \
   -c 'model_providers.gateway={name="gateway",base_url="http://localhost:3000/codex",wire_api="responses",requires_openai_auth=true}' \
   'Say hello in one word.'
 ```
+
+Keep `Codex transform` disabled on the target provider when you want `/codex/responses` to proxy the request body and response body without conversion. The gateway only retries another provider before the first byte is sent back to the client.
 
 ```bash [Terminal]
 curl http://localhost:3000/admin/providers \
@@ -168,7 +170,7 @@ curl "http://localhost:3000/admin/config/export" \
 curl -X POST "http://localhost:3000/admin/config/import" \
   -H "Authorization: Bearer dev-token" \
   -H "Content-Type: application/json" \
-  -d '{"mode":"replace","providers":[{"name":"Primary","protocol":"openai","baseUrl":"https://api.openai.com/v1","apiKey":"sk-...","priority":1}]}'
+  -d '{"mode":"replace","providers":[{"name":"Primary","protocol":"openai","baseUrl":"https://api.openai.com/v1","apiKey":"sk-...","priority":1,"codexTransform":false}]}'
 ```
 
 ## Operations

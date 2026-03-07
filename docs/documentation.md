@@ -1,10 +1,10 @@
 # Lumina Gateway — Documentation
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages request formats, routes requests based on provider priority and health, and fails over when providers are rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, and a dedicated Codex passthrough route. It routes traffic by provider priority and health, and fails over when providers are rate limited or out of quota.
 
 ## What Lumina Gateway is
 
-The gateway exposes three client-facing routes: an OpenAI-compatible chat completions endpoint, an OpenAI-compatible responses endpoint, and an Anthropic-compatible messages endpoint. Each request is validated, converted to a universal AI SDK request format, and executed against the selected upstream provider.
+The gateway exposes four client-facing routes: an OpenAI-compatible chat completions endpoint, an OpenAI-compatible responses endpoint, an Anthropic-compatible messages endpoint, and `POST /codex/responses` for Codex passthrough. The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The dedicated Codex route keeps the request and response bodies intact and proxies them straight to the selected upstream `/responses` endpoint.
 
 ## Status
 
@@ -106,6 +106,8 @@ Supported fields match the OpenAI Responses subset used by the validators: `mode
 
 Codex CLI can use either `POST /v1/responses` or the dedicated `POST /codex/responses` alias. For a dedicated Codex base URL, set `base_url` to `http://<host>:<port>/codex` and keep `wire_api="responses"`.
 
+`POST /codex/responses` requires a JSON request body with a string `model`. The gateway forwards the raw request body to the selected upstream `/responses` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Once streaming starts, the gateway never replays the request to a second provider.
+
 ### Anthropic-compatible endpoint
 
 ```http [Request]
@@ -171,7 +173,7 @@ GET    /admin/config/export      — export providers + settings
 POST   /admin/config/import      — import providers + settings
 ```
 
-`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
+`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false`. When it stays `false`, the provider remains eligible for raw `/codex/responses` passthrough routing. When it is `true`, the provider is reserved for a future transformed Codex flow and is excluded from `/codex/*` routing for now. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
 
 `POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug.
 
@@ -183,7 +185,7 @@ For `new-api`, use the OpenAI-compatible base URL (for example `https://your-new
 
 `GET /admin/usage/stats` returns `{ trend, byProvider, byModel }` for the selected date range. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first.
 
-`GET /admin/config/export` returns `{ providers, models, settings }`. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode? }`, where `mode` is `replace` or `merge`.
+`GET /admin/config/export` returns `{ providers, models, settings }` and includes `codexTransform` in each provider entry. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode? }`, where `mode` is `replace` or `merge`.
 
 ### Admin dashboard
 
@@ -192,6 +194,7 @@ The admin dashboard provides a web UI for provider management and usage visibili
 **Capabilities**
 
 - Providers list with create and update flows.
+- Codex transform switch with explicit passthrough status badges in the provider roster.
 - Usage log querying with filters and pagination.
 - API key injected from `.env` when available, otherwise stored in the browser and sent as `Authorization: Bearer ...` on every request.
 - Provider connectivity tests can target a custom model slug from the UI.
@@ -225,9 +228,11 @@ Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at b
 
 ## Provider selection and failover
 
-The gateway loads all active providers and sorts by `priority` ascending (lower is preferred), then by `id` for deterministic tie-breaking. It skips providers that are currently circuit-broken and forwards the requested model slug directly to the upstream provider.
+For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` ascending (lower is preferred), then by `id` for deterministic tie-breaking. It skips providers that are currently circuit-broken and forwards the requested model slug directly to the upstream provider.
 
-On upstream failures, the gateway reacts to the classified error type. Quota exhaustion opens a 5-minute circuit breaker, rate limits open a 60-second circuit breaker, and 5xx server errors open a 30-second circuit breaker before retrying the next provider. Authentication errors deactivate the provider immediately, model-not-found errors skip to the next provider, and unknown errors return a `500` without failover.
+For `POST /codex/responses`, the gateway uses only `openai` and `new-api` providers with `codexTransform = false`. It forwards the raw request body to upstream `/responses`, preserves the upstream response as-is, and can fail over only before the first byte reaches the client.
+
+On upstream failures, the gateway reacts to the classified error type. Quota exhaustion opens a 5-minute circuit breaker, rate limits open a 60-second circuit breaker, and 5xx server errors open a 30-second circuit breaker before retrying the next provider. Authentication errors deactivate the provider immediately, model-not-found errors skip to the next provider, and unknown errors return a `500` without failover. Codex passthrough follows the same classification rules, but if every retryable upstream attempt fails before the first byte, it returns the last upstream error response instead of synthesizing a converted payload.
 
 ## Billing and usage
 
@@ -242,6 +247,8 @@ totalCost  = inputCost + outputCost
 Pricing resolves per provider. If `inputPrice` or `outputPrice` is missing, the gateway falls back to `DEFAULT_INPUT_PRICE` and `DEFAULT_OUTPUT_PRICE`. If both are unset, the cost is recorded as `0`.
 
 Streaming requests bill after the stream finishes and usage is resolved. Non-streaming requests bill immediately after the provider response completes. Billing records the computed cost in `usageLogs` without deducting provider balances.
+
+Codex passthrough requests do not write `usageLogs` and do not call the billing layer. They still write request logs and failure statistics so provider failover and health decisions remain observable.
 
 ## Error response format
 
@@ -286,7 +293,7 @@ src/
 │   └── seed.ts              # demo data seeder
 ├── routes/
 │   ├── openai.ts            # /v1/chat/completions + /v1/responses handlers
-│   ├── codex.ts             # /codex/responses dedicated Codex handler
+│   ├── codex.ts             # /codex/responses raw passthrough handler
 │   ├── anthropic.ts         # /v1/messages handler
 │   └── admin.ts             # /admin/* management routes
 ├── services/

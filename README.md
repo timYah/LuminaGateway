@@ -1,6 +1,6 @@
 # Lumina Gateway
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages request formats, routes requests based on provider balance and health, and fails over when a provider is rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, and a dedicated Codex passthrough entrypoint. It routes requests by provider priority and health, then fails over when a provider is rate limited or out of quota.
 
 ## Features
 
@@ -8,13 +8,14 @@ Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI 
 - OpenAI-compatible responses endpoint.
 - Anthropic-compatible messages endpoint.
 - Streaming SSE relay for all supported client formats.
-- Balance-aware routing with automatic failover.
+- Priority-based routing with automatic failover.
+- Dedicated `/codex/responses` passthrough for Codex-style Responses traffic.
 - Admin routes for provider management and usage queries.
 - Vue + Nuxt UI admin dashboard for providers and usage.
 
 ## Quick start
 
-Set `GATEWAY_API_KEY` before you start the server because `/v1/*` and `/admin/*` require Bearer auth. The gateway auto-loads `.env` at startup.
+Set `GATEWAY_API_KEY` before you start the server because `/v1/*`, `/codex/*`, and `/admin/*` require Bearer auth. The gateway auto-loads `.env` at startup.
 
 ```bash
 npm install
@@ -71,6 +72,8 @@ codex exec \
   'Say hello in one word.'
 ```
 
+`POST /codex/responses` forwards the raw JSON body to the selected upstream `/responses` endpoint and returns the upstream response body unchanged. The gateway only fails over before the first byte reaches the client. In the admin UI, leave `Codex transform` off to keep a provider eligible for this passthrough path.
+
 ### New API providers
 
 When adding a new-api provider, set `protocol` to `new-api` and use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`).
@@ -112,7 +115,7 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, and `/admin/*` routes. |
 | `PORT` | `3000` | Server listen port. |
 | `LOG_LEVEL` | `info` | Logging threshold: `debug`, `info`, `warn`, `error`. |
 
@@ -121,9 +124,10 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 - `POST /v1/chat/completions` — OpenAI-compatible chat completions endpoint
 - `POST /v1/responses` — OpenAI-compatible responses endpoint
 - `POST /v1/messages` — Anthropic-compatible endpoint
+- `POST /codex/responses` — raw Codex passthrough to upstream `/responses`
 - `GET /admin/providers` — list providers
-- `POST /admin/providers` — create provider
-- `PATCH /admin/providers/:id` — update provider
+- `POST /admin/providers` — create provider (`codexTransform` defaults to `false`)
+- `PATCH /admin/providers/:id` — update provider, including the Codex transform flag
 - `GET /admin/usage` — usage query
 
 For full details, see `docs/documentation.md`.
