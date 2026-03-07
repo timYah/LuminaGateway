@@ -551,7 +551,7 @@
 ## Phase 53 — Admin UI Optimization Refresh
 
 - [x] **T-53.0** 写明本轮 Admin UI 优化执行计划（同步到 `docs/plans.md`）
-- [ ] **T-53.1** 调整 Admin 壳层：弱化侧栏存在感、压缩页头、收紧全局 spacing / shadow / radius / decorative background
+- [x] **T-53.1** 调整 Admin 壳层：弱化侧栏存在感、压缩页头、收紧全局 spacing / shadow / radius / decorative background
 - [ ] **T-53.2** 提炼共享 UI 编排：统一页面头部、section shell、filter toolbar、summary strip 的布局模式
 - [ ] **T-53.3** 重构 `/providers`：压缩 hero、重排操作区、优化 provider table 密度与 action 列、统一 modal padding
 - [ ] **T-53.4** 重构 `/usage`：重排 stats / filters / usage log / request log 的层级与密度

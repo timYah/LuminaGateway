@@ -31,45 +31,53 @@ watch(
 
 <template>
   <div class="relative z-10">
-    <div class="max-w-[1400px] mx-auto px-4 md:px-8 py-8">
-      <div class="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-8">
-        <aside class="space-y-6">
-          <div class="glass-panel radius-panel p-4 subtle-ring">
-            <div class="text-xs uppercase tracking-[0.32em] text-slate-500">
-              {{ $t("app.brand") }}
+    <div class="mx-auto max-w-[1480px] px-4 py-4 md:px-6 md:py-6 xl:px-10">
+      <div class="grid gap-5 lg:grid-cols-[208px_minmax(0,1fr)] xl:gap-8">
+        <aside class="lg:sticky lg:top-6 lg:self-start">
+          <div class="space-y-4">
+            <div class="glass-panel radius-panel p-4 subtle-ring md:p-5">
+              <div class="text-[11px] uppercase tracking-[0.32em] text-slate-500">
+                {{ $t("app.brand") }}
+              </div>
+              <div class="mt-3 text-xl font-semibold tracking-tight text-slate-900">
+                {{ $t("app.console") }}
+              </div>
+              <p class="mt-2 text-sm leading-6 text-slate-600">
+                {{ $t("app.tagline") }}
+              </p>
             </div>
-            <div class="mt-3 text-2xl font-semibold text-slate-900">
-              {{ $t("app.console") }}
+
+            <div class="surface radius-panel p-2.5">
+              <nav class="space-y-1">
+                <RouterLink
+                  to="/providers"
+                  class="block radius-card px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 hover:text-slate-950 action-press"
+                  active-class="bg-white text-slate-950 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.45)]"
+                >
+                  {{ $t("nav.providers") }}
+                </RouterLink>
+                <RouterLink
+                  to="/usage"
+                  class="block radius-card px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 hover:text-slate-950 action-press"
+                  active-class="bg-white text-slate-950 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.45)]"
+                >
+                  {{ $t("nav.usage") }}
+                </RouterLink>
+              </nav>
             </div>
-            <p class="mt-2 text-sm text-slate-600 leading-relaxed">
-              {{ $t("app.tagline") }}
-            </p>
-          </div>
-          <nav class="space-y-1">
-            <RouterLink
-              to="/providers"
-              class="block radius-card px-3.5 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-white/70 hover:text-slate-900 action-press"
-              active-class="bg-white text-slate-900 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.4)]"
-            >
-              {{ $t("nav.providers") }}
-            </RouterLink>
-            <RouterLink
-              to="/usage"
-              class="block radius-card px-3.5 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-white/70 hover:text-slate-900 action-press"
-              active-class="bg-white text-slate-900 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.4)]"
-            >
-              {{ $t("nav.usage") }}
-            </RouterLink>
-          </nav>
-          <div class="pt-4 border-t border-slate-200/60 space-y-2">
-            <div class="text-xs uppercase tracking-[0.32em] text-slate-500">
-              {{ $t("app.language") }}
+
+            <div class="surface radius-panel p-3.5">
+              <div class="text-[11px] uppercase tracking-[0.28em] text-slate-500">
+                {{ $t("app.language") }}
+              </div>
+              <div class="mt-3">
+                <USelect v-model="locale" :items="localeOptions" />
+              </div>
             </div>
-            <USelect v-model="locale" :items="localeOptions" />
           </div>
         </aside>
 
-        <main class="space-y-6">
+        <main class="min-w-0 space-y-5 md:space-y-6">
           <slot />
         </main>
       </div>
