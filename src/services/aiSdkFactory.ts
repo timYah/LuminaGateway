@@ -7,7 +7,7 @@ import type { Provider } from "../db/schema/providers";
 
 const decoder = new TextDecoder();
 
-const normalizeOpenAiBaseUrl = (baseUrl: string) => {
+export const normalizeOpenAiBaseUrl = (baseUrl: string) => {
   const trimmed = baseUrl.trim().replace(/\/+$/, "");
   if (!trimmed) return trimmed;
   return trimmed.endsWith("/v1") ? trimmed : `${trimmed}/v1`;
