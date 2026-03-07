@@ -610,6 +610,13 @@
 
 ---
 
+## Phase 57 — Provider Probe Error Classification
+
+- [x] **T-57.1** 修复 Provider 测试 / 健康检查的错误分类与错误消息提取，识别 OpenAI 兼容接口返回的 400 模型未配置场景，避免误报为“连接失败”
+- [x] **T-57.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并确认 Right Codes `gpt-4o` 探测返回 `model_not_found`、`gpt-5.2` 探测返回成功
+
+---
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
