@@ -590,6 +590,8 @@
 - [x] **T-55.8** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build && npm run docker:build`，确认镜像基于编译产物运行
 - [x] **T-55.9** 调整 `package.json` 开发脚本：gateway 与 admin 支持通过 `--host` / `HOST` 传递监听地址（如 `0.0.0.0`）
 - [x] **T-55.10** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build`，并验证 `npm run dev:gateway -- --host 0.0.0.0` 与 `npm run dev:admin -- --host 0.0.0.0` 可启动
+- [x] **T-55.11** 支持从根 `.env` 读取 `HOST`，并在 package.json 启动 gateway/admin 时自动传递（支持 `0.0.0.0`）
+- [ ] **T-55.12** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build:admin`，并验证 `.env` 中 `HOST=0.0.0.0` 时 `npm run dev` 可同时启动 gateway 与 admin
 
 ---
 

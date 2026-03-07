@@ -15,6 +15,7 @@ Lumina Gateway runs on Node.js LTS and supports SQLite or PostgreSQL. Use persis
 | `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
 | `GATEWAY_BASE_URL` | *(optional)* | Gateway base URL used by the admin dev server proxy. |
 | `PORT` | `3000` | Server listen port. |
+| `HOST` | `127.0.0.1` | Dev host binding for gateway/admin startup. Set `0.0.0.0` to expose on LAN or Docker host networking. |
 | `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
 | `DEFAULT_OUTPUT_PRICE` | *(optional)* | Global output price fallback (USD per 1M tokens). |
 | `LOG_LEVEL` | `info` | Logging threshold: `debug`, `info`, `warn`, `error`. |
@@ -39,7 +40,7 @@ npm run dev
 ```
 
 ```bash [Terminal]
-# Development with public host binding
+# Development with public host binding (equivalent to setting `HOST=0.0.0.0` in `.env`)
 HOST=0.0.0.0 npm run dev
 npm run dev:gateway -- --host 0.0.0.0
 npm run dev:admin -- --host 0.0.0.0

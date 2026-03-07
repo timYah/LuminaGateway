@@ -1,4 +1,7 @@
 import { spawn } from 'node:child_process';
+import { config as loadEnv } from 'dotenv';
+
+loadEnv();
 
 const target = process.argv[2];
 const extraArgs = process.argv.slice(3);

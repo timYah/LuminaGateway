@@ -20,7 +20,7 @@ npm install
 npm run db:migrate
 npm run db:seed
 cp .env.example .env
-# edit .env and set GATEWAY_API_KEY
+# edit .env and set GATEWAY_API_KEY (optionally set HOST=0.0.0.0)
 npm run dev
 ```
 
@@ -34,7 +34,7 @@ curl http://localhost:3000/health
 
 `npm run dev` starts both the gateway and the admin dashboard. Use `npm run dev:gateway` or `npm run dev:admin` to start them separately.
 
-To expose the dev servers on all interfaces, pass a host through the npm scripts:
+To expose the dev servers on all interfaces, set `HOST=0.0.0.0` in `.env` or pass a host through the npm scripts:
 
 ```bash
 HOST=0.0.0.0 npm run dev

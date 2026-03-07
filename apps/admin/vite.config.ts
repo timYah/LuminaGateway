@@ -63,6 +63,7 @@ export default defineConfig(({ mode }) => {
       __GATEWAY_BASE_URL__: JSON.stringify(gatewayBaseUrl),
     },
     server: {
+      host: env.ADMIN_HOST || env.HOST || undefined,
       port: 3001,
       proxy: {
         "/api": {
