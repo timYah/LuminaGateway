@@ -128,6 +128,8 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 - `GET /admin/providers` — list providers
 - `POST /admin/providers` — create provider (`codexTransform` defaults to `false`)
 - `PATCH /admin/providers/:id` — update provider, including the Codex transform flag
+- `POST /admin/providers/:id/reset` — reset circuit breaker state
+- `GET /admin/circuit-breakers` — list open circuit breakers
 - `GET /admin/usage` — usage query
 
 For full details, see `docs/documentation.md`.

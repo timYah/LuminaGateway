@@ -163,9 +163,11 @@ GET    /admin/providers          — list all providers
 POST   /admin/providers          — create a provider
 PATCH  /admin/providers/:id      — update provider fields
 POST   /admin/providers/:id/test — test provider connectivity
+POST   /admin/providers/:id/reset — reset circuit breaker state
 DELETE /admin/providers/:id      — delete provider (also removes usage logs)
 POST   /admin/providers/health   — run a health check for all providers
 GET    /admin/failure-stats      — get error type distribution for recent requests
+GET    /admin/circuit-breakers   — list open circuit breakers
 GET    /admin/usage              — query usage logs
 GET    /admin/usage/stats        — trend + provider/model distribution
 GET    /admin/request-logs       — query request-level logs
@@ -176,6 +178,8 @@ POST   /admin/config/import      — import providers + settings
 `POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false`. When it stays `false`, the provider remains eligible for raw `/codex/responses` passthrough routing. When it is `true`, the provider is reserved for a future transformed Codex flow and is excluded from `/codex/*` routing for now. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
 
 `POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug.
+
+`POST /admin/providers/:id/reset` clears the in-memory circuit breaker for the provider so it can re-enter routing immediately. `GET /admin/circuit-breakers` returns the providers currently cooling down, along with the `openUntil` timestamp and remaining time.
 
 `POST /admin/providers/health` accepts an optional `model` query parameter and returns the health results for each provider. `GET /admin/failure-stats` aggregates recent request failures by error type.
 

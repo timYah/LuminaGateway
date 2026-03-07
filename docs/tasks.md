@@ -641,7 +641,7 @@
 ## Phase 61 — Circuit Breaker Ops
 
 - [x] **T-61.1** 新增 `/admin/circuit-breakers` 观测端点与 `/admin/providers/:id/reset` 手动复位端点，补充自动化测试
-- [ ] **T-61.2** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
+- [x] **T-61.2** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
 
 ## Phase 62 — Codex Upstream Timeout
 

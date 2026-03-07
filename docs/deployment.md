@@ -152,6 +152,11 @@ curl "http://localhost:3000/admin/failure-stats" \
 ```
 
 ```bash [Terminal]
+curl "http://localhost:3000/admin/circuit-breakers" \
+  -H "Authorization: Bearer dev-token"
+```
+
+```bash [Terminal]
 curl "http://localhost:3000/admin/usage/stats?startDate=2025-01-01" \
   -H "Authorization: Bearer dev-token"
 ```
