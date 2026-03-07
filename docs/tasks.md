@@ -556,7 +556,7 @@
 - [x] **T-53.3** 重构 `/providers`：压缩 hero、重排操作区、优化 provider table 密度与 action 列、统一 modal padding
 - [x] **T-53.4** 重构 `/usage`：重排 stats / filters / usage log / request log 的层级与密度
 - [x] **T-53.5** 响应式优化：覆盖 desktop / tablet / mobile，确保按钮、工具栏、表格容器无裁切
-- [ ] **T-53.6** 文档更新：同步 Admin UI 当前结构与验证方式到 `docs/documentation.md`
+- [x] **T-53.6** 文档更新：同步 Admin UI 当前结构与验证方式到 `docs/documentation.md`
 - [ ] **T-53.7** ✅ **验证（代码）**：运行 `npm run lint && npm run typecheck && npm run test && npm --prefix apps/admin run build`
 - [ ] **T-53.8** ✅ **验证（UI）**：运行 `npm run dev`，使用 agent-browser 验证 `/providers` 与 `/usage` 的桌面端布局与关键交互
 - [ ] **T-53.9** ✅ **验证（响应式）**：使用 agent-browser 验证移动端宽度下的 header、toolbar、table、modal 无明显错位或裁切

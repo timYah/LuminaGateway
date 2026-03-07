@@ -173,12 +173,17 @@ The dashboard will run on `http://localhost:3001` and connect to the gateway at 
 
 Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at build time. Set `GATEWAY_BASE_URL` or `VITE_API_BASE_URL` to target a different gateway URL.
 
-**UI optimization plan**
+**Current structure**
 
-- Radius system: target 4–8px (panel 8px, control 6px, soft states 4px). Keep pill elements but tighten padding.
-- Layout: move section titles out of cards, reduce card stacking, use borders/dividers with whitespace for hierarchy.
-- Density: tighten `space-y`, `gap`, and table row height to a balanced density (clear, not crowded).
-- Sidebar: lighten the intro block and tighten navigation spacing.
+- Shell: compact sidebar, tighter navigation, smaller decorative background, and denser spacing for an operations-first layout.
+- Providers: compact page header, provider roster summary strip, inline health actions, denser table rows, and mobile-safe row summaries when secondary columns are hidden.
+- Usage: dashboard summary cards, filter toolbars, usage log table, and request log table arranged as a single reporting flow.
+- Responsive behavior: mobile layouts hide secondary table columns, move key metadata into the primary cell, and keep action buttons visible without horizontal clipping.
+
+**Verification**
+
+- Run `npm run dev` and validate `/providers` and `/usage` with the `agent-browser` skill before completing UI tasks.
+- Capture desktop and mobile screenshots during verification so layout, toolbar wrapping, table density, and modal spacing can be checked before commit.
 
 ## Provider selection and failover
 
