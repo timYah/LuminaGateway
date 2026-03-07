@@ -551,7 +551,7 @@
 - [x] **T-52.5** 同步 `.env.example`、`README.md`、`docs/documentation.md`、`docs/deployment.md`、`docs/prompt.md` 的数据库路径说明，并清理本地旧的 `lumina.db*`
 - [x] **T-52.6** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并确认默认 SQLite 产物位于 `.runtime/`
 - [x] **T-52.7** 将 `apps/admin` 顶层自动生成声明文件迁移到专用目录，避免 `components.d.ts` / `auto-imports.d.ts` 直接落在应用根目录
-- [ ] **T-52.8** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm --prefix apps/admin run build`，确认声明文件仅生成在专用目录
+- [x] **T-52.8** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm --prefix apps/admin run build`，确认声明文件仅生成在专用目录
 
 ---
 
