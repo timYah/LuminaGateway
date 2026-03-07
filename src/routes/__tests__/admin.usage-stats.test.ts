@@ -1,0 +1,79 @@
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { createApp } from "../../app";
+import { getDb, type SqliteDatabase } from "../../db";
+import { providers, usageLogs } from "../../db/schema";
+import { createProvider } from "../../services/providerService";
+
+process.env.DATABASE_TYPE = "sqlite";
+process.env.DATABASE_URL = "file:./test-admin-usage-stats.db";
+process.env.GATEWAY_API_KEY = "test-key";
+
+const db = getDb() as SqliteDatabase;
+const app = createApp();
+const authHeader = { Authorization: "Bearer test-key" };
+
+beforeAll(() => {
+  migrate(db, { migrationsFolder: "drizzle" });
+});
+
+beforeEach(() => {
+  db.delete(usageLogs).run();
+  db.delete(providers).run();
+});
+
+describe("admin usage stats", () => {
+  it("aggregates trend and distributions", async () => {
+    const providerA = await createProvider({
+      name: "Usage A",
+      protocol: "openai",
+      baseUrl: "https://example.com",
+      apiKey: "sk-a",
+      balance: 1,
+      isActive: true,
+      priority: 1,
+    });
+    const providerB = await createProvider({
+      name: "Usage B",
+      protocol: "openai",
+      baseUrl: "https://example.com",
+      apiKey: "sk-b",
+      balance: 1,
+      isActive: true,
+      priority: 1,
+    });
+
+    await db.insert(usageLogs).values([
+      {
+        providerId: providerA!.id,
+        modelSlug: "gpt-4o",
+        inputTokens: 10,
+        outputTokens: 5,
+        cost: 0.1,
+        createdAt: new Date("2024-01-15T00:00:00Z"),
+      },
+      {
+        providerId: providerB!.id,
+        modelSlug: "gpt-4o",
+        inputTokens: 12,
+        outputTokens: 6,
+        cost: 0.2,
+        createdAt: new Date("2024-01-16T00:00:00Z"),
+      },
+    ]);
+
+    const res = await app.request(
+      "/admin/usage/stats?startDate=2024-01-01&endDate=2024-01-31",
+      { headers: authHeader }
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.trend).toHaveLength(2);
+    expect(body.byProvider).toHaveLength(2);
+    expect(body.byModel).toHaveLength(1);
+    const dates = body.trend.map((item: { date: string }) => item.date);
+    expect(dates).toContain("2024-01-15");
+    expect(dates).toContain("2024-01-16");
+  });
+});
