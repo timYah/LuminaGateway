@@ -142,6 +142,39 @@ describe("upstreamService", () => {
     expect(classifyUpstreamError(new Error("other"))).toBe("unknown");
   });
 
+  it("callUpstreamStreaming keeps usagePromise awaitable when the stream reports an error", async () => {
+    const languageModel = { id: "mock-model" };
+    const mockProvider = {
+      responses: vi.fn().mockReturnValue(languageModel),
+      chat: vi.fn(),
+      specificationVersion: "v3",
+    };
+    createAIProvider.mockReturnValue(mockProvider);
+
+    const expectedError = new Error("stream failed");
+    const fakeStream = (async function* () {
+      yield { type: "start" };
+      yield { type: "error", error: expectedError };
+    })();
+
+    streamTextMock.mockImplementation((options) => {
+      options.onError?.(expectedError);
+      return { fullStream: fakeStream } as unknown as StreamTextResult;
+    });
+
+    const response = callUpstreamStreaming(baseProvider, modelSlug, {
+      messages: [],
+    });
+
+    const chunks: unknown[] = [];
+    for await (const chunk of response.stream) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toHaveLength(2);
+    await expect(response.usagePromise).rejects.toBe(expectedError);
+  });
+
   it("callUpstreamStreaming returns stream and usagePromise", async () => {
     const languageModel = { id: "mock-model" };
     const mockProvider = {

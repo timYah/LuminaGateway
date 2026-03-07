@@ -115,10 +115,10 @@ describe("POST /admin/providers/:id/test", () => {
     expect(body.message).toBe("upstream failed");
   });
 
-  it("returns model_not_found when upstream reports missing model", async () => {
+  it("returns model_not_found for new-api providers when upstream reports missing model", async () => {
     const provider = await createProvider({
       name: "Missing Model Provider",
-      protocol: "openai",
+      protocol: "new-api",
       baseUrl: "https://api.example.com",
       apiKey: "sk-missing",
       balance: 10,
