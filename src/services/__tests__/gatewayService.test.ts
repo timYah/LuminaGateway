@@ -17,6 +17,10 @@ vi.mock("../billingService", () => ({
   billUsage: vi.fn(),
 }));
 
+vi.mock("../requestLogService", () => ({
+  createRequestLog: vi.fn(),
+}));
+
 vi.mock("../providerService", () => ({
   deactivateProvider: vi.fn(),
 }));
@@ -206,6 +210,7 @@ describe("gatewayService", () => {
     expect("stream" in response).toBe(true);
     expect(relayOpenAIMock).toHaveBeenCalledWith(stream, "gpt-4o");
 
+    await Promise.resolve();
     await Promise.resolve();
     expect(billUsageMock).toHaveBeenCalledWith(
       providerA,

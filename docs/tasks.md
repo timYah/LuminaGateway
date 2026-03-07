@@ -455,7 +455,7 @@
 - [x] **T-49.2** 在 Provider 列表中维护健康状态字段（如 healthy/unhealthy/unknown）并随探活更新
 - [x] **T-49.3** 失败原因分类统计：按 `quota / rate_limit / server / auth / model_not_found / network / unknown` 聚合
 - [x] **T-49.4** 请求级日志：记录 provider、模型、错误类型、耗时、结果（成功/失败）
-- [ ] **T-49.5** ✅ **验证**：编写/更新测试覆盖健康检查与失败分类统计，运行 `npm run test -- gatewayService && npm run test -- upstreamService`
+- [x] **T-49.5** ✅ **验证**：编写/更新测试覆盖健康检查与失败分类统计，运行 `npm run test -- gatewayService && npm run test -- upstreamService`
 - [ ] **T-49.6** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 - [ ] **T-49.7** ✅ **验证（Admin）**：运行 `npm run dev` 并使用 agent-browser skill 验证健康状态与失败分类展示
 
