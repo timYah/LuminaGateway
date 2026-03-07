@@ -36,6 +36,27 @@ function isModelAllowed(model: string) {
   return true;
 }
 
+let cachedDefaultsRaw: string | undefined;
+let cachedDefaults: Record<string, unknown> | null = null;
+
+function resolveDefaultRequestParams() {
+  const raw = process.env.DEFAULT_REQUEST_PARAMS;
+  if (!raw) return null;
+  if (raw === cachedDefaultsRaw) return cachedDefaults;
+  cachedDefaultsRaw = raw;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      cachedDefaults = parsed as Record<string, unknown>;
+      return cachedDefaults;
+    }
+  } catch (error) {
+    console.warn("[gateway] invalid DEFAULT_REQUEST_PARAMS", error);
+  }
+  cachedDefaults = null;
+  return null;
+}
+
 export function createProtocolRoute<T extends z.ZodTypeAny>(
   options: ProtocolRouteOptions<T>
 ) {
@@ -48,15 +69,21 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
       return c.json({ error: { message: "Invalid request" } }, 400);
     }
 
-    const modelValue = (parsed.data as { model?: unknown }).model;
+    const defaults = resolveDefaultRequestParams();
+    const payload = parsed.data as Record<string, unknown>;
+    const merged = defaults
+      ? ({ ...defaults, ...payload } as z.infer<T>)
+      : parsed.data;
+
+    const modelValue = (merged as { model?: unknown }).model;
     const modelSlug = typeof modelValue === "string" ? modelValue.trim() : "";
     if (modelSlug && !isModelAllowed(modelSlug)) {
       return c.json({ error: { message: "Model not allowed" } }, 403);
     }
 
-    if ((parsed.data as { stream?: boolean }).stream) {
+    if ((merged as { stream?: boolean }).stream) {
       const response = await handleStreamingRequest(
-        options.converter(parsed.data),
+        options.converter(merged),
         options.clientFormat
       );
       if ("stream" in response) {
@@ -73,7 +100,7 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
     }
 
     const response = await handleRequest(
-      options.converter(parsed.data),
+      options.converter(merged),
       options.clientFormat
     );
     return c.json(response.body, response.status);
