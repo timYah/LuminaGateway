@@ -634,7 +634,7 @@
 ## Phase 60 — Codex Passthrough Routing
 
 - [x] **T-60.1** 为 Provider 增加 `codexTransform` 配置项（默认 `false`），同步更新数据库迁移、Admin API、配置导入导出与后端测试
-- [ ] **T-60.2** Admin `/providers` 页面增加 Codex 转换开关与状态展示，明确默认透传语义
+- [x] **T-60.2** Admin `/providers` 页面增加 Codex 转换开关与状态展示，明确默认透传语义
 - [ ] **T-60.3** 将 `POST /codex/responses` 改为原样透传上游 `/responses`，仅在首字节返回前执行 failover，并跳过 usage 计费
 - [ ] **T-60.4** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`，确认 Codex 透传链路与 Admin 配置说明一致
 

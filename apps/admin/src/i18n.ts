@@ -33,11 +33,11 @@ const messages = {
     providers: {
       title: "Priority-based routing control",
       intro:
-        "Review provider health, tune priorities, and track usage cost. Balances are informational only.",
+        "Review provider health, tune priorities, and track usage cost. Balances are informational only, and Codex stays in passthrough unless transform is enabled.",
       add: "Add provider",
       roster: "Provider roster",
       rosterHint: "Changes apply immediately to routing decisions.",
-      rosterNote: "Routing uses priority only. Balances are informational.",
+      rosterNote: "Routing uses priority only. Balances are informational. Codex defaults to passthrough.",
       refresh: "Refresh list",
       testModel: {
         label: "Test model",
@@ -76,6 +76,10 @@ const messages = {
       status: {
         active: "Active",
         paused: "Paused",
+      },
+      codex: {
+        passthrough: "Codex passthrough",
+        transform: "Codex transform",
       },
       action: {
         edit: "Edit",
@@ -127,6 +131,7 @@ const messages = {
         apiMode: "API mode",
         baseUrl: "Base URL",
         apiKey: "API key",
+        codexTransform: "Codex transform",
         balance: "Balance",
         inputPrice: "Input $/1M",
         outputPrice: "Output $/1M",
@@ -139,6 +144,8 @@ const messages = {
           baseUrl:
             "Root URL for the provider endpoint (OpenAI-compatible providers like new-api use https://host/v1).",
           apiKey: "Stored for upstream authentication.",
+          codexTransform:
+            "Off keeps /codex/responses in raw passthrough mode. Turn it on only for a reserved transformed Codex flow.",
           balanceCreate: "Informational only. Routing uses priority.",
           balanceEdit: "Informational only. Routing uses priority.",
           inputPrice: "Optional. Leave empty to use the global default.",
@@ -310,11 +317,11 @@ const messages = {
     providers: {
       title: "优先级路由控制",
       intro:
-        "查看提供商状态、调整优先级并跟踪用量成本。余额仅作参考。",
+        "查看提供商状态、调整优先级并跟踪用量成本。余额仅作参考，Codex 默认保持透传。",
       add: "新增提供商",
       roster: "提供商列表",
       rosterHint: "变更将立即影响路由决策。",
-      rosterNote: "路由仅看优先级，余额仅作参考。",
+      rosterNote: "路由仅看优先级，余额仅作参考。Codex 默认透传。",
       refresh: "刷新列表",
       testModel: {
         label: "测试模型",
@@ -353,6 +360,10 @@ const messages = {
       status: {
         active: "启用",
         paused: "暂停",
+      },
+      codex: {
+        passthrough: "Codex 透传",
+        transform: "Codex 转换",
       },
       action: {
         edit: "编辑",
@@ -404,6 +415,7 @@ const messages = {
         apiMode: "API 模式",
         baseUrl: "基础 URL",
         apiKey: "API key",
+        codexTransform: "Codex 转换",
         balance: "余额",
         inputPrice: "输入 $/1M",
         outputPrice: "输出 $/1M",
@@ -416,6 +428,8 @@ const messages = {
           baseUrl:
             "提供商接口根地址（new-api 等 OpenAI 兼容服务请使用 https://host/v1）。",
           apiKey: "用于上游鉴权的密钥。",
+          codexTransform:
+            "关闭时 /codex/responses 会保持原样透传；仅在需要预留的 Codex 转换链路时才开启。",
           balanceCreate: "仅作参考，路由以优先级为准。",
           balanceEdit: "仅作参考，路由以优先级为准。",
           inputPrice: "可选。留空则使用全局默认价格。",

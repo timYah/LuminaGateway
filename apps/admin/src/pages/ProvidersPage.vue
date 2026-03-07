@@ -13,6 +13,7 @@ type Provider = {
   baseUrl: string;
   apiKey: string;
   apiMode: "responses" | "chat";
+  codexTransform: boolean;
   balance: number;
   inputPrice: number | null;
   outputPrice: number | null;
@@ -140,6 +141,7 @@ const createForm = reactive({
   baseUrl: "",
   apiKey: "",
   apiMode: "responses" as Provider["apiMode"],
+  codexTransform: false,
   balance: "",
   inputPrice: "",
   outputPrice: "",
@@ -153,6 +155,7 @@ const editForm = reactive({
   baseUrl: "",
   apiKey: "",
   apiMode: "responses" as Provider["apiMode"],
+  codexTransform: false,
   balance: "",
   inputPrice: "",
   outputPrice: "",
@@ -166,6 +169,7 @@ const resetCreate = () => {
   createForm.baseUrl = "";
   createForm.apiKey = "";
   createForm.apiMode = "responses";
+  createForm.codexTransform = false;
   createForm.balance = "";
   createForm.inputPrice = "";
   createForm.outputPrice = "";
@@ -180,6 +184,7 @@ const openEdit = (provider: Provider) => {
   editForm.baseUrl = provider.baseUrl;
   editForm.apiKey = provider.apiKey;
   editForm.apiMode = provider.apiMode ?? "responses";
+  editForm.codexTransform = provider.codexTransform ?? false;
   editForm.balance = Number.isFinite(provider.balance)
     ? provider.balance.toString()
     : "";
@@ -276,6 +281,7 @@ const submitCreate = async () => {
         baseUrl: createForm.baseUrl.trim(),
         apiKey: createForm.apiKey.trim(),
         apiMode,
+        codexTransform: createForm.codexTransform,
         balance: normalizeOptionalNumber(createForm.balance),
         inputPrice: normalizeNullableNumber(createForm.inputPrice),
         outputPrice: normalizeNullableNumber(createForm.outputPrice),
@@ -309,6 +315,7 @@ const submitEdit = async () => {
         baseUrl: editForm.baseUrl.trim(),
         apiKey: editForm.apiKey.trim(),
         apiMode,
+        codexTransform: editForm.codexTransform,
         balance: normalizeOptionalNumber(editForm.balance),
         inputPrice: normalizeNullableNumber(editForm.inputPrice),
         outputPrice: normalizeNullableNumber(editForm.outputPrice),
@@ -457,6 +464,16 @@ const healthTone = (provider: Provider) => {
   if (status === "unhealthy") return "bg-rose-100 text-rose-700";
   return "bg-slate-200 text-slate-600";
 };
+
+const codexModeLabel = (provider: Provider) =>
+  provider.codexTransform
+    ? t("providers.codex.transform")
+    : t("providers.codex.passthrough");
+
+const codexModeTone = (provider: Provider) =>
+  provider.codexTransform
+    ? "bg-amber-100 text-amber-700"
+    : "bg-sky-100 text-sky-700";
 
 const refreshAll = async () => {
   await Promise.all([refresh(), refreshFailureStats()]);
@@ -626,7 +643,15 @@ const refreshAll = async () => {
                   <div class="mt-1 max-w-[30rem] break-all text-xs text-slate-500">
                     {{ provider.baseUrl }}
                   </div>
+                  <div class="mt-2 hidden flex-wrap gap-1.5 md:flex">
+                    <span class="summary-pill" :class="codexModeTone(provider)">
+                      <span class="summary-pill__label">{{ codexModeLabel(provider) }}</span>
+                    </span>
+                  </div>
                   <div class="mt-2 flex flex-wrap gap-1.5 md:hidden">
+                    <span class="summary-pill" :class="codexModeTone(provider)">
+                      <span class="summary-pill__label">{{ codexModeLabel(provider) }}</span>
+                    </span>
                     <span class="summary-pill">
                       <span class="summary-pill__label">{{ provider.protocol }}</span>
                     </span>
@@ -765,6 +790,12 @@ const refreshAll = async () => {
                 :items="apiModeOptions"
                 class="w-full"
               />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.form.codexTransform')"
+              :help="$t('providers.form.help.codexTransform')"
+            >
+              <USwitch v-model="createForm.codexTransform" />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.baseUrl')"
@@ -907,6 +938,12 @@ const refreshAll = async () => {
                 :items="apiModeOptions"
                 class="w-full"
               />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.form.codexTransform')"
+              :help="$t('providers.form.help.codexTransform')"
+            >
+              <USwitch v-model="editForm.codexTransform" />
             </UFormGroup>
             <UFormGroup
               :label="$t('providers.form.baseUrl')"
