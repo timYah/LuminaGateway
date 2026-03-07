@@ -14,6 +14,28 @@ type ProtocolRouteOptions<T extends z.ZodTypeAny> = {
   clientFormat: ClientFormat;
 };
 
+function parseEnvList(value: string | undefined) {
+  if (!value) return null;
+  const entries = value
+    .split(/[,\n]/)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  if (entries.length === 0) return null;
+  return new Set(entries);
+}
+
+function isModelAllowed(model: string) {
+  const allowlist = parseEnvList(process.env.MODEL_ALLOWLIST);
+  if (allowlist && !allowlist.has(model)) {
+    return false;
+  }
+  const blocklist = parseEnvList(process.env.MODEL_BLOCKLIST);
+  if (blocklist && blocklist.has(model)) {
+    return false;
+  }
+  return true;
+}
+
 export function createProtocolRoute<T extends z.ZodTypeAny>(
   options: ProtocolRouteOptions<T>
 ) {
@@ -24,6 +46,12 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
     const parsed = options.schema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: { message: "Invalid request" } }, 400);
+    }
+
+    const modelValue = (parsed.data as { model?: unknown }).model;
+    const modelSlug = typeof modelValue === "string" ? modelValue.trim() : "";
+    if (modelSlug && !isModelAllowed(modelSlug)) {
+      return c.json({ error: { message: "Model not allowed" } }, 403);
     }
 
     if ((parsed.data as { stream?: boolean }).stream) {

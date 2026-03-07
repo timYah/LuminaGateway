@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../services/gatewayService", () => ({
   handleRequest: vi.fn().mockImplementation(
     (_params: unknown, clientFormat: "openai" | "openai-responses" | "anthropic") => {
@@ -33,6 +33,11 @@ const app = createApp();
 const authHeader = { Authorization: "Bearer test-key" };
 
 describe("route stubs", () => {
+  afterEach(() => {
+    delete process.env.MODEL_ALLOWLIST;
+    delete process.env.MODEL_BLOCKLIST;
+  });
+
   it("rejects unauthenticated OpenAI request", async () => {
     const res = await app.request("/v1/chat/completions", {
       method: "POST",
@@ -57,6 +62,32 @@ describe("route stubs", () => {
       body: JSON.stringify({ model: "gpt-5.2" }),
     });
     expect(res.status).toBe(400);
+  });
+
+  it("blocks models outside the allowlist", async () => {
+    process.env.MODEL_ALLOWLIST = "gpt-4o";
+    const res = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-5.2",
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("blocks models in the blocklist", async () => {
+    process.env.MODEL_BLOCKLIST = "gpt-4o";
+    const res = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+    expect(res.status).toBe(403);
   });
 
   it("returns OpenAI error when no providers are available", async () => {

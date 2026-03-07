@@ -648,6 +648,20 @@
 - [x] **T-62.1** 为 `/codex/responses` 增加 `CODEX_UPSTREAM_TIMEOUT_MS` 超时控制，超时视为可重试错误并触发 failover，补充自动化测试
 - [x] **T-62.2** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
 
+## Phase 63 — Competitor Parity Enhancements
+
+- [x] **T-63.1** 增加模型 allowlist / blocklist（`MODEL_ALLOWLIST`、`MODEL_BLOCKLIST`），并补充自动化测试
+- [ ] **T-63.2** 支持多个 API key（`GATEWAY_API_KEYS`），并补充自动化测试
+- [ ] **T-63.3** 增加 API key 级别的限流（`RATE_LIMIT_RPM` / `RATE_LIMIT_BURST` + 可选覆盖），并补充自动化测试
+- [ ] **T-63.4** 支持默认请求参数注入（`DEFAULT_REQUEST_PARAMS`），并补充自动化测试
+- [ ] **T-63.5** 增加 `ROUTING_STRATEGY=round_robin` 轮询路由，并补充自动化测试
+- [ ] **T-63.6** 增加 `ROUTING_STRATEGY=weighted` 权重路由（`PROVIDER_WEIGHTS`），并补充自动化测试
+- [ ] **T-63.7** 增加 provider 并发上限（`PROVIDER_MAX_INFLIGHT` + 可选覆盖），并补充自动化测试
+- [ ] **T-63.8** 增加非流式响应缓存（`CACHE_TTL_MS` + 请求头覆盖），并补充自动化测试
+- [ ] **T-63.9** 增加 `/metrics` 观测端点（Prometheus 文本格式），并补充自动化测试
+- [ ] **T-63.10** 增加 upstream 重试退避（`UPSTREAM_RETRY_ATTEMPTS` / `UPSTREAM_RETRY_BASE_MS`），并补充自动化测试
+- [ ] **T-63.11** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -709,4 +723,5 @@
 | Phase 60 | 4 | Codex Passthrough Routing |
 | Phase 61 | 2 | Circuit Breaker Ops |
 | Phase 62 | 2 | Codex Upstream Timeout |
+| Phase 63 | 11 | Competitor Parity Enhancements |
 | **合计** | **273** | |
