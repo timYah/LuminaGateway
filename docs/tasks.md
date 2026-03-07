@@ -450,6 +450,7 @@
 
 ## Phase 49 — Gateway Stability & Health
 
+- [x] **T-49.0** 写明 Phase 49-50 执行计划（`docs/plans.md`）
 - [x] **T-49.1** 新增 Provider 健康检查机制（按协议探活并记录最近状态）
 - [ ] **T-49.2** 在 Provider 列表中维护健康状态字段（如 healthy/unhealthy/unknown）并随探活更新
 - [ ] **T-49.3** 失败原因分类统计：按 `quota / rate_limit / server / auth / model_not_found / network / unknown` 聚合

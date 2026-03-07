@@ -522,6 +522,51 @@ npm run dev
 
 ---
 
+## Phase 49–50 execution plan
+
+The next execution window focuses on gateway stability and admin observability. Phase 49 hardens upstream health signals and failure visibility. Phase 50 adds operational dashboards and config portability for daily admin workflows.
+
+### Phase 49 — Gateway Stability & Health
+
+This phase adds protocol-aware health checks and explicit failure classification to make routing decisions observable. It records provider health states and request-level outcomes for later analysis. It also exposes health and failure breakdowns in the admin UI.
+
+**Scope:**
+- Add provider health checks and persist `healthy`, `unhealthy`, or `unknown` on each provider.
+- Aggregate failure reasons by `quota`, `rate_limit`, `server`, `auth`, `model_not_found`, `network`, and `unknown`.
+- Record request logs with provider, model, latency, error type, and success status.
+
+**Acceptance criteria:**
+- Health checks update provider state within one polling cycle.
+- Failure aggregates match the gateway error classification outputs.
+- Request logs capture latency and result for every gateway call.
+- Admin UI surfaces provider health and failure breakdowns.
+
+**Verification:**
+- Gateway: run `npm run test -- gatewayService` and `npm run test -- upstreamService`.
+- Gateway: run `npm run lint && npm run typecheck && npm run test`.
+- Admin: run `npm run dev` and use the agent-browser skill to validate health status and failure classification in the UI.
+
+### Phase 50 — Admin Observability & Ops
+
+This phase adds usage dashboards, request log views, and configuration export/import to support routine operations. It exposes usage trends and filtering so operators can identify provider issues quickly. It also standardizes portability for provider and model configuration.
+
+**Scope:**
+- Add usage trend and provider/model distribution endpoints.
+- Add paginated request log queries with filters for provider, model, time, and error type.
+- Add config export/import for providers, models, and key settings.
+
+**Acceptance criteria:**
+- Usage trends and distributions render from the new API endpoints.
+- Request logs support pagination and filtering without errors.
+- Export and import round-trip providers and models without data loss.
+
+**Verification:**
+- Gateway: add API tests for stats and log queries, then run `npm run test`.
+- Gateway: run `npm run lint && npm run typecheck && npm run test`.
+- Admin: run `npm run dev` and use the agent-browser skill to validate the dashboard and logs view.
+
+---
+
 ## Verification checklist (kept up to date)
 
 - [x] `npm install` succeeds
