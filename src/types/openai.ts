@@ -1,5 +1,5 @@
 export type OpenAIRole = "system" | "user" | "assistant" | "tool";
-export type OpenAIResponsesMessageRole = Exclude<OpenAIRole, "tool">;
+export type OpenAIResponsesMessageRole = "system" | "developer" | "user" | "assistant";
 
 export interface OpenAIChatMessage {
   role: OpenAIRole;

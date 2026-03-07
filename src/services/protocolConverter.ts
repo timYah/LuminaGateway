@@ -20,6 +20,12 @@ export type UniversalResponse = {
   usage?: UpstreamUsage | null;
 };
 
+type UniversalMessage = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  tool_call_id?: string;
+};
+
 function createId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -40,12 +46,16 @@ function normalizeResponsesText(
     .join("\n");
 }
 
+function mergeSystemInstructions(...segments: Array<string | undefined>) {
+  const normalized = segments
+    .map((segment) => segment?.trim())
+    .filter((segment): segment is string => Boolean(segment));
+  return normalized.length > 0 ? normalized.join("\n\n") : undefined;
+}
+
 function convertResponsesInputItemsToMessages(input: OpenAIResponsesInputItem[]) {
-  const messages: Array<{
-    role: "system" | "user" | "assistant" | "tool";
-    content: string;
-    tool_call_id?: string;
-  }> = [];
+  const messages: UniversalMessage[] = [];
+  const systemSegments: string[] = [];
 
   for (const item of input) {
     if (item.type === "function_call_output") {
@@ -57,13 +67,24 @@ function convertResponsesInputItemsToMessages(input: OpenAIResponsesInputItem[])
       continue;
     }
 
+    const content = normalizeResponsesText(item.content);
+    if (item.role === "system" || item.role === "developer") {
+      if (content) {
+        systemSegments.push(content);
+      }
+      continue;
+    }
+
     messages.push({
       role: item.role,
-      content: normalizeResponsesText(item.content),
+      content,
     });
   }
 
-  return messages;
+  return {
+    messages,
+    system: mergeSystemInstructions(...systemSegments),
+  };
 }
 
 function convertUsageToOpenAIUsage(usage: UpstreamUsage | null | undefined) {
@@ -108,7 +129,6 @@ export function convertOpenAIResponsesToUniversal(
 ): UniversalRequest {
   const baseRequest = {
     model: request.model,
-    system: request.instructions,
     temperature: request.temperature,
     maxOutputTokens: request.max_output_tokens,
     tools: request.tools as unknown as UpstreamRequestParams["tools"],
@@ -118,15 +138,17 @@ export function convertOpenAIResponsesToUniversal(
   if (typeof request.input === "string") {
     return {
       ...baseRequest,
+      system: request.instructions,
       prompt: request.input,
     };
   }
 
+  const converted = convertResponsesInputItemsToMessages(request.input);
+
   return {
     ...baseRequest,
-    messages: convertResponsesInputItemsToMessages(
-      request.input
-    ) as unknown as UpstreamRequestParams["messages"],
+    system: mergeSystemInstructions(request.instructions, converted.system),
+    messages: converted.messages as unknown as UpstreamRequestParams["messages"],
   };
 }
 

@@ -34,7 +34,7 @@ const openaiResponsesTextPartSchema = z.object({
 
 const openaiResponsesMessageSchema = z.object({
   type: z.literal("message").optional(),
-  role: z.enum(["system", "user", "assistant"]),
+  role: z.enum(["system", "developer", "user", "assistant"]),
   content: z.union([z.string(), z.array(openaiResponsesTextPartSchema)]),
   id: z.string().optional(),
   phase: z.enum(["commentary", "final_answer"]).nullable().optional(),

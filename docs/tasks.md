@@ -617,6 +617,14 @@
 
 ---
 
+## Phase 58 — Codex CLI Compatibility
+
+- [x] **T-58.1** 修复 `/v1/responses` 对 Codex CLI `developer` role 输入的兼容性，将 `developer` / `system` 消息合并为上游 system prompt，避免被校验阶段拒绝
+- [ ] **T-58.2** 补充 Codex CLI 兼容性的自动化测试与文档，覆盖 Responses validator、协议转换与路由回归
+- [ ] **T-58.3** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并用真实 `codex exec` 指向本地 gateway 验证请求可成功完成
+
+---
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -673,4 +681,5 @@
 | Phase 55 | 17 | Docker Deployment |
 | Phase 56 | 4 | OpenAI Responses API |
 | Phase 57 | 2 | Provider Probe Error Classification |
-| **合计** | **262** | |
+| Phase 58 | 3 | Codex CLI Compatibility |
+| **合计** | **265** | |
