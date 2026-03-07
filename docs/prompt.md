@@ -92,7 +92,7 @@ A repo that contains:
 
 ```
 DATABASE_TYPE=sqlite          # sqlite | postgres
-DATABASE_URL=file:./lumina.db # or postgres://...
+DATABASE_URL=file:./.runtime/lumina.db # or postgres://...
 GATEWAY_API_KEY=sk-lumina-xxx # bearer token for gateway auth
 DEFAULT_INPUT_PRICE=0.0       # optional, USD per 1M input tokens
 DEFAULT_OUTPUT_PRICE=0.0      # optional, USD per 1M output tokens

@@ -29,7 +29,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 | Variable | Default | Description |
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
-| `DATABASE_URL` | `file:./lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
+| `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
 | `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
 | `PORT` | `3000` | Server listen port. |
 | `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
@@ -278,10 +278,10 @@ drizzle/                     # generated migration files
 ## Troubleshooting
 
 - **Port 3000 already in use**: `lsof -i :3000 -t | xargs kill`
-- **Database locked**: ensure no other process holds `lumina.db`; SQLite uses WAL mode for concurrency
+- **Database locked**: ensure no other process holds `.runtime/lumina.db`; SQLite uses WAL mode for concurrency
 - **No provider available**: check `GET /admin/providers` for active status, priorities, and circuit breaker state
 - **401 on requests**: verify `GATEWAY_API_KEY` matches the Bearer token
-- **Migration fails**: delete `lumina.db`, then run `npm run db:migrate && npm run db:seed`
+- **Migration fails**: delete `.runtime/lumina.db` (and its `-shm` / `-wal` companions), then run `npm run db:migrate && npm run db:seed`
 
 ## Known issues / follow-ups
 
