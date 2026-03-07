@@ -4,6 +4,7 @@ import {
   callUpstreamNonStreaming,
   callUpstreamStreaming,
   classifyUpstreamError,
+  getUpstreamErrorMessage,
 } from "../upstreamService";
 
 vi.mock("ai", async () => {
@@ -125,10 +126,13 @@ describe("upstreamService", () => {
       statusCode: 503,
     });
     const modelMissing = new APICallError({
-      message: "Model not found",
+      message: "Bad Request",
       url: "http://example.com",
       requestBodyValues: {},
-      statusCode: 404,
+      statusCode: 400,
+    });
+    Object.assign(modelMissing, {
+      responseBody: JSON.stringify({ error: "端点/codex未配置模型gpt-4o" }),
     });
     const network = new Error("fetch failed");
     (network as { code?: string }).code = "ECONNREFUSED";
@@ -140,6 +144,21 @@ describe("upstreamService", () => {
     expect(classifyUpstreamError(modelMissing)).toBe("model_not_found");
     expect(classifyUpstreamError(network)).toBe("network");
     expect(classifyUpstreamError(new Error("other"))).toBe("unknown");
+  });
+
+  it("prefers structured upstream error messages", () => {
+    const modelMissing = new APICallError({
+      message: "Bad Request",
+      url: "http://example.com",
+      requestBodyValues: {},
+      statusCode: 400,
+    });
+    Object.assign(modelMissing, {
+      responseBody: JSON.stringify({ error: "端点/codex未配置模型gpt-4o" }),
+    });
+
+    expect(getUpstreamErrorMessage(modelMissing)).toBe("端点/codex未配置模型gpt-4o");
+    expect(getUpstreamErrorMessage(new Error("plain message"))).toBe("plain message");
   });
 
   it("callUpstreamStreaming keeps usagePromise awaitable when the stream reports an error", async () => {

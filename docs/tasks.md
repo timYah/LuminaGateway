@@ -665,4 +665,5 @@
 | Phase 54 | 3 | Provider Probe Consistency |
 | Phase 55 | 17 | Docker Deployment |
 | Phase 56 | 4 | OpenAI Responses API |
-| **合计** | **260** | |
+| Phase 57 | 2 | Provider Probe Error Classification |
+| **合计** | **262** | |

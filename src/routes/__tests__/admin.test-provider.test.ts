@@ -115,7 +115,7 @@ describe("POST /admin/providers/:id/test", () => {
     expect(body.message).toBe("upstream failed");
   });
 
-  it("returns model_not_found for new-api providers when upstream reports missing model", async () => {
+  it("returns model_not_found for new-api providers when upstream reports an unsupported model", async () => {
     const provider = await createProvider({
       name: "Missing Model Provider",
       protocol: "new-api",
@@ -126,14 +126,16 @@ describe("POST /admin/providers/:id/test", () => {
       priority: 1,
     });
 
-    mockedCall.mockRejectedValue(
-      new APICallError({
-        message: "Model not found",
-        url: "https://api.example.com",
-        requestBodyValues: {},
-        statusCode: 404,
-      })
-    );
+    const error = new APICallError({
+      message: "Bad Request",
+      url: "https://api.example.com",
+      requestBodyValues: {},
+      statusCode: 400,
+    });
+    Object.assign(error, {
+      responseBody: JSON.stringify({ error: "端点/codex未配置模型gpt-4o" }),
+    });
+    mockedCall.mockRejectedValue(error);
 
     const res = await app.request(`/admin/providers/${provider!.id}/test`, {
       method: "POST",
@@ -144,6 +146,7 @@ describe("POST /admin/providers/:id/test", () => {
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(body.errorType).toBe("model_not_found");
+    expect(body.message).toBe("端点/codex未配置模型gpt-4o");
   });
 
   it("returns 404 for missing provider", async () => {

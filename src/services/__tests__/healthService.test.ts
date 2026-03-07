@@ -6,10 +6,12 @@ import {
 
 const callUpstreamNonStreaming = vi.fn();
 const classifyUpstreamError = vi.fn();
+const getUpstreamErrorMessage = vi.fn();
 
 vi.mock("../upstreamService", () => ({
   callUpstreamNonStreaming: (...args: unknown[]) => callUpstreamNonStreaming(...args),
   classifyUpstreamError: (...args: unknown[]) => classifyUpstreamError(...args),
+  getUpstreamErrorMessage: (...args: unknown[]) => getUpstreamErrorMessage(...args),
 }));
 
 const updateProviderHealth = vi.fn();
@@ -42,6 +44,7 @@ describe("healthService", () => {
   beforeEach(() => {
     callUpstreamNonStreaming.mockReset();
     classifyUpstreamError.mockReset();
+    getUpstreamErrorMessage.mockReset();
     updateProviderHealth.mockReset();
     getAllProviders.mockReset();
   });
@@ -58,11 +61,13 @@ describe("healthService", () => {
   it("marks provider unhealthy when probe fails", async () => {
     callUpstreamNonStreaming.mockRejectedValue(new Error("boom"));
     classifyUpstreamError.mockReturnValue("server");
+    getUpstreamErrorMessage.mockReturnValue("downstream failed");
 
     const result = await checkProviderHealth(provider, "gpt-4o");
 
     expect(result.status).toBe("unhealthy");
     expect(result.errorType).toBe("server");
+    expect(result.message).toBe("downstream failed");
     expect(updateProviderHealth).toHaveBeenCalledWith(provider.id, "unhealthy");
   });
 

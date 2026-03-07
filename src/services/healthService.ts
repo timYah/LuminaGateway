@@ -3,6 +3,7 @@ import { getAllProviders, updateProviderHealth } from "./providerService";
 import {
   callUpstreamNonStreaming,
   classifyUpstreamError,
+  getUpstreamErrorMessage,
   type UpstreamErrorType,
   type UpstreamRequestParams,
 } from "./upstreamService";
@@ -46,7 +47,7 @@ export async function checkProviderHealth(
       status: "unhealthy",
       latencyMs,
       errorType,
-      message: error instanceof Error ? error.message : "Unknown error",
+      message: getUpstreamErrorMessage(error),
     };
   }
 }

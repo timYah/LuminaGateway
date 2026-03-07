@@ -13,6 +13,7 @@ import {
 import {
   callUpstreamNonStreaming,
   classifyUpstreamError,
+  getUpstreamErrorMessage,
   type UpstreamRequestParams,
 } from "../services/upstreamService";
 import { runProvidersHealthCheck } from "../services/healthService";
@@ -113,7 +114,7 @@ adminRoutes.post("/admin/providers/:id/test", async (c) => {
     return c.json({
       ok: false,
       errorType,
-      message: err instanceof Error ? err.message : "Unknown error",
+      message: getUpstreamErrorMessage(err),
     });
   }
 });

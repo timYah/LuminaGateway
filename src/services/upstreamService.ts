@@ -10,6 +10,10 @@ export type UpstreamRequestParams = Omit<
 
 type GenerateTextResult = Awaited<ReturnType<typeof generateText>>;
 type StreamTextResult = Awaited<ReturnType<typeof streamText>>;
+type ApiCallErrorLike = APICallError & {
+  responseBody?: string;
+  data?: unknown;
+};
 
 export type UpstreamStreamingResponse = {
   stream: StreamTextResult["fullStream"];
@@ -29,6 +33,22 @@ export type UpstreamNonStreamingResponse = {
 type ResolvedModel = {
   languageModel: Parameters<typeof generateText>[0]["model"];
 };
+
+const MODEL_NOT_FOUND_PATTERNS = [
+  "model not found",
+  "does not exist",
+  "unknown model",
+  "model unavailable",
+  "not supported",
+  "unsupported model",
+  "invalid model",
+  "unrecognized model",
+  "未配置模型",
+  "模型未配置",
+  "模型不存在",
+  "模型不可用",
+  "不支持模型",
+];
 
 function resolveLanguageModel(provider: Provider, modelSlug: string): ResolvedModel {
   const aiProvider = createAIProvider(provider);
@@ -96,6 +116,73 @@ function unwrapStreamError(error: unknown) {
   return error;
 }
 
+function parseJsonText(value: string) {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+}
+
+function collectErrorTextFragments(value: unknown, depth = 0): string[] {
+  if (depth > 3 || value == null) return [];
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectErrorTextFragments(item, depth + 1));
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const priorityKeys = ["error", "message", "detail", "details", "msg", "type"];
+    const seen = new Set<string>();
+    const fragments: string[] = [];
+
+    for (const key of priorityKeys) {
+      if (key in record) {
+        seen.add(key);
+        fragments.push(...collectErrorTextFragments(record[key], depth + 1));
+      }
+    }
+
+    for (const [key, item] of Object.entries(record)) {
+      if (seen.has(key)) continue;
+      fragments.push(...collectErrorTextFragments(item, depth + 1));
+    }
+
+    return fragments;
+  }
+  return [];
+}
+
+function collectApiCallErrorText(error: ApiCallErrorLike) {
+  const fragments = new Set<string>();
+  const add = (value: unknown) => {
+    for (const fragment of collectErrorTextFragments(value)) {
+      fragments.add(fragment);
+    }
+  };
+
+  add(error.data);
+  if (typeof error.responseBody === "string" && error.responseBody.trim()) {
+    add(parseJsonText(error.responseBody));
+  }
+
+  return [...fragments];
+}
+
+export function getUpstreamErrorMessage(error: unknown): string {
+  if (APICallError.isInstance(error)) {
+    const apiError = error as ApiCallErrorLike;
+    const detailedMessage = collectApiCallErrorText(apiError)[0];
+    if (detailedMessage) return detailedMessage;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return "Unknown error";
+}
 
 export async function callUpstreamNonStreaming(
   provider: Provider,
@@ -207,15 +294,15 @@ export function isNetworkError(error: unknown): boolean {
 export function classifyUpstreamError(error: unknown): UpstreamErrorType {
   if (isNetworkError(error)) return "network";
   if (APICallError.isInstance(error)) {
-    const status = error.statusCode;
-    const message = error.message?.toLowerCase() ?? "";
+    const apiError = error as ApiCallErrorLike;
+    const status = apiError.statusCode;
+    const combinedText = [apiError.message, ...collectApiCallErrorText(apiError)]
+      .join(" ")
+      .toLowerCase();
     const modelMissing =
       (status === 400 || status === 404) &&
-      message.includes("model") &&
-      (message.includes("not found") ||
-        message.includes("does not exist") ||
-        message.includes("unknown") ||
-        message.includes("not supported"));
+      MODEL_NOT_FOUND_PATTERNS.some((pattern) => combinedText.includes(pattern));
+
     if (modelMissing) return "model_not_found";
     if (status === 402) return "quota";
     if (status === 429) return "rate_limit";
