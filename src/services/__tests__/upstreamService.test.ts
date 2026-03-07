@@ -158,7 +158,9 @@ describe("upstreamService", () => {
     })();
 
     streamTextMock.mockImplementation((options) => {
-      options.onError?.(expectedError);
+      options.onError?.({ error: expectedError } as Parameters<
+        NonNullable<typeof options.onError>
+      >[0]);
       return { fullStream: fakeStream } as unknown as StreamTextResult;
     });
 
