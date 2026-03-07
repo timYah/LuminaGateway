@@ -34,7 +34,7 @@ if (target === 'gateway') {
   args = ['watch', 'src/index.ts'];
 } else if (target === 'admin') {
   command = platformCommand('npm');
-  args = ['--prefix', 'apps/admin', 'run', 'dev'];
+  args = ['run', 'dev', '--workspace', 'lumina-gateway-admin'];
   if (requestedHost) {
     args.push('--', '--host', requestedHost);
   }

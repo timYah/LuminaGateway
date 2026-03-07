@@ -26,15 +26,14 @@ Run migrations before starting the gateway. Seed data is optional and intended f
 
 ```bash [Terminal]
 npm install
-# root install also installs apps/admin dependencies
-# admin install resolves platform-specific optional modules for the current machine
+# root install uses npm workspaces to install both the gateway and apps/admin dependencies
 npm run db:migrate
 npm run db:seed
 ```
 
 ## Run the stack
 
-Use `npm run dev` for local development to start both the gateway and the admin dashboard together. In production, you can run the gateway directly or ship a single Docker image that also serves the built admin dashboard. The Docker build compiles both the gateway and the admin UI before producing the runtime image.
+Use `npm run dev` for local development to start both the gateway and the admin dashboard together. The repository root is the workspace root, so a single `npm install` prepares both apps. In production, you can run the gateway directly or ship a single Docker image that also serves the built admin dashboard. The Docker build compiles both the gateway and the admin UI before producing the runtime image.
 
 ```bash [Terminal]
 # Development (gateway + admin)
@@ -78,12 +77,11 @@ npm run build:admin
 
 ## Admin dashboard
 
-The admin dashboard lives in `apps/admin`. It is a Vue + Nuxt UI app powered by Vite, connects to the gateway through the `/admin/*` APIs, and stores the API key locally in the browser. In the Docker image, the built dashboard is served directly by the gateway on `/`, `/providers`, and `/usage`.
+The admin dashboard lives in `apps/admin`. It is a Vue + Nuxt UI app powered by Vite, connects to the gateway through the `/admin/*` APIs, and in the Docker image is served directly by the gateway on `/`, `/providers`, and `/usage`. Start it from the repository root so npm resolves the workspace correctly.
 
-```bash [Terminal]
-cd apps/admin
+```bash
 npm install
-npm run dev
+npm run dev:admin
 ```
 
 Set `VITE_API_BASE_URL` to point to a non-default gateway URL. If the dashboard is hosted on a different origin, ensure the gateway allows CORS or place both behind the same reverse proxy.

@@ -34,7 +34,7 @@ Alternatively, export `GATEWAY_API_KEY` in your shell instead of using `.env`.
 curl http://localhost:3000/health
 ```
 
-`npm run dev` starts both the gateway and the admin dashboard. Use `npm run dev:gateway` or `npm run dev:admin` to start them separately.
+`npm run dev` starts both the gateway and the admin dashboard. The root `npm install` uses npm workspaces to prepare the gateway and `apps/admin` together. Use `npm run dev:gateway` or `npm run dev:admin` to start them separately.
 
 To expose the dev servers on all interfaces, set `HOST=0.0.0.0` in `.env` or pass a host through the npm scripts:
 
@@ -59,12 +59,11 @@ When adding a new-api provider, set `protocol` to `new-api` and use the OpenAI-c
 
 ## Admin dashboard
 
-The admin dashboard is a standalone Vue + Nuxt UI app powered by Vite. It provides provider management and usage querying in a web UI.
+The admin dashboard is a standalone Vue + Nuxt UI app powered by Vite. It provides provider management and usage querying in a web UI. Install dependencies once from the repository root, then start the admin workspace from the root as well.
 
-```bash [Terminal]
-cd apps/admin
+```bash
 npm install
-npm run dev
+npm run dev:admin
 ```
 
 The dashboard will run on `http://localhost:3001` and connect to the gateway at `http://localhost:3000` by default. Set `VITE_API_BASE_URL` to point at a different gateway URL.
@@ -80,7 +79,6 @@ See `docs/deployment.md` for deployment steps, environment variables, Docker usa
 - `npm run build:gateway` — compile the gateway into `dist/`
 - `npm run build:admin` — build the admin UI bundle
 - `npm run docker:build` — build the local Docker image (`lumina-gateway:local`)
-- `npm run install:admin` — install admin dependencies explicitly when needed
 - `npm run lint` — run ESLint
 - `npm run typecheck` — run `tsc` without emitting
 - `npm run test` — run Vitest

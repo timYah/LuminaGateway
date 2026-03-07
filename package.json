@@ -12,10 +12,8 @@
     "dev:admin": "node scripts/run-dev.mjs admin",
     "build": "npm run build:gateway",
     "build:gateway": "tsc -p tsconfig.build.json",
-    "build:admin": "npm --prefix apps/admin run build",
+    "build:admin": "npm run build --workspace lumina-gateway-admin",
     "docker:build": "docker build -t lumina-gateway:local .",
-    "install:admin": "npm --prefix apps/admin install --include=optional --package-lock=false",
-    "postinstall": "node scripts/postinstall.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json",
     "db:generate": "drizzle-kit generate",
@@ -53,5 +51,9 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
-  }
+  },
+  "private": true,
+  "workspaces": [
+    "apps/admin"
+  ]
 }
