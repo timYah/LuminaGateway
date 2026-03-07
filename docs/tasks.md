@@ -464,7 +464,7 @@
 ## Phase 50 — Admin Observability & Ops
 
 - [x] **T-50.1** Usage 仪表盘：新增趋势图与模型/Provider 分布统计接口
-- [ ] **T-50.2** 请求日志视图：新增分页查询与筛选条件（provider/model/time/errorType）
+- [x] **T-50.2** 请求日志视图：新增分页查询与筛选条件（provider/model/time/errorType）
 - [ ] **T-50.3** 配置导出与导入：Providers + Models + 关键配置一键导出/导入
 - [ ] **T-50.4** ✅ **验证**：编写 API 测试覆盖统计接口与日志查询
 - [ ] **T-50.5** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`

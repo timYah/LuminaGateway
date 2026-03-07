@@ -51,6 +51,22 @@ type UsageStatsResponse = {
   byModel: UsageModelStat[];
 };
 
+type RequestLogRow = {
+  id: number;
+  providerId: number;
+  modelSlug: string;
+  result: "success" | "failure";
+  errorType?: string | null;
+  latencyMs?: number | null;
+  createdAt: string;
+};
+
+type RequestLogResponse = {
+  requests: RequestLogRow[];
+  limit: number;
+  offset: number;
+};
+
 const { t } = useI18n();
 const providers = ref<Provider[]>([]);
 const providerOptions = computed(() => [
@@ -66,6 +82,16 @@ const filters = reactive({
   modelSlug: "",
   startDate: "",
   endDate: "",
+  limit: "50",
+  offset: "0",
+});
+
+const requestFilters = reactive({
+  providerId: "",
+  modelSlug: "",
+  startDate: "",
+  endDate: "",
+  errorType: "",
   limit: "50",
   offset: "0",
 });
@@ -87,6 +113,21 @@ const query = computed(() => {
   return payload;
 });
 
+const requestQuery = computed(() => {
+  const payload: Record<string, string | number> = {
+    limit: normalizeNumber(requestFilters.limit, 50),
+    offset: normalizeNumber(requestFilters.offset, 0),
+  };
+  if (requestFilters.providerId) payload.providerId = requestFilters.providerId;
+  if (requestFilters.modelSlug.trim()) {
+    payload.modelSlug = requestFilters.modelSlug.trim();
+  }
+  if (requestFilters.startDate) payload.startDate = requestFilters.startDate;
+  if (requestFilters.endDate) payload.endDate = requestFilters.endDate;
+  if (requestFilters.errorType) payload.errorType = requestFilters.errorType;
+  return payload;
+});
+
 const statsQuery = computed(() => {
   const payload: Record<string, string> = {};
   if (filters.startDate) payload.startDate = filters.startDate;
@@ -102,6 +143,17 @@ const { data, pending, error, execute } = useGatewayFetch<UsageResponse>(
     watch: false,
   }
 );
+
+const {
+  data: requestData,
+  pending: requestPending,
+  error: requestError,
+  execute: executeRequests,
+} = useGatewayFetch<RequestLogResponse>("/admin/request-logs", {
+  query: requestQuery,
+  immediate: false,
+  watch: false,
+});
 
 const {
   data: statsData,
@@ -120,6 +172,11 @@ const trend = computed(() => statsData.value?.trend ?? []);
 const providerStats = computed(() => statsData.value?.byProvider ?? []);
 const modelStats = computed(() => statsData.value?.byModel ?? []);
 const { authHeader } = useApiKey();
+
+const requestRows = computed(() => requestData.value?.requests ?? []);
+const requestEmpty = computed(
+  () => !requestPending.value && requestRows.value.length === 0
+);
 
 const providerNameMap = computed(() => {
   return new Map(providers.value.map((provider) => [provider.id, provider.name]));
@@ -141,6 +198,17 @@ const ratio = (value: number, maxValue: number) => {
   return `${percent}%`;
 };
 
+const requestErrorTypeOptions = computed(() => [
+  { label: t("usage.requests.errorType.all"), value: "" },
+  { label: t("usage.requests.errorType.quota"), value: "quota" },
+  { label: t("usage.requests.errorType.rate_limit"), value: "rate_limit" },
+  { label: t("usage.requests.errorType.server"), value: "server" },
+  { label: t("usage.requests.errorType.auth"), value: "auth" },
+  { label: t("usage.requests.errorType.model_not_found"), value: "model_not_found" },
+  { label: t("usage.requests.errorType.network"), value: "network" },
+  { label: t("usage.requests.errorType.unknown"), value: "unknown" },
+]);
+
 const fetchProviders = async () => {
   try {
     const response = await gatewayFetch<{ providers: Provider[] }>(
@@ -158,6 +226,11 @@ const applyFilters = async () => {
   await executeStats();
 };
 
+const applyRequestFilters = async () => {
+  requestFilters.offset = "0";
+  await executeRequests();
+};
+
 const nextPage = async () => {
   const limit = normalizeNumber(filters.limit, 50);
   const offset = normalizeNumber(filters.offset, 0) + limit;
@@ -172,8 +245,28 @@ const prevPage = async () => {
   await execute();
 };
 
+const nextRequestPage = async () => {
+  const limit = normalizeNumber(requestFilters.limit, 50);
+  const offset = normalizeNumber(requestFilters.offset, 0) + limit;
+  requestFilters.offset = offset.toString();
+  await executeRequests();
+};
+
+const prevRequestPage = async () => {
+  const limit = normalizeNumber(requestFilters.limit, 50);
+  const offset = Math.max(0, normalizeNumber(requestFilters.offset, 0) - limit);
+  requestFilters.offset = offset.toString();
+  await executeRequests();
+};
+
 const canNext = computed(() => rows.value.length === normalizeNumber(filters.limit, 50));
 const canPrev = computed(() => normalizeNumber(filters.offset, 0) > 0);
+const requestCanNext = computed(
+  () => requestRows.value.length === normalizeNumber(requestFilters.limit, 50)
+);
+const requestCanPrev = computed(
+  () => normalizeNumber(requestFilters.offset, 0) > 0
+);
 
 const formatDate = (value: string) => {
   const parsed = new Date(value);
@@ -194,10 +287,21 @@ const formatShortDate = (value: string) => {
 };
 
 const formatCost = (value: number) => value.toFixed(4);
+const formatLatency = (value?: number | null) =>
+  value !== null && value !== undefined ? `${value}ms` : "—";
+
+const requestResultLabel = (value: RequestLogRow["result"]) =>
+  value === "success"
+    ? t("usage.requests.result.success")
+    : t("usage.requests.result.failure");
 
 const refreshAll = async () => {
   await execute();
   await executeStats();
+};
+
+const refreshRequests = async () => {
+  await executeRequests();
 };
 
 watch(
@@ -207,6 +311,7 @@ watch(
     await fetchProviders();
     await execute();
     await executeStats();
+    await executeRequests();
   },
   { immediate: true }
 );
@@ -531,6 +636,198 @@ watch(
                 </td>
                 <td class="py-3 mono-numbers text-slate-900">
                   {{ row.cost.toFixed(4) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="surface radius-panel divide-y divide-slate-200/60">
+      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
+        <div>
+          <div class="text-sm font-medium text-slate-900">
+            {{ $t("usage.requests.title") }}
+          </div>
+          <p class="text-sm text-slate-500">
+            {{ $t("usage.requests.subtitle") }}
+          </p>
+        </div>
+        <UButton class="action-press" variant="outline" @click="refreshRequests">
+          {{ $t("usage.requests.refresh") }}
+        </UButton>
+      </div>
+
+      <div class="px-6 py-5 md:px-8 md:py-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          <UFormGroup
+            :label="$t('usage.requests.form.provider')"
+            :help="$t('usage.requests.form.help.provider')"
+          >
+            <USelect v-model="requestFilters.providerId" :items="providerOptions" />
+          </UFormGroup>
+          <UFormGroup
+            :label="$t('usage.requests.form.modelSlug')"
+            :help="$t('usage.requests.form.help.modelSlug')"
+          >
+            <UInput
+              v-model="requestFilters.modelSlug"
+              :placeholder="$t('usage.requests.form.placeholder.modelSlug')"
+            />
+          </UFormGroup>
+          <UFormGroup
+            :label="$t('usage.requests.errorType.label')"
+            :help="$t('usage.requests.errorType.help')"
+          >
+            <USelect v-model="requestFilters.errorType" :items="requestErrorTypeOptions" />
+          </UFormGroup>
+          <UFormGroup
+            :label="$t('usage.requests.form.startDate')"
+            :help="$t('usage.requests.form.help.startDate')"
+          >
+            <UInput v-model="requestFilters.startDate" type="date" />
+          </UFormGroup>
+          <UFormGroup
+            :label="$t('usage.requests.form.endDate')"
+            :help="$t('usage.requests.form.help.endDate')"
+          >
+            <UInput v-model="requestFilters.endDate" type="date" />
+          </UFormGroup>
+          <UFormGroup
+            :label="$t('usage.requests.form.limit')"
+            :help="$t('usage.requests.form.help.limit')"
+          >
+            <UInput v-model="requestFilters.limit" type="number" min="1" step="1" />
+          </UFormGroup>
+          <UFormGroup
+            :label="$t('usage.requests.form.offset')"
+            :help="$t('usage.requests.form.help.offset')"
+          >
+            <UInput v-model="requestFilters.offset" type="number" min="0" step="1" />
+          </UFormGroup>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
+        <UButton class="action-press" color="primary" @click="applyRequestFilters">
+          {{ $t("usage.requests.apply") }}
+        </UButton>
+        <div class="text-xs text-slate-500">
+          {{ $t("usage.requests.hint") }}
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between px-6 py-5 md:px-8 md:py-6">
+        <div class="text-sm font-medium text-slate-900">
+          {{ $t("usage.requests.log") }}
+        </div>
+        <div class="flex items-center gap-2">
+          <UButton
+            class="action-press"
+            size="sm"
+            variant="outline"
+            :disabled="!requestCanPrev"
+            @click="prevRequestPage"
+          >
+            {{ $t("usage.requests.previous") }}
+          </UButton>
+          <UButton
+            class="action-press"
+            size="sm"
+            variant="outline"
+            :disabled="!requestCanNext"
+            @click="nextRequestPage"
+          >
+            {{ $t("usage.requests.next") }}
+          </UButton>
+        </div>
+      </div>
+
+      <div class="px-6 py-5 md:px-8 md:py-6">
+        <div v-if="requestPending" class="space-y-2">
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
+        </div>
+
+        <div
+          v-else-if="requestError"
+          class="radius-card border border-rose-200 bg-rose-50 p-4"
+        >
+          <div class="text-sm font-medium text-rose-700">
+            {{ $t("usage.requests.errorTitle") }}
+          </div>
+          <p class="text-sm text-rose-600">
+            {{ $t("usage.requests.errorHint") }}
+          </p>
+        </div>
+
+        <div
+          v-else-if="requestEmpty"
+          class="radius-card border border-slate-200/60 p-5"
+        >
+          <div class="text-sm font-medium text-slate-800">
+            {{ $t("usage.requests.emptyTitle") }}
+          </div>
+          <p class="text-sm text-slate-500 mt-2">
+            {{ $t("usage.requests.emptyHint") }}
+          </p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-[980px] w-full text-sm">
+            <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
+              <tr class="border-b border-slate-200/60">
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.requests.table.time") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.requests.table.provider") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.requests.table.model") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.requests.table.result") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.requests.table.error") }}
+                </th>
+                <th class="py-2.5 text-left font-medium">
+                  {{ $t("usage.requests.table.latency") }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(row, index) in requestRows"
+                :key="row.id"
+                class="border-b border-slate-200/50 staggered"
+                :style="{ '--index': index }"
+              >
+                <td class="py-3 text-slate-700">
+                  {{ formatDate(row.createdAt) }}
+                </td>
+                <td class="py-3 text-slate-700">
+                  {{ providerNameMap.get(row.providerId) ?? row.providerId }}
+                </td>
+                <td class="py-3 text-slate-900">{{ row.modelSlug }}</td>
+                <td class="py-3">
+                  <span
+                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
+                    :class="row.result === 'success'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-rose-100 text-rose-700'"
+                  >
+                    {{ requestResultLabel(row.result) }}
+                  </span>
+                </td>
+                <td class="py-3 text-slate-700">
+                  {{ row.errorType || "—" }}
+                </td>
+                <td class="py-3 mono-numbers text-slate-700">
+                  {{ formatLatency(row.latencyMs) }}
                 </td>
               </tr>
             </tbody>

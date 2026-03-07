@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { and, eq, gte, lte, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getSqliteClient } from "../db";
-import { usageLogs } from "../db/schema";
+import { requestLogs, usageLogs } from "../db/schema";
 import {
   createProvider,
   deleteProvider,
@@ -223,4 +223,51 @@ adminRoutes.get("/admin/usage/stats", async (c) => {
     .orderBy(desc(totalCost));
 
   return c.json({ trend, byProvider, byModel });
+});
+
+adminRoutes.get("/admin/request-logs", async (c) => {
+  const db = getSqliteClient();
+  const { providerId, modelSlug, startDate, endDate, errorType } = c.req.query();
+  const limit = Number(c.req.query("limit") ?? 50);
+  const offset = Number(c.req.query("offset") ?? 0);
+  const resolvedLimit = Number.isFinite(limit) ? limit : 50;
+  const resolvedOffset = Number.isFinite(offset) ? offset : 0;
+  const conditions = [];
+
+  if (providerId) {
+    conditions.push(eq(requestLogs.providerId, Number(providerId)));
+  }
+  if (modelSlug) {
+    conditions.push(eq(requestLogs.modelSlug, modelSlug));
+  }
+  if (errorType) {
+    conditions.push(eq(requestLogs.errorType, errorType));
+  }
+  if (startDate) {
+    const date = new Date(startDate);
+    if (!Number.isNaN(date.valueOf())) {
+      conditions.push(gte(requestLogs.createdAt, date));
+    }
+  }
+  if (endDate) {
+    const date = new Date(endDate);
+    if (!Number.isNaN(date.valueOf())) {
+      conditions.push(lte(requestLogs.createdAt, date));
+    }
+  }
+
+  const query =
+    conditions.length > 0
+      ? db.select().from(requestLogs).where(and(...conditions))
+      : db.select().from(requestLogs);
+  const rows = await query
+    .orderBy(desc(requestLogs.createdAt))
+    .limit(resolvedLimit)
+    .offset(resolvedOffset);
+
+  return c.json({
+    requests: rows,
+    limit: resolvedLimit,
+    offset: resolvedOffset,
+  });
 });
