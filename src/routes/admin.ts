@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { and, eq, gte, lte, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getSqliteClient } from "../db";
-import { requestLogs, usageLogs } from "../db/schema";
+import { providers, requestLogs, usageLogs } from "../db/schema";
 import {
   createProvider,
   deleteProvider,
@@ -33,6 +33,13 @@ const providerSchema = z.object({
 });
 
 const providerUpdateSchema = providerSchema.partial();
+
+const configImportSchema = z.object({
+  providers: z.array(providerSchema),
+  models: z.array(z.unknown()).optional(),
+  settings: z.record(z.unknown()).optional(),
+  mode: z.enum(["replace", "merge"]).optional(),
+});
 
 export const adminRoutes = new Hono();
 
@@ -269,5 +276,57 @@ adminRoutes.get("/admin/request-logs", async (c) => {
     requests: rows,
     limit: resolvedLimit,
     offset: resolvedOffset,
+  });
+});
+
+adminRoutes.get("/admin/config/export", async (c) => {
+  const providers = await getAllProviders();
+  const exportedProviders = providers.map((provider) => ({
+    name: provider.name,
+    protocol: provider.protocol,
+    baseUrl: provider.baseUrl,
+    apiKey: provider.apiKey,
+    apiMode: provider.apiMode,
+    balance: provider.balance,
+    inputPrice: provider.inputPrice,
+    outputPrice: provider.outputPrice,
+    isActive: provider.isActive,
+    priority: provider.priority,
+  }));
+
+  return c.json({
+    providers: exportedProviders,
+    models: [],
+    settings: {
+      defaultInputPrice: process.env.DEFAULT_INPUT_PRICE ?? null,
+      defaultOutputPrice: process.env.DEFAULT_OUTPUT_PRICE ?? null,
+    },
+  });
+});
+
+adminRoutes.post("/admin/config/import", async (c) => {
+  const body = await c.req.json();
+  const parsed = configImportSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: { message: "Invalid request" } }, 400);
+  }
+
+  const mode = parsed.data.mode ?? "replace";
+  const db = getSqliteClient();
+  if (mode === "replace") {
+    db.delete(providers).run();
+  }
+
+  const created = [];
+  for (const provider of parsed.data.providers) {
+    const row = await createProvider(provider);
+    if (row) created.push(row);
+  }
+
+  return c.json({
+    ok: true,
+    imported: created.length,
+    mode,
+    ignoredModels: parsed.data.models?.length ?? 0,
   });
 });

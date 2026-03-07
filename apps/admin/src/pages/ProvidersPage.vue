@@ -114,6 +114,13 @@ const createWorking = ref(false);
 const editWorking = ref(false);
 const createError = ref("");
 const editError = ref("");
+const exportWorking = ref(false);
+const exportError = ref("");
+const importOpen = ref(false);
+const importWorking = ref(false);
+const importError = ref("");
+const importPayload = ref("");
+const importReplace = ref(true);
 const editingId = ref<number | null>(null);
 const deleteOpen = ref(false);
 const deleteWorking = ref(false);
@@ -238,6 +245,17 @@ watch(editOpen, (open) => {
   editingId.value = null;
 });
 
+watch(importOpen, (open) => {
+  if (open) {
+    importError.value = "";
+    return;
+  }
+  importWorking.value = false;
+  importError.value = "";
+  importPayload.value = "";
+  importReplace.value = true;
+});
+
 const submitCreate = async () => {
   createError.value = "";
   if (!createForm.name.trim() || !createForm.baseUrl.trim()) {
@@ -321,6 +339,56 @@ const submitDelete = async () => {
     deleteError.value = t("providers.error.delete");
   } finally {
     deleteWorking.value = false;
+  }
+};
+
+const exportConfig = async () => {
+  exportError.value = "";
+  exportWorking.value = true;
+  try {
+    const payload = await gatewayFetch("/admin/config/export");
+    const content = JSON.stringify(payload, null, 2);
+    if (typeof window !== "undefined") {
+      const blob = new Blob([content], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `lumina-config-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+  } catch (err) {
+    exportError.value = t("providers.config.exportError");
+  } finally {
+    exportWorking.value = false;
+  }
+};
+
+const submitImport = async () => {
+  importError.value = "";
+  let payload: unknown;
+  try {
+    payload = JSON.parse(importPayload.value || "{}");
+  } catch (err) {
+    importError.value = t("providers.config.importInvalid");
+    return;
+  }
+
+  importWorking.value = true;
+  try {
+    await gatewayFetch("/admin/config/import", {
+      method: "POST",
+      body: {
+        ...(payload as Record<string, unknown>),
+        mode: importReplace.value ? "replace" : "merge",
+      },
+    });
+    importOpen.value = false;
+    await Promise.all([refresh(), refreshFailureStats()]);
+  } catch (err) {
+    importError.value = t("providers.config.importError");
+  } finally {
+    importWorking.value = false;
   }
 };
 
@@ -410,10 +478,30 @@ const refreshAll = async () => {
             {{ $t("providers.intro") }}
           </p>
         </div>
-        <div class="flex items-center gap-3">
-          <UButton class="action-press" color="primary" @click="createOpen = true">
-            {{ $t("providers.add") }}
-          </UButton>
+        <div class="flex flex-col items-start gap-2 lg:items-end">
+          <div class="flex flex-wrap items-center gap-2">
+            <UButton
+              class="action-press"
+              variant="outline"
+              :loading="exportWorking"
+              @click="exportConfig"
+            >
+              {{ $t("providers.config.export") }}
+            </UButton>
+            <UButton
+              class="action-press"
+              variant="outline"
+              @click="importOpen = true"
+            >
+              {{ $t("providers.config.import") }}
+            </UButton>
+            <UButton class="action-press" color="primary" @click="createOpen = true">
+              {{ $t("providers.add") }}
+            </UButton>
+          </div>
+          <p v-if="exportError" class="text-xs text-rose-600">
+            {{ exportError }}
+          </p>
         </div>
       </header>
 
@@ -951,6 +1039,63 @@ const refreshAll = async () => {
               @click="submitDelete"
             >
               {{ $t("providers.delete.confirm") }}
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="importOpen">
+      <template #content>
+        <div class="surface radius-panel p-6 md:p-7 space-y-5">
+          <div>
+            <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
+              {{ $t("providers.config.importTitle") }}
+            </div>
+            <p class="mt-2 text-sm text-slate-600">
+              {{ $t("providers.config.importSubtitle") }}
+            </p>
+          </div>
+
+          <div class="space-y-2">
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-500">
+              {{ $t("providers.config.importLabel") }}
+            </div>
+            <textarea
+              v-model="importPayload"
+              class="w-full min-h-[180px] rounded-2xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none"
+              :placeholder="$t('providers.config.importPlaceholder')"
+            ></textarea>
+          </div>
+
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              v-model="importReplace"
+              type="checkbox"
+              class="h-4 w-4 rounded border-slate-300 text-slate-900"
+            />
+            <span>{{ $t("providers.config.replace") }}</span>
+          </label>
+
+          <p v-if="importError" class="text-sm text-rose-600">
+            {{ importError }}
+          </p>
+
+          <div class="flex items-center justify-between">
+            <UButton
+              class="action-press"
+              variant="outline"
+              @click="importOpen = false"
+            >
+              {{ $t("providers.cancel") }}
+            </UButton>
+            <UButton
+              class="action-press"
+              color="primary"
+              :loading="importWorking"
+              @click="submitImport"
+            >
+              {{ $t("providers.config.importSubmit") }}
             </UButton>
           </div>
         </div>
