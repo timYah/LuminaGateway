@@ -596,7 +596,7 @@
 - [x] **T-55.14** ✅ **验证**：在 clean 环境中运行根目录 `npm install`，随后验证 `npm run lint && npm run typecheck && npm run test && npm run build:admin` 通过
 - [x] **T-55.15** 将根安装流程切换为 `npm workspaces`：统一管理 `apps/admin` 依赖、移除额外补装脚本，并同步文档中的安装 / 构建命令
 - [x] **T-55.16** 优化 Docker 构建源：`apt` 默认使用南京大学镜像，`npm` 默认使用可覆盖的大陆镜像源，并在文档中说明可替换策略
-- [ ] **T-55.17** ✅ **验证**：在 clean 环境执行根目录 `npm install`，随后运行 `npm run lint && npm run typecheck && npm run test && npm run build:admin && npm run docker:build`，确认 workspace 安装链路与 Docker 构建均通过
+- [x] **T-55.17** ✅ **验证**：在 clean 环境执行根目录 `npm install`，随后运行 `npm run lint && npm run typecheck && npm run test && npm run build:admin && npm run docker:build`，确认 workspace 安装链路与 Docker 构建均通过
 
 ---
 
