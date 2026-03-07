@@ -68,11 +68,12 @@ describe("admin provider update", () => {
     const res = await app.request(`/admin/providers/${provider!.id}`, {
       method: "PATCH",
       headers: { ...authHeader, "Content-Type": "application/json" },
-      body: JSON.stringify({ priority: 4 }),
+      body: JSON.stringify({ priority: 4, codexTransform: true }),
     });
 
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.provider.priority).toBe(4);
+    expect(body.provider.codexTransform).toBe(true);
   });
 });

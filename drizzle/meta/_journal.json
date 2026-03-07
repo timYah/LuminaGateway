@@ -43,6 +43,13 @@
       "when": 1778167200000,
       "tag": "0005_add_provider_last_health_check_at",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1778217600000,
+      "tag": "0006_add_provider_codex_transform",
+      "breakpoints": true
     }
   ]
 }

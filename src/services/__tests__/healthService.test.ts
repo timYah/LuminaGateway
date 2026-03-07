@@ -29,6 +29,7 @@ const provider = {
   baseUrl: "https://example.com",
   apiKey: "sk-test",
   apiMode: "responses" as const,
+  codexTransform: false,
   balance: 0,
   inputPrice: null,
   outputPrice: null,

@@ -41,6 +41,7 @@ describe("providerService", () => {
     const list = await getAllProviders();
     expect(list).toHaveLength(1);
     expect(list[0].name).toBe("Test Provider");
+    expect(list[0].codexTransform).toBe(false);
   });
 
   it("getProviderById returns provider or null", async () => {
@@ -55,6 +56,14 @@ describe("providerService", () => {
     const created = await createProvider(baseProvider);
     const updated = await updateProvider(created!.id, { balance: 25 });
     expect(updated?.balance).toBe(25);
+  });
+
+  it("stores codexTransform when enabled", async () => {
+    const created = await createProvider({ ...baseProvider, codexTransform: true });
+    expect(created?.codexTransform).toBe(true);
+
+    const updated = await updateProvider(created!.id, { codexTransform: false });
+    expect(updated?.codexTransform).toBe(false);
   });
 
   it("deactivateProvider sets isActive false", async () => {

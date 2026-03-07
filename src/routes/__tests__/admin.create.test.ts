@@ -38,6 +38,7 @@ describe("admin provider create", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.provider.name).toBe("Created Provider");
+    expect(body.provider.codexTransform).toBe(false);
 
     const rows = await db.select().from(providers);
     expect(rows).toHaveLength(1);
@@ -64,11 +65,13 @@ describe("admin provider create", () => {
         apiKey: "sk-newapi",
         balance: 5,
         priority: 3,
+        codexTransform: true,
       }),
     });
 
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.provider.protocol).toBe("new-api");
+    expect(body.provider.codexTransform).toBe(true);
   });
 });

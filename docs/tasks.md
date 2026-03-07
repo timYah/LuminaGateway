@@ -631,6 +631,13 @@
 - [x] **T-59.1** 新增 `POST /codex/responses` 专用路由，复用 OpenAI Responses 协议处理链路，并为 `/codex/*` 补充 CORS 与鉴权中间件
 - [x] **T-59.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并用真实 `codex exec` 将 `base_url` 指向 `/codex` 验证请求可成功完成
 
+## Phase 60 — Codex Passthrough Routing
+
+- [x] **T-60.1** 为 Provider 增加 `codexTransform` 配置项（默认 `false`），同步更新数据库迁移、Admin API、配置导入导出与后端测试
+- [ ] **T-60.2** Admin `/providers` 页面增加 Codex 转换开关与状态展示，明确默认透传语义
+- [ ] **T-60.3** 将 `POST /codex/responses` 改为原样透传上游 `/responses`，仅在首字节返回前执行 failover，并跳过 usage 计费
+- [ ] **T-60.4** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`，确认 Codex 透传链路与 Admin 配置说明一致
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -689,4 +696,5 @@
 | Phase 57 | 2 | Provider Probe Error Classification |
 | Phase 58 | 3 | Codex CLI Compatibility |
 | Phase 59 | 2 | Dedicated Codex Endpoint |
-| **合计** | **265** | |
+| Phase 60 | 4 | Codex Passthrough Routing |
+| **合计** | **269** | |

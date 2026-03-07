@@ -36,6 +36,7 @@ describe("admin providers list", () => {
       balance: 5,
       isActive: true,
       priority: 1,
+      codexTransform: true,
     });
 
     const res = await app.request("/admin/providers", {
@@ -45,5 +46,6 @@ describe("admin providers list", () => {
     const body = await res.json();
     expect(body.providers).toHaveLength(1);
     expect(body.providers[0].name).toBe("Admin Provider");
+    expect(body.providers[0].codexTransform).toBe(true);
   });
 });

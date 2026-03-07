@@ -17,6 +17,9 @@ export const providers = sqliteTable("providers", {
   apiMode: text("api_mode", { enum: ["responses", "chat"] })
     .notNull()
     .default("responses"),
+  codexTransform: integer("codex_transform", { mode: "boolean" })
+    .notNull()
+    .default(false),
   balance: real("balance").notNull().default(0),
   inputPrice: real("input_price"),
   outputPrice: real("output_price"),
