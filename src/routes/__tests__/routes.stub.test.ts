@@ -25,6 +25,7 @@ vi.mock("../../services/gatewayService", () => ({
   ),
 }));
 import { createApp } from "../../app";
+import { keyQuotaTracker } from "../../services/quotaService";
 
 process.env.GATEWAY_API_KEY = "test-key";
 
@@ -39,6 +40,12 @@ describe("route stubs", () => {
     delete process.env.TOKEN_RATE_LIMIT_TPM;
     delete process.env.TOKEN_RATE_LIMIT_BURST;
     delete process.env.TOKEN_RATE_LIMIT_OVERRIDES;
+    delete process.env.KEY_DAILY_TOKENS;
+    delete process.env.KEY_MONTHLY_TOKENS;
+    delete process.env.KEY_DAILY_BUDGET_USD;
+    delete process.env.KEY_MONTHLY_BUDGET_USD;
+    delete process.env.KEY_QUOTA_OVERRIDES;
+    keyQuotaTracker.reset();
   });
 
   it("rejects unauthenticated OpenAI request", async () => {
@@ -131,6 +138,33 @@ describe("route stubs", () => {
 
     expect(res1.status).toBe(503);
     expect(res2.status).toBe(429);
+  });
+
+  it("enforces key quotas", async () => {
+    process.env.KEY_DAILY_TOKENS = "1";
+
+    const first = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "" }],
+        max_tokens: 1,
+      }),
+    });
+
+    const second = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "" }],
+        max_tokens: 1,
+      }),
+    });
+
+    expect(first.status).toBe(503);
+    expect(second.status).toBe(429);
   });
 
   it("returns Responses API error when no providers are available", async () => {

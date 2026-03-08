@@ -39,6 +39,7 @@ import * as billingService from "../../services/billingService";
 import * as failureStatsService from "../../services/failureStatsService";
 import { gatewayCircuitBreaker, gatewayRouter } from "../../services/gatewayService";
 import * as providerService from "../../services/providerService";
+import { keyQuotaTracker } from "../../services/quotaService";
 import * as requestLogService from "../../services/requestLogService";
 
 process.env.GATEWAY_API_KEY = "test-key";
@@ -121,6 +122,12 @@ describe("codex passthrough route", () => {
     delete process.env.TOKEN_RATE_LIMIT_TPM;
     delete process.env.TOKEN_RATE_LIMIT_BURST;
     delete process.env.TOKEN_RATE_LIMIT_OVERRIDES;
+    delete process.env.KEY_DAILY_TOKENS;
+    delete process.env.KEY_MONTHLY_TOKENS;
+    delete process.env.KEY_DAILY_BUDGET_USD;
+    delete process.env.KEY_MONTHLY_BUDGET_USD;
+    delete process.env.KEY_QUOTA_OVERRIDES;
+    keyQuotaTracker.reset();
   });
 
   it("rejects invalid JSON bodies", async () => {
@@ -333,6 +340,32 @@ describe("codex passthrough route", () => {
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(429);
+  });
+
+  it("enforces key quotas", async () => {
+    process.env.KEY_DAILY_TOKENS = "1";
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ id: "resp_ok" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+    );
+
+    const first = await app.request("/codex/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "gpt-5.2", input: [], max_output_tokens: 1 }),
+    });
+    const second = await app.request("/codex/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "gpt-5.2", input: [], max_output_tokens: 1 }),
+    });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(429);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns the last retryable upstream response if every candidate fails", async () => {

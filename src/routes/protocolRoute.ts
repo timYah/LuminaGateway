@@ -9,6 +9,7 @@ import {
 import { responseCache, resolveCacheTtlMs } from "../services/cacheService";
 import { estimateUsage } from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
+import { keyQuotaTracker } from "../services/quotaService";
 import { normalizeAuthToken } from "../utils/auth";
 
 type ProtocolRouteOptions<T extends z.ZodTypeAny> = {
@@ -110,6 +111,11 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
           429,
           limit.retryAfter ? { "Retry-After": limit.retryAfter.toString() } : undefined
         );
+      }
+
+      const quota = keyQuotaTracker.consume(authToken, usageEstimate);
+      if (!quota.allowed) {
+        return c.json({ error: { message: "Quota exceeded" } }, 429);
       }
     }
 

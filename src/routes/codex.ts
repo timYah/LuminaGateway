@@ -10,6 +10,7 @@ import { createRequestLog } from "../services/requestLogService";
 import { wrapStreamWithFinalizer } from "../services/streamUtils";
 import { estimateUsage } from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
+import { keyQuotaTracker } from "../services/quotaService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
 
@@ -199,6 +200,11 @@ codexRoutes.post("/codex/responses", async (c) => {
         429,
         limit.retryAfter ? { "Retry-After": limit.retryAfter.toString() } : undefined
       );
+    }
+
+    const quota = keyQuotaTracker.consume(authToken, usageEstimate);
+    if (!quota.allowed) {
+      return buildGatewayErrorResponse("Quota exceeded", 429);
     }
   }
 
