@@ -676,6 +676,11 @@
 - [x] **T-65.1** `/usage` 页面密度优化：压缩卡片、表格、过滤区间距，降低默认页面高度
 - [x] **T-65.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
+## Phase 66 — Admin Route Switching
+
+- [x] **T-66.1** 兼容 SPA 导航：router 使用 `BASE_URL`，gateway 提供 HTML fallback 以确保 `/providers` 与 `/usage` 动态切换
+- [ ] **T-66.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage` 切换
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -740,4 +745,5 @@
 | Phase 63 | 11 | Competitor Parity Enhancements |
 | Phase 64 | 6 | Advanced Governance & Usage Controls |
 | Phase 65 | 2 | Admin Usage Compact Pass |
-| **合计** | **275** | |
+| Phase 66 | 2 | Admin Route Switching |
+| **合计** | **277** | |

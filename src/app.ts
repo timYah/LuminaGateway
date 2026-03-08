@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { Hono } from "hono";
+import { existsSync, readFileSync } from "node:fs";
+import { Hono, type Context } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { cors } from "hono/cors";
 import { authMiddleware } from "./middleware/auth";
@@ -14,9 +14,11 @@ import { renderMetrics } from "./services/metricsService";
 
 function registerAdminUi(app: Hono) {
   const adminDistRoot = process.env.ADMIN_DIST_ROOT || "./apps/admin/dist";
-  if (!existsSync(`${adminDistRoot}/index.html`)) {
+  const adminIndexPath = `${adminDistRoot}/index.html`;
+  if (!existsSync(adminIndexPath)) {
     return;
   }
+  const adminIndexHtml = readFileSync(adminIndexPath, "utf8");
 
   app.use(
     "/assets/*",
@@ -26,15 +28,18 @@ function registerAdminUi(app: Hono) {
     })
   );
 
-  const serveAdminIndex = serveStatic({
-    root: adminDistRoot,
-    path: "index.html",
-    precompressed: true,
-  });
+  const serveAdminIndex = (c: Context) => c.html(adminIndexHtml);
 
   app.get("/", serveAdminIndex);
   app.get("/providers", serveAdminIndex);
   app.get("/usage", serveAdminIndex);
+  app.notFound((c) => {
+    const accept = c.req.header("accept") || "";
+    if (accept.includes("text/html")) {
+      return serveAdminIndex(c);
+    }
+    return c.json({ error: { message: "Not Found" } }, 404);
+  });
 }
 
 export function createApp() {
