@@ -364,8 +364,8 @@ watch(
           </p>
         </div>
 
-        <div v-else class="grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_0.95fr_0.95fr]">
-          <div class="radius-card border border-slate-200/70 bg-slate-50/70 p-4 space-y-3">
+        <div v-else class="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_0.85fr]">
+          <div class="metric-card p-4 space-y-3">
             <div class="text-sm font-medium text-slate-900">
               {{ $t("usage.dashboard.trend") }}
             </div>
@@ -384,9 +384,9 @@ watch(
                     {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
                   </span>
                 </div>
-                <div class="h-2 rounded-full bg-slate-100">
+                <div class="metric-card__bar">
                   <div
-                    class="h-2 rounded-full bg-slate-900"
+                    class="metric-card__bar-fill"
                     :style="{ width: ratio(item.requestCount, maxTrend) }"
                   ></div>
                 </div>
@@ -397,65 +397,67 @@ watch(
             </div>
           </div>
 
-          <div class="radius-card border border-slate-200/70 bg-slate-50/70 p-4 space-y-3">
-            <div class="text-sm font-medium text-slate-900">
-              {{ $t("usage.dashboard.providers") }}
-            </div>
-            <div v-if="providerStats.length === 0" class="text-sm text-slate-500">
-              {{ $t("usage.dashboard.empty") }}
-            </div>
-            <div v-else class="space-y-3">
-              <div
-                v-for="item in providerStats"
-                :key="item.providerId"
-                class="space-y-1"
-              >
-                <div class="flex items-center justify-between text-xs text-slate-600">
-                  <span>{{ providerNameMap.get(item.providerId) ?? item.providerId }}</span>
-                  <span class="mono-numbers">
-                    {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
-                  </span>
-                </div>
-                <div class="h-2 rounded-full bg-slate-100">
-                  <div
-                    class="h-2 rounded-full bg-slate-800"
-                    :style="{ width: ratio(item.requestCount, maxProvider) }"
-                  ></div>
-                </div>
-                <div class="text-[11px] text-slate-500 mono-numbers">
-                  ${{ formatCost(item.totalCost) }}
+          <div class="grid gap-4">
+            <div class="metric-card p-4 space-y-3">
+              <div class="text-sm font-medium text-slate-900">
+                {{ $t("usage.dashboard.providers") }}
+              </div>
+              <div v-if="providerStats.length === 0" class="text-sm text-slate-500">
+                {{ $t("usage.dashboard.empty") }}
+              </div>
+              <div v-else class="space-y-3">
+                <div
+                  v-for="item in providerStats"
+                  :key="item.providerId"
+                  class="space-y-1"
+                >
+                  <div class="flex items-center justify-between text-xs text-slate-600">
+                    <span>{{ providerNameMap.get(item.providerId) ?? item.providerId }}</span>
+                    <span class="mono-numbers">
+                      {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                    </span>
+                  </div>
+                  <div class="metric-card__bar">
+                    <div
+                      class="metric-card__bar-fill"
+                      :style="{ width: ratio(item.requestCount, maxProvider) }"
+                    ></div>
+                  </div>
+                  <div class="text-[11px] text-slate-500 mono-numbers">
+                    ${{ formatCost(item.totalCost) }}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="radius-card border border-slate-200/70 bg-slate-50/70 p-4 space-y-3">
-            <div class="text-sm font-medium text-slate-900">
-              {{ $t("usage.dashboard.models") }}
-            </div>
-            <div v-if="modelStats.length === 0" class="text-sm text-slate-500">
-              {{ $t("usage.dashboard.empty") }}
-            </div>
-            <div v-else class="space-y-3">
-              <div
-                v-for="item in modelStats"
-                :key="item.modelSlug"
-                class="space-y-1"
-              >
-                <div class="flex items-center justify-between text-xs text-slate-600">
-                  <span>{{ item.modelSlug }}</span>
-                  <span class="mono-numbers">
-                    {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
-                  </span>
-                </div>
-                <div class="h-2 rounded-full bg-slate-100">
-                  <div
-                    class="h-2 rounded-full bg-slate-700"
-                    :style="{ width: ratio(item.requestCount, maxModel) }"
-                  ></div>
-                </div>
-                <div class="text-[11px] text-slate-500 mono-numbers">
-                  ${{ formatCost(item.totalCost) }}
+            <div class="metric-card p-4 space-y-3">
+              <div class="text-sm font-medium text-slate-900">
+                {{ $t("usage.dashboard.models") }}
+              </div>
+              <div v-if="modelStats.length === 0" class="text-sm text-slate-500">
+                {{ $t("usage.dashboard.empty") }}
+              </div>
+              <div v-else class="space-y-3">
+                <div
+                  v-for="item in modelStats"
+                  :key="item.modelSlug"
+                  class="space-y-1"
+                >
+                  <div class="flex items-center justify-between text-xs text-slate-600">
+                    <span>{{ item.modelSlug }}</span>
+                    <span class="mono-numbers">
+                      {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                    </span>
+                  </div>
+                  <div class="metric-card__bar">
+                    <div
+                      class="metric-card__bar-fill"
+                      :style="{ width: ratio(item.requestCount, maxModel) }"
+                    ></div>
+                  </div>
+                  <div class="text-[11px] text-slate-500 mono-numbers">
+                    ${{ formatCost(item.totalCost) }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -616,7 +618,7 @@ watch(
               <tr
                 v-for="(row, index) in rows"
                 :key="row.id"
-                class="border-b border-slate-200/50 staggered"
+                class="border-b border-slate-200/50 staggered transition-colors hover:bg-slate-50/70"
                 :style="{ '--index': index }"
               >
                 <td class="py-2.5 pr-4 align-top text-slate-700">
@@ -802,7 +804,7 @@ watch(
               <tr
                 v-for="(row, index) in requestRows"
                 :key="row.id"
-                class="border-b border-slate-200/50 staggered"
+                class="border-b border-slate-200/50 staggered transition-colors hover:bg-slate-50/70"
                 :style="{ '--index': index }"
               >
                 <td class="py-2.5 pr-4 align-top text-slate-700">

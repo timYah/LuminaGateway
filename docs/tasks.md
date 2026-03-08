@@ -671,6 +671,11 @@
 - [x] **T-64.5** 增加按 API key / 路由的用量与成本汇总端点，并补充自动化测试
 - [x] **T-64.6** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
 
+## Phase 65 — Admin Usage Compact Pass
+
+- [x] **T-65.1** `/usage` 页面密度优化：压缩卡片、表格、过滤区间距，降低默认页面高度
+- [ ] **T-65.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -734,4 +739,5 @@
 | Phase 62 | 2 | Codex Upstream Timeout |
 | Phase 63 | 11 | Competitor Parity Enhancements |
 | Phase 64 | 6 | Advanced Governance & Usage Controls |
-| **合计** | **273** | |
+| Phase 65 | 2 | Admin Usage Compact Pass |
+| **合计** | **275** | |
