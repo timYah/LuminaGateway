@@ -684,7 +684,7 @@
 ## Phase 67 — Admin Nav Base Path
 
 - [x] **T-67.1** 改进 admin 路由 base 解析，支持部署在子路径时左右侧栏切换仍可用
-- [ ] **T-67.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage`（含子路径）
+- [x] **T-67.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage`（含子路径）
 
 ## 任务统计
 
