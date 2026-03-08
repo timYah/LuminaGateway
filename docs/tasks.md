@@ -679,7 +679,7 @@
 ## Phase 66 — Admin Route Switching
 
 - [x] **T-66.1** 兼容 SPA 导航：router 使用 `BASE_URL`，gateway 提供 HTML fallback 以确保 `/providers` 与 `/usage` 动态切换
-- [ ] **T-66.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage` 切换
+- [x] **T-66.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage` 切换
 
 ## 任务统计
 
