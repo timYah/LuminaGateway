@@ -1,15 +1,38 @@
 <script setup lang="ts">
 import { computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRoute, useRouter } from "vue-router";
 
 import { localeStorageKey } from "../i18n";
 
 const { locale, t } = useI18n();
+const route = useRoute();
+const router = useRouter();
+const navBaseClass =
+  "block radius-card px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 hover:text-slate-950 action-press";
+const navActiveClass =
+  "bg-white text-slate-950 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.45)]";
 
 const localeOptions = computed(() => [
   { label: t("app.languageOptions.en"), value: "en" },
   { label: t("app.languageOptions.zh"), value: "zh" },
 ]);
+
+const navPrefix = computed(() =>
+  route.fullPath.startsWith("/admin") ? "/admin" : ""
+);
+const providersHref = computed(() => `${navPrefix.value}/providers`);
+const usageHref = computed(() => `${navPrefix.value}/usage`);
+const isProviders = computed(() => route.path === "/providers");
+const isUsage = computed(() => route.path === "/usage");
+const goProviders = () => {
+  if (isProviders.value) return;
+  router.push(providersHref.value);
+};
+const goUsage = () => {
+  if (isUsage.value) return;
+  router.push(usageHref.value);
+};
 
 watch(
   locale,
@@ -49,20 +72,20 @@ watch(
 
             <div class="surface radius-panel p-2.5">
               <nav class="space-y-1">
-                <RouterLink
-                  to="/providers"
-                  class="block radius-card px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 hover:text-slate-950 action-press"
-                  active-class="bg-white text-slate-950 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.45)]"
+                <button
+                  type="button"
+                  :class="[navBaseClass, isProviders ? navActiveClass : '']"
+                  @click="goProviders"
                 >
                   {{ $t("nav.providers") }}
-                </RouterLink>
-                <RouterLink
-                  to="/usage"
-                  class="block radius-card px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 hover:text-slate-950 action-press"
-                  active-class="bg-white text-slate-950 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.45)]"
+                </button>
+                <button
+                  type="button"
+                  :class="[navBaseClass, isUsage ? navActiveClass : '']"
+                  @click="goUsage"
                 >
                   {{ $t("nav.usage") }}
-                </RouterLink>
+                </button>
               </nav>
             </div>
 

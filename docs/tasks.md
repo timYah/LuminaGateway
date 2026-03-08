@@ -686,6 +686,11 @@
 - [x] **T-67.1** 改进 admin 路由 base 解析，支持部署在子路径时左右侧栏切换仍可用
 - [x] **T-67.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage`（含子路径）
 
+## Phase 68 — Admin Nav Fix
+
+- [x] **T-68.1** 修复 admin 导航与用量筛选：/admin alias 路由、导航前缀、非空下拉值，确保 `/providers` ↔ `/usage` 内容切换稳定
+- [ ] **T-68.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage`
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -752,4 +757,5 @@
 | Phase 65 | 2 | Admin Usage Compact Pass |
 | Phase 66 | 2 | Admin Route Switching |
 | Phase 67 | 2 | Admin Nav Base Path |
-| **合计** | **279** | |
+| Phase 68 | 2 | Admin Nav Fix |
+| **合计** | **281** | |

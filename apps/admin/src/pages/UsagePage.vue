@@ -69,9 +69,11 @@ type RequestLogResponse = {
 };
 
 const { t } = useI18n();
+const ALL_PROVIDERS = "all";
+const ALL_ERROR_TYPES = "all";
 const providers = ref<Provider[]>([]);
 const providerOptions = computed(() => [
-  { label: t("common.allProviders"), value: "" },
+  { label: t("common.allProviders"), value: ALL_PROVIDERS },
   ...providers.value.map((provider) => ({
     label: provider.name,
     value: provider.id.toString(),
@@ -79,7 +81,7 @@ const providerOptions = computed(() => [
 ]);
 
 const filters = reactive({
-  providerId: "",
+  providerId: ALL_PROVIDERS,
   modelSlug: "",
   startDate: "",
   endDate: "",
@@ -88,11 +90,11 @@ const filters = reactive({
 });
 
 const requestFilters = reactive({
-  providerId: "",
+  providerId: ALL_PROVIDERS,
   modelSlug: "",
   startDate: "",
   endDate: "",
-  errorType: "",
+  errorType: ALL_ERROR_TYPES,
   limit: "50",
   offset: "0",
 });
@@ -107,7 +109,9 @@ const query = computed(() => {
     limit: normalizeNumber(filters.limit, 50),
     offset: normalizeNumber(filters.offset, 0),
   };
-  if (filters.providerId) payload.providerId = filters.providerId;
+  if (filters.providerId !== ALL_PROVIDERS) {
+    payload.providerId = filters.providerId;
+  }
   if (filters.modelSlug.trim()) payload.modelSlug = filters.modelSlug.trim();
   if (filters.startDate) payload.startDate = filters.startDate;
   if (filters.endDate) payload.endDate = filters.endDate;
@@ -119,13 +123,17 @@ const requestQuery = computed(() => {
     limit: normalizeNumber(requestFilters.limit, 50),
     offset: normalizeNumber(requestFilters.offset, 0),
   };
-  if (requestFilters.providerId) payload.providerId = requestFilters.providerId;
+  if (requestFilters.providerId !== ALL_PROVIDERS) {
+    payload.providerId = requestFilters.providerId;
+  }
   if (requestFilters.modelSlug.trim()) {
     payload.modelSlug = requestFilters.modelSlug.trim();
   }
   if (requestFilters.startDate) payload.startDate = requestFilters.startDate;
   if (requestFilters.endDate) payload.endDate = requestFilters.endDate;
-  if (requestFilters.errorType) payload.errorType = requestFilters.errorType;
+  if (requestFilters.errorType !== ALL_ERROR_TYPES) {
+    payload.errorType = requestFilters.errorType;
+  }
   return payload;
 });
 
@@ -200,7 +208,7 @@ const ratio = (value: number, maxValue: number) => {
 };
 
 const requestErrorTypeOptions = computed(() => [
-  { label: t("usage.requests.errorType.all"), value: "" },
+  { label: t("usage.requests.errorType.all"), value: ALL_ERROR_TYPES },
   { label: t("usage.requests.errorType.quota"), value: "quota" },
   { label: t("usage.requests.errorType.rate_limit"), value: "rate_limit" },
   { label: t("usage.requests.errorType.server"), value: "server" },
