@@ -36,6 +36,9 @@ describe("route stubs", () => {
   afterEach(() => {
     delete process.env.MODEL_ALLOWLIST;
     delete process.env.MODEL_BLOCKLIST;
+    delete process.env.TOKEN_RATE_LIMIT_TPM;
+    delete process.env.TOKEN_RATE_LIMIT_BURST;
+    delete process.env.TOKEN_RATE_LIMIT_OVERRIDES;
   });
 
   it("rejects unauthenticated OpenAI request", async () => {
@@ -102,6 +105,32 @@ describe("route stubs", () => {
     expect(res.status).toBe(503);
     const body = await res.json();
     expect(body.error?.message).toBeDefined();
+  });
+
+  it("rate limits based on token budget", async () => {
+    process.env.TOKEN_RATE_LIMIT_TPM = "1";
+    process.env.TOKEN_RATE_LIMIT_BURST = "1";
+    const res1 = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "" }],
+        max_tokens: 1,
+      }),
+    });
+    const res2 = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "" }],
+        max_tokens: 1,
+      }),
+    });
+
+    expect(res1.status).toBe(503);
+    expect(res2.status).toBe(429);
   });
 
   it("returns Responses API error when no providers are available", async () => {

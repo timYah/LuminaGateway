@@ -7,6 +7,9 @@ import {
   type GatewayRequestParams,
 } from "../services/gatewayService";
 import { responseCache, resolveCacheTtlMs } from "../services/cacheService";
+import { estimateUsage } from "../services/requestEstimator";
+import { tokenRateLimiter } from "../services/tokenRateLimiter";
+import { normalizeAuthToken } from "../utils/auth";
 
 type ProtocolRouteOptions<T extends z.ZodTypeAny> = {
   path: string;
@@ -95,6 +98,19 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
     const modelSlug = typeof modelValue === "string" ? modelValue.trim() : "";
     if (modelSlug && !isModelAllowed(modelSlug)) {
       return c.json({ error: { message: "Model not allowed" } }, 403);
+    }
+
+    const usageEstimate = estimateUsage(options.clientFormat, merged as Record<string, unknown>);
+    const authToken = normalizeAuthToken(c.req.header("Authorization"));
+    if (authToken) {
+      const limit = tokenRateLimiter.consume(authToken, usageEstimate.totalTokens);
+      if (!limit.allowed) {
+        return c.json(
+          { error: { message: "Token rate limit exceeded" } },
+          429,
+          limit.retryAfter ? { "Retry-After": limit.retryAfter.toString() } : undefined
+        );
+      }
     }
 
     if ((merged as { stream?: boolean }).stream) {

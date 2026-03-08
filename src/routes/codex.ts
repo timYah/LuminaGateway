@@ -8,7 +8,10 @@ import { gatewayInflightLimiter } from "../services/inflightService";
 import { deactivateProvider } from "../services/providerService";
 import { createRequestLog } from "../services/requestLogService";
 import { wrapStreamWithFinalizer } from "../services/streamUtils";
+import { estimateUsage } from "../services/requestEstimator";
+import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
+import { normalizeAuthToken } from "../utils/auth";
 
 const RATE_LIMIT_COOLDOWN_MS = 60_000;
 const SERVER_COOLDOWN_MS = 30_000;
@@ -184,6 +187,19 @@ codexRoutes.post("/codex/responses", async (c) => {
   const modelSlug = typeof modelValue === "string" ? modelValue.trim() : "";
   if (!modelSlug) {
     return buildGatewayErrorResponse("Invalid request", 400);
+  }
+
+  const usageEstimate = estimateUsage("openai-responses", parsedBody as Record<string, unknown>);
+  const authToken = normalizeAuthToken(c.req.header("Authorization"));
+  if (authToken) {
+    const limit = tokenRateLimiter.consume(authToken, usageEstimate.totalTokens);
+    if (!limit.allowed) {
+      return c.json(
+        { error: { message: "Token rate limit exceeded" } },
+        429,
+        limit.retryAfter ? { "Retry-After": limit.retryAfter.toString() } : undefined
+      );
+    }
   }
 
   const candidates = (await gatewayRouter.getAllCandidates(modelSlug)).filter(

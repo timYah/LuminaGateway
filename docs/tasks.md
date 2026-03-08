@@ -662,6 +662,15 @@
 - [x] **T-63.10** 增加 upstream 重试退避（`UPSTREAM_RETRY_ATTEMPTS` / `UPSTREAM_RETRY_BASE_MS`），并补充自动化测试
 - [x] **T-63.11** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
 
+## Phase 64 — Advanced Governance & Usage Controls
+
+- [x] **T-64.1** 增加 token 级限流（`TOKEN_RATE_LIMIT_TPM` / `TOKEN_RATE_LIMIT_BURST` + 覆盖），并补充自动化测试
+- [ ] **T-64.2** 增加 API key 日/月配额与预算（`KEY_DAILY_TOKENS` / `KEY_MONTHLY_TOKENS` / `KEY_DAILY_BUDGET_USD` / `KEY_MONTHLY_BUDGET_USD` + 覆盖），并补充自动化测试
+- [ ] **T-64.3** 增加内容安全阻断（`CONTENT_BLOCKLIST`），并补充自动化测试
+- [ ] **T-64.4** 增加 JWT 用户鉴权与用户/分组配额（`JWT_SECRET` 等），并补充自动化测试
+- [ ] **T-64.5** 增加按 API key / 路由的用量与成本汇总端点，并补充自动化测试
+- [ ] **T-64.6** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -724,4 +733,5 @@
 | Phase 61 | 2 | Circuit Breaker Ops |
 | Phase 62 | 2 | Codex Upstream Timeout |
 | Phase 63 | 11 | Competitor Parity Enhancements |
+| Phase 64 | 6 | Advanced Governance & Usage Controls |
 | **合计** | **273** | |

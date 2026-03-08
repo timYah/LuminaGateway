@@ -118,6 +118,9 @@ describe("codex passthrough route", () => {
 
   afterEach(() => {
     delete process.env.CODEX_UPSTREAM_TIMEOUT_MS;
+    delete process.env.TOKEN_RATE_LIMIT_TPM;
+    delete process.env.TOKEN_RATE_LIMIT_BURST;
+    delete process.env.TOKEN_RATE_LIMIT_OVERRIDES;
   });
 
   it("rejects invalid JSON bodies", async () => {
@@ -305,6 +308,31 @@ describe("codex passthrough route", () => {
 
     expect(res.status).toBe(200);
     expect(openCircuitSpy).toHaveBeenCalledWith(1, 30_000);
+  });
+
+  it("enforces token rate limits", async () => {
+    process.env.TOKEN_RATE_LIMIT_TPM = "1";
+    process.env.TOKEN_RATE_LIMIT_BURST = "1";
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ id: "resp_ok" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    );
+
+    const first = await app.request("/codex/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "gpt-5.2", input: [] }),
+    });
+    const second = await app.request("/codex/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "gpt-5.2", input: [] }),
+    });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(429);
   });
 
   it("returns the last retryable upstream response if every candidate fails", async () => {
