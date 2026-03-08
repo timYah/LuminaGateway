@@ -47,9 +47,11 @@ export function createApp() {
     return c.text(renderMetrics());
   });
 
+  const jwtHeader = (process.env.JWT_HEADER ?? "X-User-Token").trim() || "X-User-Token";
+  const allowHeaders = Array.from(new Set(["Authorization", "Content-Type", jwtHeader]));
   const corsOptions = {
     origin: "*",
-    allowHeaders: ["Authorization", "Content-Type"],
+    allowHeaders,
     allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   };
 

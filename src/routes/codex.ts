@@ -6,12 +6,13 @@ import { isContentBlocked } from "../services/contentSafetyService";
 import { recordFailure } from "../services/failureStatsService";
 import { gatewayCircuitBreaker, gatewayRouter } from "../services/gatewayService";
 import { gatewayInflightLimiter } from "../services/inflightService";
+import { extractJwtIdentity, resolveJwtConfig, verifyJwt } from "../services/jwtService";
 import { deactivateProvider } from "../services/providerService";
 import { createRequestLog } from "../services/requestLogService";
 import { wrapStreamWithFinalizer } from "../services/streamUtils";
 import { estimateUsage } from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
-import { keyQuotaTracker } from "../services/quotaService";
+import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
 
@@ -192,9 +193,32 @@ codexRoutes.post("/codex/responses", async (c) => {
   }
 
   const usageEstimate = estimateUsage("openai-responses", parsedBody as Record<string, unknown>);
+
+  const jwtConfig = resolveJwtConfig();
+  const jwtHeaderValue = jwtConfig.enabled ? c.req.header(jwtConfig.header) : undefined;
+  const jwtToken = jwtConfig.enabled ? normalizeAuthToken(jwtHeaderValue) : "";
+  const jwtVerification = jwtConfig.enabled && jwtToken ? verifyJwt(jwtToken, jwtConfig.secret) : null;
+  let jwtIdentity: { userId: string; groups: string[] } | null = null;
+
+  if (jwtConfig.enabled) {
+    if (!jwtToken || !jwtVerification?.ok) {
+      return buildGatewayErrorResponse("Unauthorized", 401);
+    }
+    const identity = extractJwtIdentity(
+      jwtVerification.payload,
+      jwtConfig.userClaim,
+      jwtConfig.groupClaim
+    );
+    if (!identity.userId) {
+      return buildGatewayErrorResponse("Unauthorized", 401);
+    }
+    jwtIdentity = identity;
+  }
+
   if (isContentBlocked(usageEstimate.text)) {
     return buildGatewayErrorResponse("Content blocked", 403);
   }
+
   const authToken = normalizeAuthToken(c.req.header("Authorization"));
   if (authToken) {
     const limit = tokenRateLimiter.consume(authToken, usageEstimate.totalTokens);
@@ -205,10 +229,35 @@ codexRoutes.post("/codex/responses", async (c) => {
         limit.retryAfter ? { "Retry-After": limit.retryAfter.toString() } : undefined
       );
     }
+  }
 
-    const quota = keyQuotaTracker.consume(authToken, usageEstimate);
+  if (authToken) {
+    const quota = keyQuotaTracker.canConsume(authToken, usageEstimate);
     if (!quota.allowed) {
       return buildGatewayErrorResponse("Quota exceeded", 429);
+    }
+  }
+
+  if (jwtIdentity) {
+    const userQuota = userQuotaTracker.canConsume(jwtIdentity.userId, usageEstimate);
+    if (!userQuota.allowed) {
+      return buildGatewayErrorResponse("User quota exceeded", 429);
+    }
+    for (const group of jwtIdentity.groups) {
+      const groupQuota = groupQuotaTracker.canConsume(group, usageEstimate);
+      if (!groupQuota.allowed) {
+        return buildGatewayErrorResponse("Group quota exceeded", 429);
+      }
+    }
+  }
+
+  if (authToken) {
+    keyQuotaTracker.consume(authToken, usageEstimate);
+  }
+  if (jwtIdentity) {
+    userQuotaTracker.consume(jwtIdentity.userId, usageEstimate);
+    for (const group of jwtIdentity.groups) {
+      groupQuotaTracker.consume(group, usageEstimate);
     }
   }
 

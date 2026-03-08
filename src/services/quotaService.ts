@@ -19,6 +19,15 @@ type QuotaEntry = {
   monthlyCost: number;
 };
 
+type QuotaConfig = {
+  dailyTokensEnv: string;
+  monthlyTokensEnv: string;
+  dailyBudgetEnv: string;
+  monthlyBudgetEnv: string;
+  overridesEnv: string;
+  logLabel: string;
+};
+
 function parseNumber(value: string | undefined) {
   if (!value) return null;
   const parsed = Number(value);
@@ -26,37 +35,16 @@ function parseNumber(value: string | undefined) {
   return parsed;
 }
 
-function parseOverrides(raw: string | undefined): Record<string, QuotaLimits> {
+function parseOverrides(raw: string | undefined, label: string): Record<string, QuotaLimits> {
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw) as Record<string, QuotaLimits>;
     if (!parsed || typeof parsed !== "object") return {};
     return parsed;
   } catch (error) {
-    console.warn("[quota] invalid KEY_QUOTA_OVERRIDES", error);
+    console.warn(`[quota] invalid ${label}_QUOTA_OVERRIDES`, error);
     return {};
   }
-}
-
-function resolveDefaultLimits(): QuotaLimits {
-  return {
-    dailyTokens: parseNumber(process.env.KEY_DAILY_TOKENS),
-    monthlyTokens: parseNumber(process.env.KEY_MONTHLY_TOKENS),
-    dailyBudgetUsd: parseNumber(process.env.KEY_DAILY_BUDGET_USD),
-    monthlyBudgetUsd: parseNumber(process.env.KEY_MONTHLY_BUDGET_USD),
-  };
-}
-
-function buildLimitsForKey(key: string, overrides: Record<string, QuotaLimits>): QuotaLimits {
-  const defaults = resolveDefaultLimits();
-  const override = overrides[key];
-  if (!override) return defaults;
-  return {
-    dailyTokens: override.dailyTokens ?? defaults.dailyTokens,
-    monthlyTokens: override.monthlyTokens ?? defaults.monthlyTokens,
-    dailyBudgetUsd: override.dailyBudgetUsd ?? defaults.dailyBudgetUsd,
-    monthlyBudgetUsd: override.monthlyBudgetUsd ?? defaults.monthlyBudgetUsd,
-  };
 }
 
 function currentDayKey(date: Date) {
@@ -72,33 +60,59 @@ class QuotaTracker {
   private cachedOverridesRaw: string | undefined;
   private cachedOverrides: Record<string, QuotaLimits> = {};
 
+  constructor(private readonly config: QuotaConfig) {}
+
   private resolveOverrides() {
-    const raw = process.env.KEY_QUOTA_OVERRIDES;
+    const raw = process.env[this.config.overridesEnv];
     if (raw !== this.cachedOverridesRaw) {
       this.cachedOverridesRaw = raw;
-      this.cachedOverrides = parseOverrides(raw);
+      this.cachedOverrides = parseOverrides(raw, this.config.logLabel);
     }
     return this.cachedOverrides;
   }
 
-  consume(key: string, usage: QuotaUsage) {
+  private resolveDefaultLimits(): QuotaLimits {
+    return {
+      dailyTokens: parseNumber(process.env[this.config.dailyTokensEnv]),
+      monthlyTokens: parseNumber(process.env[this.config.monthlyTokensEnv]),
+      dailyBudgetUsd: parseNumber(process.env[this.config.dailyBudgetEnv]),
+      monthlyBudgetUsd: parseNumber(process.env[this.config.monthlyBudgetEnv]),
+    };
+  }
+
+  private buildLimitsForKey(key: string, overrides: Record<string, QuotaLimits>): QuotaLimits {
+    const defaults = this.resolveDefaultLimits();
+    const override = overrides[key];
+    if (!override) return defaults;
+    return {
+      dailyTokens: override.dailyTokens ?? defaults.dailyTokens,
+      monthlyTokens: override.monthlyTokens ?? defaults.monthlyTokens,
+      dailyBudgetUsd: override.dailyBudgetUsd ?? defaults.dailyBudgetUsd,
+      monthlyBudgetUsd: override.monthlyBudgetUsd ?? defaults.monthlyBudgetUsd,
+    };
+  }
+
+  private evaluate(key: string, usage: QuotaUsage, apply: boolean) {
     if (!key) return { allowed: true };
     const overrides = this.resolveOverrides();
-    const limits = buildLimitsForKey(key, overrides);
+    const limits = this.buildLimitsForKey(key, overrides);
     const hasLimits = Object.values(limits).some((value) => value !== null && value !== undefined);
     if (!hasLimits) return { allowed: true };
 
     const now = new Date();
     const dayKey = currentDayKey(now);
     const monthKey = currentMonthKey(now);
-    const entry = this.entries.get(key) ?? {
-      day: dayKey,
-      month: monthKey,
-      dailyTokens: 0,
-      monthlyTokens: 0,
-      dailyCost: 0,
-      monthlyCost: 0,
-    };
+    const existing = this.entries.get(key);
+    const entry: QuotaEntry = existing
+      ? { ...existing }
+      : {
+          day: dayKey,
+          month: monthKey,
+          dailyTokens: 0,
+          monthlyTokens: 0,
+          dailyCost: 0,
+          monthlyCost: 0,
+        };
 
     if (entry.day !== dayKey) {
       entry.day = dayKey;
@@ -129,13 +143,23 @@ class QuotaTracker {
       if (nextMonthlyCost > limits.monthlyBudgetUsd) return { allowed: false };
     }
 
-    entry.dailyTokens = nextDailyTokens;
-    entry.monthlyTokens = nextMonthlyTokens;
-    entry.dailyCost = nextDailyCost;
-    entry.monthlyCost = nextMonthlyCost;
-    this.entries.set(key, entry);
+    if (apply) {
+      entry.dailyTokens = nextDailyTokens;
+      entry.monthlyTokens = nextMonthlyTokens;
+      entry.dailyCost = nextDailyCost;
+      entry.monthlyCost = nextMonthlyCost;
+      this.entries.set(key, entry);
+    }
 
     return { allowed: true };
+  }
+
+  canConsume(key: string, usage: QuotaUsage) {
+    return this.evaluate(key, usage, false);
+  }
+
+  consume(key: string, usage: QuotaUsage) {
+    return this.evaluate(key, usage, true);
   }
 
   reset() {
@@ -143,4 +167,29 @@ class QuotaTracker {
   }
 }
 
-export const keyQuotaTracker = new QuotaTracker();
+export const keyQuotaTracker = new QuotaTracker({
+  dailyTokensEnv: "KEY_DAILY_TOKENS",
+  monthlyTokensEnv: "KEY_MONTHLY_TOKENS",
+  dailyBudgetEnv: "KEY_DAILY_BUDGET_USD",
+  monthlyBudgetEnv: "KEY_MONTHLY_BUDGET_USD",
+  overridesEnv: "KEY_QUOTA_OVERRIDES",
+  logLabel: "KEY",
+});
+
+export const userQuotaTracker = new QuotaTracker({
+  dailyTokensEnv: "USER_DAILY_TOKENS",
+  monthlyTokensEnv: "USER_MONTHLY_TOKENS",
+  dailyBudgetEnv: "USER_DAILY_BUDGET_USD",
+  monthlyBudgetEnv: "USER_MONTHLY_BUDGET_USD",
+  overridesEnv: "USER_QUOTA_OVERRIDES",
+  logLabel: "USER",
+});
+
+export const groupQuotaTracker = new QuotaTracker({
+  dailyTokensEnv: "GROUP_DAILY_TOKENS",
+  monthlyTokensEnv: "GROUP_MONTHLY_TOKENS",
+  dailyBudgetEnv: "GROUP_DAILY_BUDGET_USD",
+  monthlyBudgetEnv: "GROUP_MONTHLY_BUDGET_USD",
+  overridesEnv: "GROUP_QUOTA_OVERRIDES",
+  logLabel: "GROUP",
+});

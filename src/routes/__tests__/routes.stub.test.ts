@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../services/gatewayService", () => ({
   handleRequest: vi.fn().mockImplementation(
@@ -25,13 +26,22 @@ vi.mock("../../services/gatewayService", () => ({
   ),
 }));
 import { createApp } from "../../app";
-import { keyQuotaTracker } from "../../services/quotaService";
+import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../../services/quotaService";
 
 process.env.GATEWAY_API_KEY = "test-key";
 
 const app = createApp();
 
 const authHeader = { Authorization: "Bearer test-key" };
+
+function createJwt(payload: Record<string, unknown>, secret: string) {
+  const header = { alg: "HS256", typ: "JWT" };
+  const encode = (value: Record<string, unknown>) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const token = `${encode(header)}.${encode(payload)}`;
+  const signature = createHmac("sha256", secret).update(token).digest("base64url");
+  return `${token}.${signature}`;
+}
 
 describe("route stubs", () => {
   afterEach(() => {
@@ -46,7 +56,23 @@ describe("route stubs", () => {
     delete process.env.KEY_MONTHLY_BUDGET_USD;
     delete process.env.KEY_QUOTA_OVERRIDES;
     delete process.env.CONTENT_BLOCKLIST;
+    delete process.env.JWT_SECRET;
+    delete process.env.JWT_HEADER;
+    delete process.env.JWT_USER_CLAIM;
+    delete process.env.JWT_GROUP_CLAIM;
+    delete process.env.USER_DAILY_TOKENS;
+    delete process.env.USER_MONTHLY_TOKENS;
+    delete process.env.USER_DAILY_BUDGET_USD;
+    delete process.env.USER_MONTHLY_BUDGET_USD;
+    delete process.env.USER_QUOTA_OVERRIDES;
+    delete process.env.GROUP_DAILY_TOKENS;
+    delete process.env.GROUP_MONTHLY_TOKENS;
+    delete process.env.GROUP_DAILY_BUDGET_USD;
+    delete process.env.GROUP_MONTHLY_BUDGET_USD;
+    delete process.env.GROUP_QUOTA_OVERRIDES;
     keyQuotaTracker.reset();
+    userQuotaTracker.reset();
+    groupQuotaTracker.reset();
   });
 
   it("rejects unauthenticated OpenAI request", async () => {
@@ -170,6 +196,48 @@ describe("route stubs", () => {
     const second = await app.request("/v1/chat/completions", {
       method: "POST",
       headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "" }],
+        max_tokens: 1,
+      }),
+    });
+
+    expect(first.status).toBe(503);
+    expect(second.status).toBe(429);
+  });
+
+  it("requires JWT when enabled", async () => {
+    process.env.JWT_SECRET = "test-secret";
+    const res = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("enforces user quotas from JWT", async () => {
+    process.env.JWT_SECRET = "test-secret";
+    process.env.USER_DAILY_TOKENS = "1";
+    const token = createJwt({ sub: "user-1" }, "test-secret");
+
+    const first = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: { ...authHeader, "X-User-Token": token },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "" }],
+        max_tokens: 1,
+      }),
+    });
+
+    const second = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: { ...authHeader, "X-User-Token": token },
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [{ role: "user", content: "" }],

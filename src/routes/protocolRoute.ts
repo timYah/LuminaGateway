@@ -8,9 +8,10 @@ import {
 } from "../services/gatewayService";
 import { responseCache, resolveCacheTtlMs } from "../services/cacheService";
 import { isContentBlocked } from "../services/contentSafetyService";
+import { extractJwtIdentity, resolveJwtConfig, verifyJwt } from "../services/jwtService";
 import { estimateUsage } from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
-import { keyQuotaTracker } from "../services/quotaService";
+import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
 import { normalizeAuthToken } from "../utils/auth";
 
 type ProtocolRouteOptions<T extends z.ZodTypeAny> = {
@@ -103,9 +104,32 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
     }
 
     const usageEstimate = estimateUsage(options.clientFormat, merged as Record<string, unknown>);
+
+    const jwtConfig = resolveJwtConfig();
+    const jwtHeaderValue = jwtConfig.enabled ? c.req.header(jwtConfig.header) : undefined;
+    const jwtToken = jwtConfig.enabled ? normalizeAuthToken(jwtHeaderValue) : "";
+    const jwtVerification = jwtConfig.enabled && jwtToken ? verifyJwt(jwtToken, jwtConfig.secret) : null;
+    let jwtIdentity: { userId: string; groups: string[] } | null = null;
+
+    if (jwtConfig.enabled) {
+      if (!jwtToken || !jwtVerification?.ok) {
+        return c.json({ error: { message: "Unauthorized" } }, 401);
+      }
+      const identity = extractJwtIdentity(
+        jwtVerification.payload,
+        jwtConfig.userClaim,
+        jwtConfig.groupClaim
+      );
+      if (!identity.userId) {
+        return c.json({ error: { message: "Unauthorized" } }, 401);
+      }
+      jwtIdentity = identity;
+    }
+
     if (isContentBlocked(usageEstimate.text)) {
       return c.json({ error: { message: "Content blocked" } }, 403);
     }
+
     const authToken = normalizeAuthToken(c.req.header("Authorization"));
     if (authToken) {
       const limit = tokenRateLimiter.consume(authToken, usageEstimate.totalTokens);
@@ -116,10 +140,35 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
           limit.retryAfter ? { "Retry-After": limit.retryAfter.toString() } : undefined
         );
       }
+    }
 
-      const quota = keyQuotaTracker.consume(authToken, usageEstimate);
+    if (authToken) {
+      const quota = keyQuotaTracker.canConsume(authToken, usageEstimate);
       if (!quota.allowed) {
         return c.json({ error: { message: "Quota exceeded" } }, 429);
+      }
+    }
+
+    if (jwtIdentity) {
+      const userQuota = userQuotaTracker.canConsume(jwtIdentity.userId, usageEstimate);
+      if (!userQuota.allowed) {
+        return c.json({ error: { message: "User quota exceeded" } }, 429);
+      }
+      for (const group of jwtIdentity.groups) {
+        const groupQuota = groupQuotaTracker.canConsume(group, usageEstimate);
+        if (!groupQuota.allowed) {
+          return c.json({ error: { message: "Group quota exceeded" } }, 429);
+        }
+      }
+    }
+
+    if (authToken) {
+      keyQuotaTracker.consume(authToken, usageEstimate);
+    }
+    if (jwtIdentity) {
+      userQuotaTracker.consume(jwtIdentity.userId, usageEstimate);
+      for (const group of jwtIdentity.groups) {
+        groupQuotaTracker.consume(group, usageEstimate);
       }
     }
 

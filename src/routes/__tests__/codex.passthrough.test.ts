@@ -39,7 +39,7 @@ import * as billingService from "../../services/billingService";
 import * as failureStatsService from "../../services/failureStatsService";
 import { gatewayCircuitBreaker, gatewayRouter } from "../../services/gatewayService";
 import * as providerService from "../../services/providerService";
-import { keyQuotaTracker } from "../../services/quotaService";
+import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../../services/quotaService";
 import * as requestLogService from "../../services/requestLogService";
 
 process.env.GATEWAY_API_KEY = "test-key";
@@ -128,7 +128,23 @@ describe("codex passthrough route", () => {
     delete process.env.KEY_MONTHLY_BUDGET_USD;
     delete process.env.KEY_QUOTA_OVERRIDES;
     delete process.env.CONTENT_BLOCKLIST;
+    delete process.env.JWT_SECRET;
+    delete process.env.JWT_HEADER;
+    delete process.env.JWT_USER_CLAIM;
+    delete process.env.JWT_GROUP_CLAIM;
+    delete process.env.USER_DAILY_TOKENS;
+    delete process.env.USER_MONTHLY_TOKENS;
+    delete process.env.USER_DAILY_BUDGET_USD;
+    delete process.env.USER_MONTHLY_BUDGET_USD;
+    delete process.env.USER_QUOTA_OVERRIDES;
+    delete process.env.GROUP_DAILY_TOKENS;
+    delete process.env.GROUP_MONTHLY_TOKENS;
+    delete process.env.GROUP_DAILY_BUDGET_USD;
+    delete process.env.GROUP_MONTHLY_BUDGET_USD;
+    delete process.env.GROUP_QUOTA_OVERRIDES;
     keyQuotaTracker.reset();
+    userQuotaTracker.reset();
+    groupQuotaTracker.reset();
   });
 
   it("rejects invalid JSON bodies", async () => {
@@ -172,6 +188,18 @@ describe("codex passthrough route", () => {
     });
 
     expect(res.status).toBe(403);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("requires JWT when enabled", async () => {
+    process.env.JWT_SECRET = "test-secret";
+    const res = await app.request("/codex/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "gpt-5.2", input: [] }),
+    });
+
+    expect(res.status).toBe(401);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
