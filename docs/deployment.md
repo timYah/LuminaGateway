@@ -12,13 +12,36 @@ Lumina Gateway runs on Node.js LTS and supports SQLite or PostgreSQL. Use persis
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, and `/admin/*` routes. |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
+| `CONTENT_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked content keywords (case-insensitive). |
 | `RATE_LIMIT_RPM` | *(optional)* | Per-API-key requests-per-minute limit (enables rate limiting). |
 | `RATE_LIMIT_BURST` | *(optional)* | Burst capacity for rate limiting (defaults to `RATE_LIMIT_RPM`). |
 | `RATE_LIMIT_OVERRIDES` | *(optional)* | JSON map of per-key limits. |
+| `TOKEN_RATE_LIMIT_TPM` | *(optional)* | Per-API-key token-per-minute limit (enables token-based throttling). |
+| `TOKEN_RATE_LIMIT_BURST` | *(optional)* | Burst token capacity (defaults to `TOKEN_RATE_LIMIT_TPM`). |
+| `TOKEN_RATE_LIMIT_OVERRIDES` | *(optional)* | JSON map of per-key token limits. |
+| `KEY_DAILY_TOKENS` | *(optional)* | Daily token quota per API key. |
+| `KEY_MONTHLY_TOKENS` | *(optional)* | Monthly token quota per API key. |
+| `KEY_DAILY_BUDGET_USD` | *(optional)* | Daily budget (USD) per API key. |
+| `KEY_MONTHLY_BUDGET_USD` | *(optional)* | Monthly budget (USD) per API key. |
+| `KEY_QUOTA_OVERRIDES` | *(optional)* | JSON map of per-key quota overrides. |
+| `JWT_SECRET` | *(optional)* | Enables JWT auth when set (HS256). Missing or invalid tokens return `401`. |
+| `JWT_HEADER` | `X-User-Token` | Header name used to receive JWTs. |
+| `JWT_USER_CLAIM` | `sub` | JWT claim used for user identity. |
+| `JWT_GROUP_CLAIM` | `groups` | JWT claim used for group identity. |
+| `USER_DAILY_TOKENS` | *(optional)* | Daily token quota per user (JWT). |
+| `USER_MONTHLY_TOKENS` | *(optional)* | Monthly token quota per user (JWT). |
+| `USER_DAILY_BUDGET_USD` | *(optional)* | Daily budget (USD) per user (JWT). |
+| `USER_MONTHLY_BUDGET_USD` | *(optional)* | Monthly budget (USD) per user (JWT). |
+| `USER_QUOTA_OVERRIDES` | *(optional)* | JSON map of per-user quota overrides. |
+| `GROUP_DAILY_TOKENS` | *(optional)* | Daily token quota per group (JWT). |
+| `GROUP_MONTHLY_TOKENS` | *(optional)* | Monthly token quota per group (JWT). |
+| `GROUP_DAILY_BUDGET_USD` | *(optional)* | Daily budget (USD) per group (JWT). |
+| `GROUP_MONTHLY_BUDGET_USD` | *(optional)* | Monthly budget (USD) per group (JWT). |
+| `GROUP_QUOTA_OVERRIDES` | *(optional)* | JSON map of per-group quota overrides. |
 | `DEFAULT_REQUEST_PARAMS` | *(optional)* | JSON object merged into each `/v1/*` request when fields are missing. |
 | `ROUTING_STRATEGY` | `priority` | Routing strategy: `priority`, `round_robin`, or `weighted`. |
 | `PROVIDER_WEIGHTS` | *(optional)* | JSON map of provider weights for weighted routing. |
@@ -123,7 +146,7 @@ The admin UI can load credentials from the root `.env` file. Set `GATEWAY_API_KE
 
 ## Usage examples
 
-All `/v1/*`, `/codex/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`.
+All `/v1/*`, `/codex/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Set `JWT_SECRET` to require a user JWT in the header defined by `JWT_HEADER` (default `X-User-Token`).
 
 The `/metrics` endpoint exposes Prometheus-compatible counters for request volume and latency.
 
@@ -170,6 +193,11 @@ curl "http://localhost:3000/admin/failure-stats" \
 
 ```bash [Terminal]
 curl "http://localhost:3000/admin/circuit-breakers" \
+  -H "Authorization: Bearer dev-token"
+```
+
+```bash [Terminal]
+curl "http://localhost:3000/admin/usage/summary" \
   -H "Authorization: Bearer dev-token"
 ```
 

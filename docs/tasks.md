@@ -669,7 +669,7 @@
 - [x] **T-64.3** 增加内容安全阻断（`CONTENT_BLOCKLIST`），并补充自动化测试
 - [x] **T-64.4** 增加 JWT 用户鉴权与用户/分组配额（`JWT_SECRET` 等），并补充自动化测试
 - [x] **T-64.5** 增加按 API key / 路由的用量与成本汇总端点，并补充自动化测试
-- [ ] **T-64.6** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
+- [x] **T-64.6** ✅ **验证**：更新文档并运行 `npm run lint && npm run typecheck && npm run test`
 
 ## 任务统计
 

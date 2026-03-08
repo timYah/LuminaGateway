@@ -119,9 +119,32 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
+| `CONTENT_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked content keywords (case-insensitive). |
 | `RATE_LIMIT_RPM` | *(optional)* | Per-API-key requests-per-minute limit (enables rate limiting). |
 | `RATE_LIMIT_BURST` | *(optional)* | Burst capacity for rate limiting (defaults to `RATE_LIMIT_RPM`). |
 | `RATE_LIMIT_OVERRIDES` | *(optional)* | JSON map of per-key limits, e.g. `{"key-1":{"rpm":120,"burst":30}}`. |
+| `TOKEN_RATE_LIMIT_TPM` | *(optional)* | Per-API-key token-per-minute limit (enables token-based throttling). |
+| `TOKEN_RATE_LIMIT_BURST` | *(optional)* | Burst token capacity (defaults to `TOKEN_RATE_LIMIT_TPM`). |
+| `TOKEN_RATE_LIMIT_OVERRIDES` | *(optional)* | JSON map of per-key token limits, e.g. `{"key-1":{"tpm":12000,"burst":4000}}`. |
+| `KEY_DAILY_TOKENS` | *(optional)* | Daily token quota per API key. |
+| `KEY_MONTHLY_TOKENS` | *(optional)* | Monthly token quota per API key. |
+| `KEY_DAILY_BUDGET_USD` | *(optional)* | Daily budget (USD) per API key. |
+| `KEY_MONTHLY_BUDGET_USD` | *(optional)* | Monthly budget (USD) per API key. |
+| `KEY_QUOTA_OVERRIDES` | *(optional)* | JSON map of per-key quota overrides. |
+| `JWT_SECRET` | *(optional)* | Enables JWT auth when set (HS256). Missing or invalid tokens return `401`. |
+| `JWT_HEADER` | `X-User-Token` | Header name used to receive JWTs. |
+| `JWT_USER_CLAIM` | `sub` | JWT claim used for user identity. |
+| `JWT_GROUP_CLAIM` | `groups` | JWT claim used for group identity. |
+| `USER_DAILY_TOKENS` | *(optional)* | Daily token quota per user (JWT). |
+| `USER_MONTHLY_TOKENS` | *(optional)* | Monthly token quota per user (JWT). |
+| `USER_DAILY_BUDGET_USD` | *(optional)* | Daily budget (USD) per user (JWT). |
+| `USER_MONTHLY_BUDGET_USD` | *(optional)* | Monthly budget (USD) per user (JWT). |
+| `USER_QUOTA_OVERRIDES` | *(optional)* | JSON map of per-user quota overrides. |
+| `GROUP_DAILY_TOKENS` | *(optional)* | Daily token quota per group (JWT). |
+| `GROUP_MONTHLY_TOKENS` | *(optional)* | Monthly token quota per group (JWT). |
+| `GROUP_DAILY_BUDGET_USD` | *(optional)* | Daily budget (USD) per group (JWT). |
+| `GROUP_MONTHLY_BUDGET_USD` | *(optional)* | Monthly budget (USD) per group (JWT). |
+| `GROUP_QUOTA_OVERRIDES` | *(optional)* | JSON map of per-group quota overrides. |
 | `DEFAULT_REQUEST_PARAMS` | *(optional)* | JSON object merged into each `/v1/*` request when fields are missing. |
 | `ROUTING_STRATEGY` | `priority` | Routing strategy: `priority`, `round_robin`, or `weighted`. |
 | `PROVIDER_WEIGHTS` | *(optional)* | JSON map of provider weights for weighted routing (by id or name). |
@@ -131,6 +154,8 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
 | `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
+| `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
+| `DEFAULT_OUTPUT_PRICE` | *(optional)* | Global output price fallback (USD per 1M tokens). |
 | `PORT` | `3000` | Server listen port. |
 | `LOG_LEVEL` | `info` | Logging threshold: `debug`, `info`, `warn`, `error`. |
 
@@ -146,6 +171,7 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 - `POST /admin/providers/:id/reset` — reset circuit breaker state
 - `GET /admin/circuit-breakers` — list open circuit breakers
 - `GET /admin/usage` — usage query
+- `GET /admin/usage/summary` — usage + cost summary by API key and route
 - `GET /metrics` — Prometheus-compatible metrics
 
 For full details, see `docs/documentation.md`.

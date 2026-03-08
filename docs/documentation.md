@@ -30,13 +30,36 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*` and `/admin/*` routes. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, and `/admin/*` routes. |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
+| `CONTENT_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked content keywords (case-insensitive). |
 | `RATE_LIMIT_RPM` | *(optional)* | Per-API-key requests-per-minute limit (enables rate limiting). |
 | `RATE_LIMIT_BURST` | *(optional)* | Burst capacity for rate limiting (defaults to `RATE_LIMIT_RPM`). |
 | `RATE_LIMIT_OVERRIDES` | *(optional)* | JSON map of per-key limits, e.g. `{"key-1":{"rpm":120,"burst":30}}`. |
+| `TOKEN_RATE_LIMIT_TPM` | *(optional)* | Per-API-key token-per-minute limit (enables token-based throttling). |
+| `TOKEN_RATE_LIMIT_BURST` | *(optional)* | Burst token capacity (defaults to `TOKEN_RATE_LIMIT_TPM`). |
+| `TOKEN_RATE_LIMIT_OVERRIDES` | *(optional)* | JSON map of per-key token limits, e.g. `{"key-1":{"tpm":12000,"burst":4000}}`. |
+| `KEY_DAILY_TOKENS` | *(optional)* | Daily token quota per API key. |
+| `KEY_MONTHLY_TOKENS` | *(optional)* | Monthly token quota per API key. |
+| `KEY_DAILY_BUDGET_USD` | *(optional)* | Daily budget (USD) per API key. |
+| `KEY_MONTHLY_BUDGET_USD` | *(optional)* | Monthly budget (USD) per API key. |
+| `KEY_QUOTA_OVERRIDES` | *(optional)* | JSON map of per-key quota overrides. |
+| `JWT_SECRET` | *(optional)* | Enables JWT auth when set (HS256). Missing or invalid tokens return `401`. |
+| `JWT_HEADER` | `X-User-Token` | Header name used to receive JWTs. |
+| `JWT_USER_CLAIM` | `sub` | JWT claim used for user identity. |
+| `JWT_GROUP_CLAIM` | `groups` | JWT claim used for group identity. |
+| `USER_DAILY_TOKENS` | *(optional)* | Daily token quota per user (JWT). |
+| `USER_MONTHLY_TOKENS` | *(optional)* | Monthly token quota per user (JWT). |
+| `USER_DAILY_BUDGET_USD` | *(optional)* | Daily budget (USD) per user (JWT). |
+| `USER_MONTHLY_BUDGET_USD` | *(optional)* | Monthly budget (USD) per user (JWT). |
+| `USER_QUOTA_OVERRIDES` | *(optional)* | JSON map of per-user quota overrides. |
+| `GROUP_DAILY_TOKENS` | *(optional)* | Daily token quota per group (JWT). |
+| `GROUP_MONTHLY_TOKENS` | *(optional)* | Monthly token quota per group (JWT). |
+| `GROUP_DAILY_BUDGET_USD` | *(optional)* | Daily budget (USD) per group (JWT). |
+| `GROUP_MONTHLY_BUDGET_USD` | *(optional)* | Monthly budget (USD) per group (JWT). |
+| `GROUP_QUOTA_OVERRIDES` | *(optional)* | JSON map of per-group quota overrides. |
 | `DEFAULT_REQUEST_PARAMS` | *(optional)* | JSON object merged into each `/v1/*` request when fields are missing. |
 | `ROUTING_STRATEGY` | `priority` | Routing strategy: `priority`, `round_robin`, or `weighted`. |
 | `PROVIDER_WEIGHTS` | *(optional)* | JSON map of provider weights for weighted routing (by id or name). |
@@ -64,7 +87,13 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 
 ### Authentication
 
-All `/v1/*` and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`.
+All `/v1/*`, `/codex/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`.
+
+Set `JWT_SECRET` to enable per-user authentication. When it is set, the gateway also requires a JWT in the header defined by `JWT_HEADER` (default `X-User-Token`). The gateway reads the user and group claims from `JWT_USER_CLAIM` and `JWT_GROUP_CLAIM` and enforces any configured user or group quotas.
+
+### Throttling and quotas
+
+Set `RATE_LIMIT_*` to throttle requests per minute and `TOKEN_RATE_LIMIT_*` to throttle token volume per minute. Configure API key budgets with `KEY_*` and configure per-user or per-group budgets with `USER_*` and `GROUP_*` when JWT auth is enabled. Set `CONTENT_BLOCKLIST` to reject requests that contain blocked keywords.
 
 ### Health check
 
@@ -196,6 +225,7 @@ POST   /admin/providers/health   — run a health check for all providers
 GET    /admin/failure-stats      — get error type distribution for recent requests
 GET    /admin/circuit-breakers   — list open circuit breakers
 GET    /admin/usage              — query usage logs
+GET    /admin/usage/summary      — usage + cost summary by API key and route
 GET    /admin/usage/stats        — trend + provider/model distribution
 GET    /admin/request-logs       — query request-level logs
 GET    /admin/config/export      — export providers + settings
@@ -213,6 +243,8 @@ POST   /admin/config/import      — import providers + settings
 For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 
 `GET /admin/usage` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `limit`, and `offset`. The response includes `{ usage, limit, offset }` sorted by `createdAt` descending.
+
+`GET /admin/usage/summary` returns aggregated usage and estimated cost grouped by API key and route. The estimate uses `DEFAULT_INPUT_PRICE` and `DEFAULT_OUTPUT_PRICE` when they are set.
 
 `GET /admin/usage/stats` returns `{ trend, byProvider, byModel }` for the selected date range. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first.
 
