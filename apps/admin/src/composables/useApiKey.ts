@@ -2,12 +2,28 @@ import { computed, ref, watch } from "vue";
 
 declare const __GATEWAY_API_KEY__: string;
 
+type RuntimeConfig = {
+  apiKey?: string;
+  baseUrl?: string;
+};
+
+const runtimeConfig =
+  typeof globalThis !== "undefined"
+    ? (globalThis as { __GATEWAY_RUNTIME__?: RuntimeConfig })
+        .__GATEWAY_RUNTIME__
+    : undefined;
+const runtimeKey =
+  typeof runtimeConfig?.apiKey === "string"
+    ? runtimeConfig.apiKey.trim()
+    : "";
+
 const storageKey = "lumina-admin-api-key";
 const key = ref<string | null>(null);
 const ready = ref(false);
 let initialized = false;
-const envKey =
+const buildKey =
   typeof __GATEWAY_API_KEY__ === "string" ? __GATEWAY_API_KEY__.trim() : "";
+const envKey = buildKey || runtimeKey;
 const fromEnv = envKey.length > 0;
 
 const init = () => {

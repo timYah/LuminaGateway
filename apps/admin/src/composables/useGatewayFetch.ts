@@ -5,6 +5,19 @@ import { useApiKey } from "./useApiKey";
 
 declare const __GATEWAY_BASE_URL__: string;
 
+type RuntimeConfig = {
+  apiKey?: string;
+  baseUrl?: string;
+};
+
+const runtimeConfig =
+  typeof globalThis !== "undefined"
+    ? (globalThis as { __GATEWAY_RUNTIME__?: RuntimeConfig })
+        .__GATEWAY_RUNTIME__
+    : undefined;
+const runtimeBase =
+  typeof runtimeConfig?.baseUrl === "string" ? runtimeConfig.baseUrl : undefined;
+
 type QueryValue = string | number | boolean | null | undefined;
 type QueryParams = Record<string, QueryValue>;
 
@@ -23,9 +36,13 @@ type UseGatewayFetchOptions = GatewayFetchOptions & {
 
 const envBase =
   typeof __GATEWAY_BASE_URL__ === "string" ? __GATEWAY_BASE_URL__.trim() : "";
-const apiBase = (
-  envBase || import.meta.env.VITE_API_BASE_URL || "/api"
-).replace(/\/$/, "");
+const baseCandidate =
+  envBase.length > 0
+    ? envBase
+    : runtimeBase !== undefined
+    ? runtimeBase
+    : import.meta.env.VITE_API_BASE_URL || "/api";
+const apiBase = (baseCandidate || "").replace(/\/$/, "");
 
 const buildUrl = (path: string, query?: QueryParams) => {
   const normalizedPath = path.startsWith("/")

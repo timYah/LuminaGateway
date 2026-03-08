@@ -18,7 +18,22 @@ function registerAdminUi(app: Hono) {
   if (!existsSync(adminIndexPath)) {
     return;
   }
-  const adminIndexHtml = readFileSync(adminIndexPath, "utf8");
+  const rawAdminIndexHtml = readFileSync(adminIndexPath, "utf8");
+  const runtimeKey =
+    (process.env.GATEWAY_API_KEY ?? "").trim() ||
+    (process.env.GATEWAY_API_KEYS ?? "")
+      .split(/[,\n]/)
+      .map((value) => value.trim())
+      .find((value) => value.length > 0) ||
+    "";
+  const runtimeBaseUrl = process.env.GATEWAY_BASE_URL ?? "";
+  const runtimeScript = `<script>window.__GATEWAY_RUNTIME__=${JSON.stringify({
+    apiKey: runtimeKey,
+    baseUrl: runtimeBaseUrl,
+  })};</script>`;
+  const adminIndexHtml = rawAdminIndexHtml.includes("</head>")
+    ? rawAdminIndexHtml.replace("</head>", `${runtimeScript}</head>`)
+    : `${runtimeScript}${rawAdminIndexHtml}`;
 
   app.use(
     "/assets/*",
