@@ -691,6 +691,11 @@
 - [x] **T-68.1** 修复 admin 导航与用量筛选：/admin alias 路由、导航前缀、非空下拉值，确保 `/providers` ↔ `/usage` 内容切换稳定
 - [x] **T-68.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage`
 
+## Phase 69 — Usage Layout & Paging
+
+- [x] **T-69.1** 调整 `/usage` 仪表盘布局（trend 与右侧卡片重新排布），并增加每页数量选择（10/20/50/100，默认 10）
+- [ ] **T-69.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/usage` 布局与分页选项
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -758,4 +763,5 @@
 | Phase 66 | 2 | Admin Route Switching |
 | Phase 67 | 2 | Admin Nav Base Path |
 | Phase 68 | 2 | Admin Nav Fix |
-| **合计** | **281** | |
+| Phase 69 | 2 | Usage Layout & Paging |
+| **合计** | **283** | |

@@ -71,6 +71,13 @@ type RequestLogResponse = {
 const { t } = useI18n();
 const ALL_PROVIDERS = "all";
 const ALL_ERROR_TYPES = "all";
+const DEFAULT_LIMIT = 10;
+const pageSizeOptions = [
+  { label: "10", value: "10" },
+  { label: "20", value: "20" },
+  { label: "50", value: "50" },
+  { label: "100", value: "100" },
+];
 const providers = ref<Provider[]>([]);
 const providerOptions = computed(() => [
   { label: t("common.allProviders"), value: ALL_PROVIDERS },
@@ -85,7 +92,7 @@ const filters = reactive({
   modelSlug: "",
   startDate: "",
   endDate: "",
-  limit: "50",
+  limit: DEFAULT_LIMIT.toString(),
   offset: "0",
 });
 
@@ -95,7 +102,7 @@ const requestFilters = reactive({
   startDate: "",
   endDate: "",
   errorType: ALL_ERROR_TYPES,
-  limit: "50",
+  limit: DEFAULT_LIMIT.toString(),
   offset: "0",
 });
 
@@ -106,7 +113,7 @@ const normalizeNumber = (value: string, fallback: number) => {
 
 const query = computed(() => {
   const payload: Record<string, string | number> = {
-    limit: normalizeNumber(filters.limit, 50),
+    limit: normalizeNumber(filters.limit, DEFAULT_LIMIT),
     offset: normalizeNumber(filters.offset, 0),
   };
   if (filters.providerId !== ALL_PROVIDERS) {
@@ -120,7 +127,7 @@ const query = computed(() => {
 
 const requestQuery = computed(() => {
   const payload: Record<string, string | number> = {
-    limit: normalizeNumber(requestFilters.limit, 50),
+    limit: normalizeNumber(requestFilters.limit, DEFAULT_LIMIT),
     offset: normalizeNumber(requestFilters.offset, 0),
   };
   if (requestFilters.providerId !== ALL_PROVIDERS) {
@@ -241,37 +248,40 @@ const applyRequestFilters = async () => {
 };
 
 const nextPage = async () => {
-  const limit = normalizeNumber(filters.limit, 50);
+  const limit = normalizeNumber(filters.limit, DEFAULT_LIMIT);
   const offset = normalizeNumber(filters.offset, 0) + limit;
   filters.offset = offset.toString();
   await execute();
 };
 
 const prevPage = async () => {
-  const limit = normalizeNumber(filters.limit, 50);
+  const limit = normalizeNumber(filters.limit, DEFAULT_LIMIT);
   const offset = Math.max(0, normalizeNumber(filters.offset, 0) - limit);
   filters.offset = offset.toString();
   await execute();
 };
 
 const nextRequestPage = async () => {
-  const limit = normalizeNumber(requestFilters.limit, 50);
+  const limit = normalizeNumber(requestFilters.limit, DEFAULT_LIMIT);
   const offset = normalizeNumber(requestFilters.offset, 0) + limit;
   requestFilters.offset = offset.toString();
   await executeRequests();
 };
 
 const prevRequestPage = async () => {
-  const limit = normalizeNumber(requestFilters.limit, 50);
+  const limit = normalizeNumber(requestFilters.limit, DEFAULT_LIMIT);
   const offset = Math.max(0, normalizeNumber(requestFilters.offset, 0) - limit);
   requestFilters.offset = offset.toString();
   await executeRequests();
 };
 
-const canNext = computed(() => rows.value.length === normalizeNumber(filters.limit, 50));
+const canNext = computed(
+  () => rows.value.length === normalizeNumber(filters.limit, DEFAULT_LIMIT)
+);
 const canPrev = computed(() => normalizeNumber(filters.offset, 0) > 0);
 const requestCanNext = computed(
-  () => requestRows.value.length === normalizeNumber(requestFilters.limit, 50)
+  () =>
+    requestRows.value.length === normalizeNumber(requestFilters.limit, DEFAULT_LIMIT)
 );
 const requestCanPrev = computed(
   () => normalizeNumber(requestFilters.offset, 0) > 0
@@ -372,7 +382,7 @@ watch(
           </p>
         </div>
 
-        <div v-else class="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_0.85fr]">
+        <div v-else class="grid gap-4">
           <div class="metric-card p-4 space-y-3">
             <div class="text-sm font-medium text-slate-900">
               {{ $t("usage.dashboard.trend") }}
@@ -405,7 +415,7 @@ watch(
             </div>
           </div>
 
-          <div class="grid gap-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div class="metric-card p-4 space-y-3">
               <div class="text-sm font-medium text-slate-900">
                 {{ $t("usage.dashboard.providers") }}
@@ -515,7 +525,7 @@ watch(
             :label="$t('usage.form.limit')"
             :help="$t('usage.form.help.limit')"
           >
-            <UInput v-model="filters.limit" type="number" min="1" step="1" />
+            <USelect v-model="filters.limit" :items="pageSizeOptions" />
           </UFormGroup>
           <UFormGroup
             :label="$t('usage.form.offset')"
@@ -707,7 +717,7 @@ watch(
             :label="$t('usage.requests.form.limit')"
             :help="$t('usage.requests.form.help.limit')"
           >
-            <UInput v-model="requestFilters.limit" type="number" min="1" step="1" />
+            <USelect v-model="requestFilters.limit" :items="pageSizeOptions" />
           </UFormGroup>
           <UFormGroup
             :label="$t('usage.requests.form.offset')"
