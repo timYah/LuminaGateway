@@ -27,6 +27,7 @@ vi.mock("../../services/gatewayService", () => ({
 }));
 import { createApp } from "../../app";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../../services/quotaService";
+import { resetUsageSummary } from "../../services/usageSummaryService";
 
 process.env.GATEWAY_API_KEY = "test-key";
 
@@ -73,6 +74,7 @@ describe("route stubs", () => {
     keyQuotaTracker.reset();
     userQuotaTracker.reset();
     groupQuotaTracker.reset();
+    resetUsageSummary();
   });
 
   it("rejects unauthenticated OpenAI request", async () => {
@@ -247,6 +249,28 @@ describe("route stubs", () => {
 
     expect(first.status).toBe(503);
     expect(second.status).toBe(429);
+  });
+
+  it("records usage summary by key and route", async () => {
+    resetUsageSummary();
+    await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+
+    const summaryRes = await app.request("/admin/usage/summary", {
+      headers: authHeader,
+    });
+    expect(summaryRes.status).toBe(200);
+    const body = await summaryRes.json();
+    expect(body.totals.requests).toBeGreaterThanOrEqual(1);
+    expect(body.byKey["test-key"]).toBeDefined();
+    expect(body.byRoute["/v1/chat/completions"]).toBeDefined();
+    expect(body.byKeyRoute["test-key"]["/v1/chat/completions"]).toBeDefined();
   });
 
   it("returns Responses API error when no providers are available", async () => {

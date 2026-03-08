@@ -12,6 +12,7 @@ import { extractJwtIdentity, resolveJwtConfig, verifyJwt } from "../services/jwt
 import { estimateUsage } from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
+import { recordUsage } from "../services/usageSummaryService";
 import { normalizeAuthToken } from "../utils/auth";
 
 type ProtocolRouteOptions<T extends z.ZodTypeAny> = {
@@ -170,6 +171,15 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
       for (const group of jwtIdentity.groups) {
         groupQuotaTracker.consume(group, usageEstimate);
       }
+    }
+
+    if (authToken) {
+      recordUsage({
+        apiKey: authToken,
+        route: options.path,
+        totalTokens: usageEstimate.totalTokens,
+        estimatedCostUsd: usageEstimate.estimatedCostUsd,
+      });
     }
 
     if ((merged as { stream?: boolean }).stream) {

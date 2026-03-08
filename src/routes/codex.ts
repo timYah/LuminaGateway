@@ -13,6 +13,7 @@ import { wrapStreamWithFinalizer } from "../services/streamUtils";
 import { estimateUsage } from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
+import { recordUsage } from "../services/usageSummaryService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
 
@@ -259,6 +260,15 @@ codexRoutes.post("/codex/responses", async (c) => {
     for (const group of jwtIdentity.groups) {
       groupQuotaTracker.consume(group, usageEstimate);
     }
+  }
+
+  if (authToken) {
+    recordUsage({
+      apiKey: authToken,
+      route: "/codex/responses",
+      totalTokens: usageEstimate.totalTokens,
+      estimatedCostUsd: usageEstimate.estimatedCostUsd,
+    });
   }
 
   const candidates = (await gatewayRouter.getAllCandidates(modelSlug)).filter(

@@ -19,6 +19,7 @@ import {
 } from "../services/upstreamService";
 import { runProvidersHealthCheck } from "../services/healthService";
 import { getFailureStats } from "../services/failureStatsService";
+import { getUsageSummary } from "../services/usageSummaryService";
 
 const providerSchema = z.object({
   name: z.string().min(1),
@@ -160,6 +161,10 @@ adminRoutes.post("/admin/providers/:id/reset", async (c) => {
 
 adminRoutes.get("/admin/failure-stats", (c) => {
   return c.json(getFailureStats());
+});
+
+adminRoutes.get("/admin/usage/summary", (c) => {
+  return c.json(getUsageSummary());
 });
 
 adminRoutes.get("/admin/usage", async (c) => {
