@@ -247,6 +247,16 @@ const applyRequestFilters = async () => {
   await executeRequests();
 };
 
+const updateUsageLimit = async () => {
+  filters.offset = "0";
+  await execute();
+};
+
+const updateRequestLimit = async () => {
+  requestFilters.offset = "0";
+  await executeRequests();
+};
+
 const nextPage = async () => {
   const limit = normalizeNumber(filters.limit, DEFAULT_LIMIT);
   const offset = normalizeNumber(filters.offset, 0) + limit;
@@ -333,6 +343,22 @@ watch(
     await executeRequests();
   },
   { immediate: true }
+);
+
+watch(
+  () => filters.limit,
+  async (value, prev) => {
+    if (value === prev) return;
+    await updateUsageLimit();
+  }
+);
+
+watch(
+  () => requestFilters.limit,
+  async (value, prev) => {
+    if (value === prev) return;
+    await updateRequestLimit();
+  }
 );
 </script>
 
@@ -556,12 +582,21 @@ watch(
           </p>
         </div>
         <div class="flex items-center gap-2">
+          <div class="hidden items-center gap-2 text-xs text-slate-500 sm:flex">
+            <span>{{ $t("usage.form.limit") }}</span>
+            <USelect
+              v-model="filters.limit"
+              :items="pageSizeOptions"
+              class="w-24"
+            />
+          </div>
           <UButton
             class="action-press"
             size="sm"
             variant="outline"
             :disabled="!canPrev"
-            @click="prevPage"
+            type="button"
+            @click.prevent="prevPage"
           >
             {{ $t("usage.previous") }}
           </UButton>
@@ -570,7 +605,8 @@ watch(
             size="sm"
             variant="outline"
             :disabled="!canNext"
-            @click="nextPage"
+            type="button"
+            @click.prevent="nextPage"
           >
             {{ $t("usage.next") }}
           </UButton>
@@ -742,12 +778,21 @@ watch(
           {{ $t("usage.requests.log") }}
         </div>
         <div class="flex items-center gap-2">
+          <div class="hidden items-center gap-2 text-xs text-slate-500 sm:flex">
+            <span>{{ $t("usage.requests.form.limit") }}</span>
+            <USelect
+              v-model="requestFilters.limit"
+              :items="pageSizeOptions"
+              class="w-24"
+            />
+          </div>
           <UButton
             class="action-press"
             size="sm"
             variant="outline"
             :disabled="!requestCanPrev"
-            @click="prevRequestPage"
+            type="button"
+            @click.prevent="prevRequestPage"
           >
             {{ $t("usage.requests.previous") }}
           </UButton>
@@ -756,7 +801,8 @@ watch(
             size="sm"
             variant="outline"
             :disabled="!requestCanNext"
-            @click="nextRequestPage"
+            type="button"
+            @click.prevent="nextRequestPage"
           >
             {{ $t("usage.requests.next") }}
           </UButton>
