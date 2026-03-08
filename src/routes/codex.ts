@@ -2,6 +2,7 @@ import { APICallError } from "ai";
 import { Hono } from "hono";
 import type { Provider } from "../db/schema/providers";
 import { normalizeOpenAiBaseUrl } from "../services/aiSdkFactory";
+import { isContentBlocked } from "../services/contentSafetyService";
 import { recordFailure } from "../services/failureStatsService";
 import { gatewayCircuitBreaker, gatewayRouter } from "../services/gatewayService";
 import { gatewayInflightLimiter } from "../services/inflightService";
@@ -191,6 +192,9 @@ codexRoutes.post("/codex/responses", async (c) => {
   }
 
   const usageEstimate = estimateUsage("openai-responses", parsedBody as Record<string, unknown>);
+  if (isContentBlocked(usageEstimate.text)) {
+    return buildGatewayErrorResponse("Content blocked", 403);
+  }
   const authToken = normalizeAuthToken(c.req.header("Authorization"));
   if (authToken) {
     const limit = tokenRateLimiter.consume(authToken, usageEstimate.totalTokens);

@@ -45,6 +45,7 @@ describe("route stubs", () => {
     delete process.env.KEY_DAILY_BUDGET_USD;
     delete process.env.KEY_MONTHLY_BUDGET_USD;
     delete process.env.KEY_QUOTA_OVERRIDES;
+    delete process.env.CONTENT_BLOCKLIST;
     keyQuotaTracker.reset();
   });
 
@@ -95,6 +96,19 @@ describe("route stubs", () => {
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("blocks content matching the safety list", async () => {
+    process.env.CONTENT_BLOCKLIST = "secret";
+    const res = await app.request("/v1/chat/completions", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "this contains a secret" }],
       }),
     });
     expect(res.status).toBe(403);

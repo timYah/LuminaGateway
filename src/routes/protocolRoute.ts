@@ -7,6 +7,7 @@ import {
   type GatewayRequestParams,
 } from "../services/gatewayService";
 import { responseCache, resolveCacheTtlMs } from "../services/cacheService";
+import { isContentBlocked } from "../services/contentSafetyService";
 import { estimateUsage } from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { keyQuotaTracker } from "../services/quotaService";
@@ -102,6 +103,9 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
     }
 
     const usageEstimate = estimateUsage(options.clientFormat, merged as Record<string, unknown>);
+    if (isContentBlocked(usageEstimate.text)) {
+      return c.json({ error: { message: "Content blocked" } }, 403);
+    }
     const authToken = normalizeAuthToken(c.req.header("Authorization"));
     if (authToken) {
       const limit = tokenRateLimiter.consume(authToken, usageEstimate.totalTokens);

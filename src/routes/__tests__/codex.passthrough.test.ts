@@ -127,6 +127,7 @@ describe("codex passthrough route", () => {
     delete process.env.KEY_DAILY_BUDGET_USD;
     delete process.env.KEY_MONTHLY_BUDGET_USD;
     delete process.env.KEY_QUOTA_OVERRIDES;
+    delete process.env.CONTENT_BLOCKLIST;
     keyQuotaTracker.reset();
   });
 
@@ -156,6 +157,21 @@ describe("codex passthrough route", () => {
     });
 
     expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks content matching the safety list", async () => {
+    process.env.CONTENT_BLOCKLIST = "secret";
+    const res = await app.request("/codex/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({
+        model: "gpt-5.2",
+        input: [{ role: "user", content: [{ type: "input_text", text: "secret" }] }],
+      }),
+    });
+
+    expect(res.status).toBe(403);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
