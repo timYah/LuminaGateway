@@ -674,7 +674,7 @@
 ## Phase 65 — Admin Usage Compact Pass
 
 - [x] **T-65.1** `/usage` 页面密度优化：压缩卡片、表格、过滤区间距，降低默认页面高度
-- [ ] **T-65.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+- [x] **T-65.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
 ## 任务统计
 
