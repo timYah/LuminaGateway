@@ -696,6 +696,11 @@
 - [x] **T-69.1** 调整 `/usage` 仪表盘布局（trend 与右侧卡片重新排布），并增加每页数量选择（10/20/50/100，默认 10）
 - [x] **T-69.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/usage` 布局与分页选项
 
+## Phase 70 — Admin Runtime Config
+
+- [x] **T-70.1** 网关注入运行时 API key / baseUrl 到 admin，并在前端读取以避免 `/admin` 面板 401/404
+- [x] **T-70.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/usage` 不再报 Dashboard failed
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -764,4 +769,5 @@
 | Phase 67 | 2 | Admin Nav Base Path |
 | Phase 68 | 2 | Admin Nav Fix |
 | Phase 69 | 2 | Usage Layout & Paging |
-| **合计** | **283** | |
+| Phase 70 | 2 | Admin Runtime Config |
+| **合计** | **285** | |
