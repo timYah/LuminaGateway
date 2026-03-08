@@ -694,7 +694,7 @@
 ## Phase 69 — Usage Layout & Paging
 
 - [x] **T-69.1** 调整 `/usage` 仪表盘布局（trend 与右侧卡片重新排布），并增加每页数量选择（10/20/50/100，默认 10）
-- [ ] **T-69.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/usage` 布局与分页选项
+- [x] **T-69.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/usage` 布局与分页选项
 
 ## 任务统计
 
