@@ -390,10 +390,10 @@ watch(
         </div>
       </div>
       <div class="section-shell__body pt-0">
-        <div v-if="statsPending" class="space-y-3">
-          <div class="h-10 radius-soft skeleton"></div>
-          <div class="h-10 radius-soft skeleton"></div>
-          <div class="h-10 radius-soft skeleton"></div>
+        <div v-if="statsPending" class="space-y-2">
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
         </div>
 
         <div
@@ -408,15 +408,15 @@ watch(
           </p>
         </div>
 
-        <div v-else class="grid gap-4">
-          <div class="metric-card p-4 space-y-3">
+        <div v-else class="grid gap-3">
+          <div class="metric-card p-3 space-y-2">
             <div class="text-sm font-medium text-slate-900">
               {{ $t("usage.dashboard.trend") }}
             </div>
             <div v-if="trend.length === 0" class="text-sm text-slate-500">
               {{ $t("usage.dashboard.empty") }}
             </div>
-            <div v-else class="space-y-3">
+            <div v-else class="space-y-2">
               <div
                 v-for="item in trend"
                 :key="item.date"
@@ -441,15 +441,15 @@ watch(
             </div>
           </div>
 
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div class="metric-card p-4 space-y-3">
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div class="metric-card p-3 space-y-2">
               <div class="text-sm font-medium text-slate-900">
                 {{ $t("usage.dashboard.providers") }}
               </div>
               <div v-if="providerStats.length === 0" class="text-sm text-slate-500">
                 {{ $t("usage.dashboard.empty") }}
               </div>
-              <div v-else class="space-y-3">
+              <div v-else class="space-y-2">
                 <div
                   v-for="item in providerStats"
                   :key="item.providerId"
@@ -474,14 +474,14 @@ watch(
               </div>
             </div>
 
-            <div class="metric-card p-4 space-y-3">
+            <div class="metric-card p-3 space-y-2">
               <div class="text-sm font-medium text-slate-900">
                 {{ $t("usage.dashboard.models") }}
               </div>
               <div v-if="modelStats.length === 0" class="text-sm text-slate-500">
                 {{ $t("usage.dashboard.empty") }}
               </div>
-              <div v-else class="space-y-3">
+              <div v-else class="space-y-2">
                 <div
                   v-for="item in modelStats"
                   :key="item.modelSlug"
