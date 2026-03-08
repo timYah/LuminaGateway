@@ -689,7 +689,7 @@
 ## Phase 68 — Admin Nav Fix
 
 - [x] **T-68.1** 修复 admin 导航与用量筛选：/admin alias 路由、导航前缀、非空下拉值，确保 `/providers` ↔ `/usage` 内容切换稳定
-- [ ] **T-68.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage`
+- [x] **T-68.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage`
 
 ## 任务统计
 
