@@ -681,6 +681,11 @@
 - [x] **T-66.1** 兼容 SPA 导航：router 使用 `BASE_URL`，gateway 提供 HTML fallback 以确保 `/providers` 与 `/usage` 动态切换
 - [x] **T-66.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage` 切换
 
+## Phase 67 — Admin Nav Base Path
+
+- [x] **T-67.1** 改进 admin 路由 base 解析，支持部署在子路径时左右侧栏切换仍可用
+- [ ] **T-67.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/providers` ↔ `/usage`（含子路径）
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -746,4 +751,5 @@
 | Phase 64 | 6 | Advanced Governance & Usage Controls |
 | Phase 65 | 2 | Admin Usage Compact Pass |
 | Phase 66 | 2 | Admin Route Switching |
-| **合计** | **277** | |
+| Phase 67 | 2 | Admin Nav Base Path |
+| **合计** | **279** | |
