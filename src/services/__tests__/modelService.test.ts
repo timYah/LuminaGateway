@@ -62,15 +62,15 @@ async function seedProviders() {
 }
 
 describe("modelService", () => {
-  it("getActiveProvidersByModel sorts by priority asc then id", async () => {
+  it("getActiveProvidersByModel sorts by priority desc then id", async () => {
     await seedProviders();
 
     const list = await getActiveProvidersByModel("gpt-4o");
     expect(list.map((p) => p.name)).toEqual([
+      "Provider A",
       "Provider B",
       "Provider C",
       "Provider D",
-      "Provider A",
     ]);
   });
 });

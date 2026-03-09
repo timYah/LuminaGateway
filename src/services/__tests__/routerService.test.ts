@@ -63,27 +63,27 @@ async function seed() {
 }
 
 describe("routerService", () => {
-  it("selects provider by priority asc then id", async () => {
+  it("selects provider by priority desc then id", async () => {
     await seed();
     const router = new RouterService(new CircuitBreaker());
     const selected = await router.selectProvider("gpt-4o");
-    expect(selected.name).toBe("Provider B");
+    expect(selected.name).toBe("Provider A");
   });
 
   it("filters circuit-open providers", async () => {
     const inserted = await seed();
     const breaker = new CircuitBreaker();
     const router = new RouterService(breaker);
-    breaker.open(inserted[1].id, 1000);
+    breaker.open(inserted[0].id, 1000);
     const selected = await router.selectProvider("gpt-4o");
-    expect(selected.name).toBe("Provider C");
+    expect(selected.name).toBe("Provider B");
   });
 
   it("filters recovering providers", async () => {
     const inserted = await seed();
     const recovery = new ProviderRecoveryService();
     recovery.markRecovering({
-      providerId: inserted[1].id,
+      providerId: inserted[0].id,
       errorType: "server",
       probeModel: "gpt-4o",
     });
@@ -91,7 +91,7 @@ describe("routerService", () => {
 
     const selected = await router.selectProvider("gpt-4o");
 
-    expect(selected.name).toBe("Provider C");
+    expect(selected.name).toBe("Provider B");
   });
 
   it("getAllCandidates returns sorted filtered list", async () => {
@@ -99,9 +99,9 @@ describe("routerService", () => {
     const router = new RouterService(new CircuitBreaker());
     const list = await router.getAllCandidates("gpt-4o");
     expect(list.map((p) => p.name)).toEqual([
+      "Provider A",
       "Provider B",
       "Provider C",
-      "Provider A",
     ]);
   });
 
@@ -112,14 +112,14 @@ describe("routerService", () => {
     const first = await router.getAllCandidates("gpt-4o");
     const second = await router.getAllCandidates("gpt-4o");
     expect(first.map((p) => p.name)).toEqual([
+      "Provider A",
       "Provider B",
       "Provider C",
-      "Provider A",
     ]);
     expect(second.map((p) => p.name)).toEqual([
+      "Provider B",
       "Provider C",
       "Provider A",
-      "Provider B",
     ]);
   });
 
@@ -136,8 +136,8 @@ describe("routerService", () => {
     const ordered = await router.getAllCandidates("gpt-4o");
     expect(ordered.map((p) => p.name)).toEqual([
       "Provider C",
-      "Provider B",
       "Provider A",
+      "Provider B",
     ]);
   });
 

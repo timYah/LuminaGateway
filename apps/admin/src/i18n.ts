@@ -166,7 +166,7 @@ const messages = {
           balanceEdit: "Informational only. Routing uses priority.",
           inputPrice: "Optional. Leave empty to use the global default.",
           outputPrice: "Optional. Leave empty to use the global default.",
-          priority: "Lower values take precedence.",
+          priority: "Higher values take precedence.",
           active: "Active providers are eligible for routing.",
         },
         placeholder: {
@@ -488,7 +488,7 @@ const messages = {
           balanceEdit: "仅作参考，路由以优先级为准。",
           inputPrice: "可选。留空则使用全局默认价格。",
           outputPrice: "可选。留空则使用全局默认价格。",
-          priority: "数值越小优先级越高。",
+          priority: "数值越大优先级越高。",
           active: "启用的提供商可参与路由。",
         },
         placeholder: {

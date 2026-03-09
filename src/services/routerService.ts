@@ -79,6 +79,12 @@ export class RouterService {
     return [selected, ...remaining];
   }
 
+  private applyPriority<T extends { id: number; priority: number }>(providers: T[]) {
+    if (providers.length <= 1) return providers;
+    return providers
+      .slice()
+      .sort((a, b) => b.priority - a.priority || a.id - b.id);
+  }
 
   async getAllCandidates(modelSlug: string) {
     const providers = await getActiveProvidersByModel(modelSlug);
@@ -94,7 +100,7 @@ export class RouterService {
     if (strategy === "weighted") {
       return this.applyWeighted(candidates);
     }
-    return candidates;
+    return this.applyPriority(candidates);
   }
 
   async selectProvider(modelSlug: string) {

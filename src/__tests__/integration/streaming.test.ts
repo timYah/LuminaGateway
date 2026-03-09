@@ -54,7 +54,7 @@ async function seedProviders() {
     inputPrice: 1,
     outputPrice: 1,
     isActive: true,
-    priority: 1,
+    priority: 2,
   });
   const providerB = await createProvider({
     name: "Stream Provider B",
@@ -65,7 +65,7 @@ async function seedProviders() {
     inputPrice: 1,
     outputPrice: 1,
     isActive: true,
-    priority: 2,
+    priority: 1,
   });
 
   return { providerA, providerB };

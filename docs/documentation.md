@@ -295,7 +295,7 @@ Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at b
 
 ## Provider selection and failover
 
-For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` ascending (lower is preferred), then by `id` for deterministic tie-breaking. It skips providers that are currently circuit-broken and forwards the requested model slug directly to the upstream provider.
+For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. It skips providers that are currently circuit-broken and forwards the requested model slug directly to the upstream provider.
 
 For `POST /codex/responses`, the gateway uses only `openai` and `new-api` providers with `codexTransform = false`. It forwards the raw request body to upstream `/responses`, preserves the upstream response as-is, and can fail over only before the first byte reaches the client.
 

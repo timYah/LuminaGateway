@@ -28,7 +28,7 @@ Client Request
 [Provider Load]    ── load active providers (priority ordered)
     │
     ▼
-[Provider Router]   ── select provider by priority (asc) → id (asc)
+[Provider Router]   ── select provider by priority (desc) → id (asc)
     │                   filter: isActive=true, not circuit-broken
     ▼
 [Protocol Adapter]  ── convert request to upstream provider's native format
@@ -52,7 +52,7 @@ Client Request
 function selectProvider():
   candidates = db.providers
     .where(isActive = true AND NOT circuitBroken)
-    .orderBy(priority ASC, id ASC)
+    .orderBy(priority DESC, id ASC)
 
   return candidates[0]  // deterministic: same state → same pick
 ```
@@ -194,7 +194,7 @@ npm run lint && npm run typecheck && npm run test
 **Acceptance criteria:**
 - `npm run db:seed` populates at least 3 providers.
 - Service methods are typed and tested.
-- `getActiveProvidersByModel(slug)` returns providers sorted by priority asc, id asc.
+- `getActiveProvidersByModel(slug)` returns providers sorted by priority desc, id asc.
 
 **Verification commands:**
 ```bash

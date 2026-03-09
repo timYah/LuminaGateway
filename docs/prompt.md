@@ -65,7 +65,7 @@ A repo that contains:
 
 ### C) Smart routing — "The Switch"
 
-- **Priority routing (default)**: among active providers, pick the one with the lowest `priority` (then `id` as tiebreaker).
+- **Priority routing (default)**: among active providers, pick the one with the highest `priority` (then `id` as tiebreaker).
 - **Health-aware fallback**: if the chosen provider returns `402`, `429`, `401`, or `5xx`:
   - Mark it temporarily unhealthy (circuit breaker; defaults: quota 5m, rate limit 60s, server 30s).
   - Immediately retry with the next candidate — no error returned to client unless all candidates exhausted.
