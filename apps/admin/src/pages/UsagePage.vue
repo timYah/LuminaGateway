@@ -120,6 +120,7 @@ const filters = reactive({
   limit: DEFAULT_LIMIT.toString(),
   offset: "0",
 });
+const filtersCollapsed = ref(true);
 
 const requestFilters = reactive({
   providerId: ALL_PROVIDERS,
@@ -596,8 +597,21 @@ watch(
             {{ $t("usage.filters") }}
           </div>
         </div>
+        <UButton
+          class="action-press"
+          size="sm"
+          variant="outline"
+          type="button"
+          @click="filtersCollapsed = !filtersCollapsed"
+        >
+          {{
+            filtersCollapsed
+              ? $t("usage.filtersToggle.show")
+              : $t("usage.filtersToggle.hide")
+          }}
+        </UButton>
       </div>
-      <div class="section-shell__body pt-0">
+      <div v-show="!filtersCollapsed" class="section-shell__body pt-0">
         <div class="toolbar-grid">
           <UFormGroup
             :label="$t('usage.form.provider')"
@@ -640,7 +654,7 @@ watch(
           </UFormGroup>
         </div>
       </div>
-      <div class="section-shell__footer">
+      <div v-show="!filtersCollapsed" class="section-shell__footer">
         <UButton class="action-press" color="primary" @click="applyFilters">
           {{ $t("usage.apply") }}
         </UButton>

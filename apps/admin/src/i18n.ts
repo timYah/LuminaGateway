@@ -204,6 +204,10 @@ const messages = {
         errorHint: "Verify the API key and try again.",
       },
       filters: "Filters",
+      filtersToggle: {
+        show: "Show filters",
+        hide: "Hide filters",
+      },
       apply: "Apply filters",
       hint: "Requests use the current offset and limit values.",
       log: "Usage log",
@@ -526,6 +530,10 @@ const messages = {
         errorHint: "请检查 API key 后重试。",
       },
       filters: "筛选",
+      filtersToggle: {
+        show: "展开筛选",
+        hide: "收起筛选",
+      },
       apply: "应用筛选",
       hint: "请求将使用当前 offset 与 limit。",
       log: "用量日志",
