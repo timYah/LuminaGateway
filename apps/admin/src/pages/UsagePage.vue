@@ -131,6 +131,7 @@ const requestFilters = reactive({
   limit: DEFAULT_LIMIT.toString(),
   offset: "0",
 });
+const requestFiltersCollapsed = ref(true);
 
 const normalizeNumber = (value: string, fallback: number) => {
   const parsed = Number(value);
@@ -934,12 +935,27 @@ watch(
             {{ $t("usage.requests.subtitle") }}
           </p>
         </div>
-        <UButton class="action-press" variant="outline" @click="refreshRequests">
-          {{ $t("usage.requests.refresh") }}
-        </UButton>
+        <div class="flex items-center gap-2">
+          <UButton
+            class="action-press"
+            size="sm"
+            variant="outline"
+            type="button"
+            @click="requestFiltersCollapsed = !requestFiltersCollapsed"
+          >
+            {{
+              requestFiltersCollapsed
+                ? $t("usage.filtersToggle.show")
+                : $t("usage.filtersToggle.hide")
+            }}
+          </UButton>
+          <UButton class="action-press" size="sm" variant="outline" @click="refreshRequests">
+            {{ $t("usage.requests.refresh") }}
+          </UButton>
+        </div>
       </div>
 
-      <div class="section-shell__body pt-0">
+      <div v-show="!requestFiltersCollapsed" class="section-shell__body pt-0">
         <div class="toolbar-grid">
           <UFormGroup
             :label="$t('usage.requests.form.provider')"
@@ -989,7 +1005,7 @@ watch(
         </div>
       </div>
 
-      <div class="section-shell__footer">
+      <div v-show="!requestFiltersCollapsed" class="section-shell__footer">
         <UButton class="action-press" color="primary" @click="applyRequestFilters">
           {{ $t("usage.requests.apply") }}
         </UButton>
