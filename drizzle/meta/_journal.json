@@ -50,6 +50,13 @@
       "when": 1778217600000,
       "tag": "0006_add_provider_codex_transform",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1778284800000,
+      "tag": "0007_add_request_log_request_id",
+      "breakpoints": true
     }
   ]
 }

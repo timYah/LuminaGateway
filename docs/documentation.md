@@ -69,6 +69,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
 | `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
+| `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` | `300000` | Base interval (ms) for automatic recovery probes after recoverable provider failures; each run adds a random `1-10s` jitter. |
 | `PORT` | `3000` | Server listen port. |
 | `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
 | `DEFAULT_OUTPUT_PRICE` | *(optional)* | Global output price fallback (USD per 1M tokens). |
@@ -228,17 +229,20 @@ GET    /admin/usage              — query usage logs
 GET    /admin/usage/summary      — usage + cost summary by API key and route
 GET    /admin/usage/stats        — trend + provider/model distribution
 GET    /admin/request-logs       — query request-level logs
+GET    /admin/active-requests     — inspect current in-flight requests
 GET    /admin/config/export      — export providers + settings
 POST   /admin/config/import      — import providers + settings
 ```
 
 `POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false`. When it stays `false`, the provider remains eligible for raw `/codex/responses` passthrough routing. When it is `true`, the provider is reserved for a future transformed Codex flow and is excluded from `/codex/*` routing for now. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
 
-`POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug.
+`POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug. If the provider is recovering, a successful manual test also clears the in-memory recovery gate and circuit breaker so the provider can re-enter routing immediately.
 
-`POST /admin/providers/:id/reset` clears the in-memory circuit breaker for the provider so it can re-enter routing immediately. `GET /admin/circuit-breakers` returns the providers currently cooling down, along with the `openUntil` timestamp and remaining time.
+`POST /admin/providers/:id/reset` clears the in-memory circuit breaker and recovery gate for the provider so it can re-enter routing immediately. `GET /admin/circuit-breakers` returns providers currently cooling down and/or recovering, including `state`, `remainingMs`, and recovery probe metadata when available.
 
-`POST /admin/providers/health` accepts an optional `model` query parameter and returns the health results for each provider. `GET /admin/failure-stats` aggregates recent request failures by error type.
+`POST /admin/providers/health` accepts an optional `model` query parameter and returns the health results for each provider. A successful probe also restores any recovering provider to routing immediately. `GET /admin/failure-stats` aggregates recent request failures by error type.
+
+When a provider hits a recoverable upstream failure (`quota`, `rate_limit`, `network`, or `server`), Lumina Gateway keeps it out of routing until a recovery probe succeeds. Automatic probes run every `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` plus a random `1-10s` delay to avoid fixed-interval patterns. `GET /admin/providers` includes a `recovery` object for providers currently in this state, with the trigger error type, probe model, next probe time, and the latest failed probe details.
 
 For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 
@@ -246,7 +250,7 @@ For `new-api`, use the OpenAI-compatible base URL (for example `https://your-new
 
 `GET /admin/usage/summary` returns aggregated usage and estimated cost grouped by API key and route. The estimate uses `DEFAULT_INPUT_PRICE` and `DEFAULT_OUTPUT_PRICE` when they are set.
 
-`GET /admin/usage/stats` returns `{ trend, byProvider, byModel }` for the selected date range. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first.
+`GET /admin/usage/stats` returns `{ trend, byProvider, byModel }` for the selected date range. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first. `GET /admin/active-requests` returns `{ activeRequests }` for the requests currently in flight, including the active provider and failover attempt details for each request. Historical request logs now also include `requestId` so current in-flight requests can be correlated with completed provider-attempt logs.
 
 `GET /admin/config/export` returns `{ providers, models, settings }` and includes `codexTransform` in each provider entry. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode? }`, where `mode` is `replace` or `merge`.
 
@@ -262,7 +266,7 @@ The admin dashboard provides a web UI for provider management and usage visibili
 - API key injected from `.env` when available, otherwise stored in the browser and sent as `Authorization: Bearer ...` on every request.
 - Provider connectivity tests can target a custom model slug from the UI.
 - Health status and failure mix visibility for providers.
-- Usage trends and request log visibility.
+- Usage trends, current in-flight request visibility, and request log visibility.
 - Config export/import for provider portability.
 
 **Setup**
@@ -281,7 +285,7 @@ Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at b
 
 - Shell: compact sidebar, tighter navigation, smaller decorative background, and denser spacing for an operations-first layout.
 - Providers: compact page header, provider roster summary strip, inline health actions, denser table rows, and mobile-safe row summaries when secondary columns are hidden.
-- Usage: dashboard summary cards, filter toolbars, usage log table, and request log table arranged as a single reporting flow.
+- Usage: dashboard summary cards, filter toolbars, an active-request table for in-flight traffic, a usage log table, and a request log table arranged as a single reporting flow.
 - Responsive behavior: mobile layouts hide secondary table columns, move key metadata into the primary cell, and keep action buttons visible without horizontal clipping.
 
 **Verification**

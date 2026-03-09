@@ -6,6 +6,7 @@ export type RequestLogResult = "success" | "failure";
 
 export type CreateRequestLogInput = {
   providerId: number;
+  requestId?: string | null;
   modelSlug: string;
   result: RequestLogResult;
   latencyMs?: number | null;
@@ -18,6 +19,7 @@ export async function createRequestLog(input: CreateRequestLogInput) {
     .insert(requestLogs)
     .values({
       providerId: input.providerId,
+      requestId: input.requestId ?? null,
       modelSlug: input.modelSlug,
       result: input.result,
       latencyMs: input.latencyMs ?? null,

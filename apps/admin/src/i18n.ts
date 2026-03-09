@@ -39,6 +39,12 @@ const messages = {
       rosterHint: "Changes apply immediately to routing decisions.",
       rosterNote: "Routing uses priority only. Balances are informational. Codex defaults to passthrough.",
       refresh: "Refresh list",
+      advanced: {
+        title: "Pricing & priority",
+        hint: "Optional balance, pricing, and priority settings.",
+        show: "Show",
+        hide: "Hide",
+      },
       testModel: {
         label: "Test model",
         help: "Used for connectivity checks only.",
@@ -63,6 +69,12 @@ const messages = {
         unhealthy: "Unhealthy",
         unknown: "Unknown",
       },
+      recovery: {
+        badge: "Recovering",
+        hint: "Manual test or health check success immediately restores a recovering provider to routing.",
+        summary: "Recovering from {reason}. Probe model: {model}. Next auto-check: {time}.",
+        lastResult: "Last probe failed with {reason} at {time}.",
+      },
       failures: {
         title: "Failure mix",
         quota: "Quota",
@@ -80,6 +92,10 @@ const messages = {
       codex: {
         passthrough: "Codex passthrough",
         transform: "Codex transform",
+        tooltip: {
+          passthrough: "Codex passthrough: this provider handles raw /codex/responses traffic.",
+          transform: "Codex transform: this provider is reserved for transformed Codex flow.",
+        },
       },
       action: {
         edit: "Edit",
@@ -225,6 +241,28 @@ const messages = {
           modelSlug: "gpt-4o",
         },
       },
+      activeRequests: {
+        title: "Active requests",
+        subtitle: "See in-flight gateway requests and the provider currently serving each one.",
+        refresh: "Refresh current requests",
+        errorTitle: "Active requests failed to load.",
+        errorHint: "Verify the API key and refresh again.",
+        emptyTitle: "No active requests right now.",
+        emptyHint: "New in-flight requests appear here after manual refresh.",
+        routing: "Routing...",
+        table: {
+          time: "Started",
+          request: "Request",
+          model: "Model",
+          provider: "Current provider",
+          attempts: "Attempts",
+          elapsed: "Elapsed",
+        },
+        status: {
+          active: "Active",
+          failed: "Failed",
+        },
+      },
       requests: {
         title: "Request logs",
         subtitle: "Inspect success and failure outcomes for each provider call.",
@@ -323,6 +361,12 @@ const messages = {
       rosterHint: "变更将立即影响路由决策。",
       rosterNote: "路由仅看优先级，余额仅作参考。Codex 默认透传。",
       refresh: "刷新列表",
+      advanced: {
+        title: "定价与优先级",
+        hint: "可选填写余额、定价与优先级设置。",
+        show: "展开",
+        hide: "收起",
+      },
       testModel: {
         label: "测试模型",
         help: "仅用于连通性测试。",
@@ -347,6 +391,12 @@ const messages = {
         unhealthy: "异常",
         unknown: "未知",
       },
+      recovery: {
+        badge: "恢复中",
+        hint: "手动测试或批量健康检查成功后，会立即将恢复中的提供商重新加入路由。",
+        summary: "因 {reason} 进入恢复中。探测模型：{model}。下次自动检测：{time}。",
+        lastResult: "最近一次探测在 {time} 因 {reason} 失败。",
+      },
       failures: {
         title: "失败分类",
         quota: "额度",
@@ -364,6 +414,10 @@ const messages = {
       codex: {
         passthrough: "Codex 透传",
         transform: "Codex 转换",
+        tooltip: {
+          passthrough: "Codex 透传：该提供商直接处理原始 /codex/responses 请求。",
+          transform: "Codex 转换：该提供商预留给转换后的 Codex 流程。",
+        },
       },
       action: {
         edit: "编辑",
@@ -507,6 +561,28 @@ const messages = {
         },
         placeholder: {
           modelSlug: "gpt-4o",
+        },
+      },
+      activeRequests: {
+        title: "当前请求",
+        subtitle: "查看正在处理中的网关请求，以及当前命中的 provider。",
+        refresh: "刷新当前请求",
+        errorTitle: "当前请求加载失败。",
+        errorHint: "请检查 API key 后重试。",
+        emptyTitle: "当前没有进行中的请求。",
+        emptyHint: "手动刷新后，这里会显示新的处理中请求。",
+        routing: "路由中...",
+        table: {
+          time: "开始时间",
+          request: "请求",
+          model: "模型",
+          provider: "当前提供商",
+          attempts: "尝试记录",
+          elapsed: "已耗时",
+        },
+        status: {
+          active: "进行中",
+          failed: "失败",
         },
       },
       requests: {

@@ -1,12 +1,28 @@
+type StreamFinalizeOptions = {
+  onComplete?: () => void | Promise<void>;
+  onError?: (error: unknown) => void | Promise<void>;
+  onFinalize?: () => void | Promise<void>;
+};
+
+function toOptions(options: StreamFinalizeOptions | (() => void)): StreamFinalizeOptions {
+  if (typeof options === "function") {
+    return { onFinalize: options };
+  }
+  return options;
+}
+
 export function wrapStreamWithFinalizer(
   stream: ReadableStream<Uint8Array>,
-  onFinalize: () => void
+  options: StreamFinalizeOptions | (() => void)
 ) {
+  const resolvedOptions = toOptions(options);
   let finalized = false;
   const finalizeOnce = () => {
     if (finalized) return;
     finalized = true;
-    onFinalize();
+    void Promise.resolve(resolvedOptions.onFinalize?.()).catch((error) => {
+      console.error("[streamUtils] finalizer failed", error);
+    });
   };
 
   return new ReadableStream<Uint8Array>({
@@ -17,6 +33,9 @@ export function wrapStreamWithFinalizer(
           .read()
           .then(({ done, value }) => {
             if (done) {
+              void Promise.resolve(resolvedOptions.onComplete?.()).catch((error) => {
+                console.error("[streamUtils] completion hook failed", error);
+              });
               finalizeOnce();
               controller.close();
               return;
@@ -25,6 +44,9 @@ export function wrapStreamWithFinalizer(
             return pump();
           })
           .catch((error) => {
+            void Promise.resolve(resolvedOptions.onError?.(error)).catch((hookError) => {
+              console.error("[streamUtils] error hook failed", hookError);
+            });
             finalizeOnce();
             controller.error(error);
           });

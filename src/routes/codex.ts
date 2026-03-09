@@ -7,7 +7,7 @@ import { recordFailure } from "../services/failureStatsService";
 import { gatewayCircuitBreaker, gatewayRouter } from "../services/gatewayService";
 import { gatewayInflightLimiter } from "../services/inflightService";
 import { extractJwtIdentity, resolveJwtConfig, verifyJwt } from "../services/jwtService";
-import { deactivateProvider } from "../services/providerService";
+import { applyProviderFailurePolicy } from "../services/providerFailurePolicy";
 import { createRequestLog } from "../services/requestLogService";
 import { wrapStreamWithFinalizer } from "../services/streamUtils";
 import { estimateUsage } from "../services/requestEstimator";
@@ -16,10 +16,8 @@ import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../service
 import { recordUsage } from "../services/usageSummaryService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
-
-const RATE_LIMIT_COOLDOWN_MS = 60_000;
-const SERVER_COOLDOWN_MS = 30_000;
-const QUOTA_COOLDOWN_MS = 300_000;
+import { resolveRequestId } from "../utils/requestContext";
+import { activeRequestService } from "../services/activeRequestService";
 
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
@@ -131,28 +129,6 @@ async function recordRequestLogSafe(input: Parameters<typeof createRequestLog>[0
     await createRequestLog(input);
   } catch (error) {
     console.error("[codex] request log failed", error);
-  }
-}
-
-async function applyRetryableFailurePolicy(provider: Provider, errorType: ReturnType<typeof classifyUpstreamError>) {
-  switch (errorType) {
-    case "quota":
-      gatewayCircuitBreaker.open(provider.id, QUOTA_COOLDOWN_MS);
-      return true;
-    case "rate_limit":
-      gatewayCircuitBreaker.open(provider.id, RATE_LIMIT_COOLDOWN_MS);
-      return true;
-    case "server":
-    case "network":
-      gatewayCircuitBreaker.open(provider.id, SERVER_COOLDOWN_MS);
-      return true;
-    case "auth":
-      await deactivateProvider(provider.id);
-      return true;
-    case "model_not_found":
-      return true;
-    default:
-      return false;
   }
 }
 
@@ -271,10 +247,18 @@ codexRoutes.post("/codex/responses", async (c) => {
     });
   }
 
+  const requestId = resolveRequestId(c);
+  activeRequestService.startRequest({
+    requestId,
+    path: "/codex/responses",
+    modelSlug,
+  });
+
   const candidates = (await gatewayRouter.getAllCandidates(modelSlug)).filter(
     isCodexPassthroughCandidate
   );
   if (candidates.length === 0) {
+    activeRequestService.finishRequest(requestId);
     return buildGatewayErrorResponse("No provider available", 503);
   }
 
@@ -286,6 +270,11 @@ codexRoutes.post("/codex/responses", async (c) => {
     if (!gatewayInflightLimiter.tryAcquire(provider.id, provider.name)) {
       continue;
     }
+    activeRequestService.startAttempt({
+      requestId,
+      providerId: provider.id,
+      providerName: provider.name,
+    });
     const start = Date.now();
     const upstreamUrl = buildUpstreamUrl(provider, c.req.url);
     const abortController = timeoutMs ? new AbortController() : null;
@@ -306,24 +295,73 @@ codexRoutes.post("/codex/responses", async (c) => {
       if (timeoutId) clearTimeout(timeoutId);
 
       if (upstreamResponse.ok) {
-        await recordRequestLogSafe({
-          providerId: provider.id,
-          modelSlug,
-          result: "success",
-          latencyMs: Date.now() - start,
-        });
         const responseBody = upstreamResponse.body;
+        const headers = filterResponseHeaders(upstreamResponse.headers);
         if (!responseBody) {
+          await recordRequestLogSafe({
+            providerId: provider.id,
+            requestId,
+            modelSlug,
+            result: "success",
+            latencyMs: Date.now() - start,
+          });
           release();
+          activeRequestService.finishRequest(requestId);
           return new Response(null, {
             status: upstreamResponse.status,
-            headers: filterResponseHeaders(upstreamResponse.headers),
+            headers,
           });
         }
-        return new Response(wrapStreamWithFinalizer(responseBody, release), {
+        return new Response(
+          wrapStreamWithFinalizer(responseBody, {
+            onComplete: () =>
+              recordRequestLogSafe({
+                providerId: provider.id,
+                requestId,
+                modelSlug,
+                result: "success",
+                latencyMs: Date.now() - start,
+              }),
+            onError: async (streamError) => {
+              const errorType = classifyUpstreamError(streamError);
+              const message = getUpstreamErrorMessage(streamError);
+              activeRequestService.failAttempt({
+                requestId,
+                providerId: provider.id,
+                errorType,
+              });
+              await recordRequestLogSafe({
+                providerId: provider.id,
+                requestId,
+                modelSlug,
+                result: "failure",
+                errorType,
+                latencyMs: Date.now() - start,
+              });
+              recordFailure(provider.id, errorType);
+              console.warn("[codex] upstream stream failed after first byte", {
+                providerId: provider.id,
+                providerName: provider.name,
+                errorType,
+                message,
+              });
+              await applyProviderFailurePolicy({
+                breaker: gatewayCircuitBreaker,
+                providerId: provider.id,
+                modelSlug,
+                errorType,
+              });
+            },
+            onFinalize: () => {
+              release();
+              activeRequestService.finishRequest(requestId);
+            },
+          }),
+          {
           status: upstreamResponse.status,
-          headers: filterResponseHeaders(upstreamResponse.headers),
-        });
+          headers,
+        }
+        );
       }
 
       const responseBody = await upstreamResponse.text();
@@ -331,8 +369,14 @@ codexRoutes.post("/codex/responses", async (c) => {
       const errorType = classifyUpstreamError(error);
       const message = getUpstreamErrorMessage(error);
 
+      activeRequestService.failAttempt({
+        requestId,
+        providerId: provider.id,
+        errorType,
+      });
       await recordRequestLogSafe({
         providerId: provider.id,
+        requestId,
         modelSlug,
         result: "failure",
         errorType,
@@ -354,9 +398,15 @@ codexRoutes.post("/codex/responses", async (c) => {
       };
 
       release();
-      const shouldFailover = await applyRetryableFailurePolicy(provider, errorType);
+      const shouldFailover = await applyProviderFailurePolicy({
+        breaker: gatewayCircuitBreaker,
+        providerId: provider.id,
+        modelSlug,
+        errorType,
+      });
       if (shouldFailover) continue;
 
+      activeRequestService.finishRequest(requestId);
       return new Response(responseBody || null, {
         status: upstreamResponse.status,
         headers: lastFailureResponse.headers,
@@ -368,8 +418,14 @@ codexRoutes.post("/codex/responses", async (c) => {
       const errorType = classifyUpstreamError(normalizedError);
       const message = getUpstreamErrorMessage(normalizedError);
 
+      activeRequestService.failAttempt({
+        requestId,
+        providerId: provider.id,
+        errorType,
+      });
       await recordRequestLogSafe({
         providerId: provider.id,
+        requestId,
         modelSlug,
         result: "failure",
         errorType,
@@ -384,19 +440,27 @@ codexRoutes.post("/codex/responses", async (c) => {
       });
 
       release();
-      const shouldFailover = await applyRetryableFailurePolicy(provider, errorType);
+      const shouldFailover = await applyProviderFailurePolicy({
+        breaker: gatewayCircuitBreaker,
+        providerId: provider.id,
+        modelSlug,
+        errorType,
+      });
       if (shouldFailover) continue;
 
+      activeRequestService.finishRequest(requestId);
       return buildGatewayErrorResponse(message, 500);
     }
   }
 
   if (lastFailureResponse) {
+    activeRequestService.finishRequest(requestId);
     return new Response(lastFailureResponse.bodyText || null, {
       status: lastFailureResponse.status,
       headers: lastFailureResponse.headers,
     });
   }
 
+  activeRequestService.finishRequest(requestId);
   return buildGatewayErrorResponse("No provider available", 503);
 });

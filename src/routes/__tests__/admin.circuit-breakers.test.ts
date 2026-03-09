@@ -4,6 +4,7 @@ import { createApp } from "../../app";
 import { getDb, type SqliteDatabase } from "../../db";
 import { providers } from "../../db/schema";
 import { gatewayCircuitBreaker } from "../../services/gatewayService";
+import { providerRecoveryService } from "../../services/providerRecoveryService";
 import { createProvider } from "../../services/providerService";
 import { configureTestDatabase } from "../../test/testDb";
 
@@ -22,6 +23,8 @@ beforeEach(() => {
   db.delete(providers).run();
   gatewayCircuitBreaker.reset(1);
   gatewayCircuitBreaker.reset(2);
+  providerRecoveryService.resetAll();
+  providerRecoveryService.stop();
 });
 
 describe("admin circuit breakers", () => {
@@ -60,6 +63,38 @@ describe("admin circuit breakers", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.breakers).toEqual([]);
+  });
+
+  it("lists providers that are recovering even after cooldown expires", async () => {
+    const provider = await createProvider({
+      name: "Recovering Provider",
+      protocol: "openai",
+      baseUrl: "https://example.com",
+      apiKey: "sk-recovering",
+      balance: 0,
+      isActive: true,
+      priority: 1,
+    });
+    providerRecoveryService.markRecovering({
+      providerId: provider!.id,
+      errorType: "server",
+      probeModel: "gpt-4o",
+    });
+
+    const res = await app.request("/admin/circuit-breakers", {
+      headers: authHeader,
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.breakers).toHaveLength(1);
+    expect(body.breakers[0]).toMatchObject({
+      providerId: provider!.id,
+      state: "recovering",
+      triggerErrorType: "server",
+      probeModel: "gpt-4o",
+    });
+    expect(body.breakers[0].remainingMs).toBeGreaterThan(0);
   });
 
   it("resets a circuit breaker via admin", async () => {

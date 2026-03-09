@@ -52,7 +52,8 @@ describe("protocol route default params", () => {
 
     expect(handleRequest).toHaveBeenCalledWith(
       { model: "gpt-4o", temperature: 0.3 },
-      "openai"
+      "openai",
+      expect.objectContaining({ requestId: expect.any(String) })
     );
   });
 
@@ -66,7 +67,8 @@ describe("protocol route default params", () => {
 
     expect(handleRequest).toHaveBeenCalledWith(
       { model: "gpt-4o", temperature: 0.9 },
-      "openai"
+      "openai",
+      expect.objectContaining({ requestId: expect.any(String) })
     );
   });
 
@@ -80,7 +82,8 @@ describe("protocol route default params", () => {
 
     expect(handleStreamingRequest).toHaveBeenCalledWith(
       { model: "gpt-4o", temperature: 0.4 },
-      "openai"
+      "openai",
+      expect.objectContaining({ requestId: expect.any(String) })
     );
   });
 });

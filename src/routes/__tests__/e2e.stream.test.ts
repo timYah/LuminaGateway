@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
 vi.mock("../../services/upstreamService", async () => {
   const actual = await vi.importActual<typeof import("../../services/upstreamService")>(
@@ -15,12 +16,17 @@ vi.mock("../../services/billingService", () => ({
 }));
 
 import { createApp } from "../../app";
+import { getDb, type SqliteDatabase } from "../../db";
+import { providers, requestLogs } from "../../db/schema";
 import { gatewayRouter } from "../../services/gatewayService";
 import { callUpstreamStreaming } from "../../services/upstreamService";
+import { configureTestDatabase } from "../../test/testDb";
 import type { AsyncIterableStream, TextStreamPart, ToolSet } from "ai";
 
+configureTestDatabase("e2e-stream");
 process.env.GATEWAY_API_KEY = "test-key";
 
+const db = getDb() as SqliteDatabase;
 const app = createApp();
 const authHeader = { Authorization: "Bearer test-key" };
 
@@ -46,11 +52,33 @@ const provider = {
 const callUpstreamStreamingMock = vi.mocked(callUpstreamStreaming);
 const getAllCandidatesSpy = vi.spyOn(gatewayRouter, "getAllCandidates");
 
+beforeAll(() => {
+  migrate(db, { migrationsFolder: "drizzle" });
+});
+
 describe("e2e streaming routes", () => {
   beforeEach(() => {
     callUpstreamStreamingMock.mockReset();
     getAllCandidatesSpy.mockReset();
     getAllCandidatesSpy.mockResolvedValue([provider]);
+    db.delete(requestLogs).run();
+    db.delete(providers).run();
+    db.insert(providers).values({
+      id: provider.id,
+      name: provider.name,
+      protocol: provider.protocol,
+      baseUrl: provider.baseUrl,
+      apiKey: provider.apiKey,
+      apiMode: provider.apiMode,
+      codexTransform: provider.codexTransform,
+      balance: provider.balance,
+      inputPrice: provider.inputPrice,
+      outputPrice: provider.outputPrice,
+      isActive: provider.isActive,
+      priority: provider.priority,
+      healthStatus: provider.healthStatus,
+      lastHealthCheckAt: provider.lastHealthCheckAt,
+    }).run();
   });
 
   it("streams OpenAI SSE response", async () => {

@@ -3,6 +3,7 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { createApp } from "../../app";
 import { getDb, type SqliteDatabase } from "../../db";
 import { providers } from "../../db/schema";
+import { providerRecoveryService } from "../../services/providerRecoveryService";
 import { createProvider } from "../../services/providerService";
 import { configureTestDatabase } from "../../test/testDb";
 
@@ -19,6 +20,8 @@ beforeAll(() => {
 
 beforeEach(() => {
   db.delete(providers).run();
+  providerRecoveryService.resetAll();
+  providerRecoveryService.stop();
 });
 
 describe("admin providers list", () => {
@@ -47,5 +50,34 @@ describe("admin providers list", () => {
     expect(body.providers).toHaveLength(1);
     expect(body.providers[0].name).toBe("Admin Provider");
     expect(body.providers[0].codexTransform).toBe(true);
+  });
+
+  it("includes recovery metadata for recovering providers", async () => {
+    const provider = await createProvider({
+      name: "Recovering Provider",
+      protocol: "openai",
+      baseUrl: "https://example.com",
+      apiKey: "sk-recover",
+      balance: 5,
+      isActive: true,
+      priority: 1,
+    });
+    providerRecoveryService.markRecovering({
+      providerId: provider!.id,
+      errorType: "rate_limit",
+      probeModel: "gpt-4o",
+    });
+
+    const res = await app.request("/admin/providers", {
+      headers: authHeader,
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.providers[0].recovery).toMatchObject({
+      state: "recovering",
+      triggerErrorType: "rate_limit",
+      probeModel: "gpt-4o",
+    });
   });
 });

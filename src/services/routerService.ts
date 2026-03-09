@@ -1,5 +1,6 @@
 import { CircuitBreaker } from "./circuitBreaker";
 import { getActiveProvidersByModel } from "./modelService";
+import { providerRecoveryService } from "./providerRecoveryService";
 
 export class NoProviderAvailableError extends Error {
   constructor(modelSlug: string) {
@@ -11,7 +12,10 @@ export class NoProviderAvailableError extends Error {
 export class RouterService {
   private readonly roundRobinIndex = new Map<string, number>();
 
-  constructor(private readonly breaker: CircuitBreaker) {}
+  constructor(
+    private readonly breaker: CircuitBreaker,
+    private readonly recovery = providerRecoveryService
+  ) {}
 
   private resolveStrategy() {
     const raw = process.env.ROUTING_STRATEGY?.toLowerCase().trim();
@@ -78,7 +82,10 @@ export class RouterService {
 
   async getAllCandidates(modelSlug: string) {
     const providers = await getActiveProvidersByModel(modelSlug);
-    const candidates = providers.filter((provider) => !this.breaker.isOpen(provider.id));
+    const candidates = providers.filter(
+      (provider) =>
+        !this.breaker.isOpen(provider.id) && !this.recovery.isRecovering(provider.id)
+    );
     if (candidates.length <= 1) return candidates;
     const strategy = this.resolveStrategy();
     if (strategy === "round_robin") {

@@ -3,6 +3,7 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { getDb, type SqliteDatabase } from "../../db";
 import { providers } from "../../db/schema";
 import { CircuitBreaker } from "../circuitBreaker";
+import { ProviderRecoveryService } from "../providerRecoveryService";
 import { NoProviderAvailableError, RouterService } from "../routerService";
 import { configureTestDatabase } from "../../test/testDb";
 
@@ -75,6 +76,21 @@ describe("routerService", () => {
     const router = new RouterService(breaker);
     breaker.open(inserted[1].id, 1000);
     const selected = await router.selectProvider("gpt-4o");
+    expect(selected.name).toBe("Provider C");
+  });
+
+  it("filters recovering providers", async () => {
+    const inserted = await seed();
+    const recovery = new ProviderRecoveryService();
+    recovery.markRecovering({
+      providerId: inserted[1].id,
+      errorType: "server",
+      probeModel: "gpt-4o",
+    });
+    const router = new RouterService(new CircuitBreaker(), recovery);
+
+    const selected = await router.selectProvider("gpt-4o");
+
     expect(selected.name).toBe("Provider C");
   });
 

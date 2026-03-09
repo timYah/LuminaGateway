@@ -9,6 +9,7 @@ export const requestLogs = sqliteTable(
     providerId: integer("provider_id")
       .notNull()
       .references(() => providers.id, { onDelete: "cascade" }),
+    requestId: text("request_id"),
     modelSlug: text("model_slug").notNull(),
     result: text("result", { enum: ["success", "failure"] }).notNull(),
     errorType: text("error_type", {
@@ -29,6 +30,7 @@ export const requestLogs = sqliteTable(
   },
   (table) => ({
     createdAtIdx: index("request_logs_created_at_idx").on(table.createdAt),
+    requestIdIdx: index("request_logs_request_id_idx").on(table.requestId),
   })
 );
 

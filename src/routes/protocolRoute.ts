@@ -14,6 +14,8 @@ import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
 import { recordUsage } from "../services/usageSummaryService";
 import { normalizeAuthToken } from "../utils/auth";
+import { resolveRequestId } from "../utils/requestContext";
+import { activeRequestService } from "../services/activeRequestService";
 
 type ProtocolRouteOptions<T extends z.ZodTypeAny> = {
   path: string;
@@ -182,22 +184,36 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
       });
     }
 
+    const requestId = resolveRequestId(c);
+
     if ((merged as { stream?: boolean }).stream) {
-      const response = await handleStreamingRequest(
-        options.converter(merged),
-        options.clientFormat
-      );
-      if ("stream" in response) {
-        return new Response(response.stream, {
-          status: response.status,
-          headers: {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-            Connection: "keep-alive",
-          },
-        });
+      activeRequestService.startRequest({
+        requestId,
+        path: options.path,
+        modelSlug,
+      });
+      try {
+        const response = await handleStreamingRequest(
+          options.converter(merged),
+          options.clientFormat,
+          { requestId }
+        );
+        if ("stream" in response) {
+          return new Response(response.stream, {
+            status: response.status,
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache",
+              Connection: "keep-alive",
+            },
+          });
+        }
+        activeRequestService.finishRequest(requestId);
+        return c.json(response.body, response.status);
+      } catch (error) {
+        activeRequestService.finishRequest(requestId);
+        throw error;
       }
-      return c.json(response.body, response.status);
     }
 
     const cacheTtlMs = resolveCacheTtlMs(c.req.header("x-cache-ttl-ms"));
@@ -211,18 +227,28 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
       }
     }
 
-    const response = await handleRequest(
-      options.converter(merged),
-      options.clientFormat
-    );
-    if (cacheTtlMs && cacheKey && response.status === 200) {
-      responseCache.set(cacheKey, {
-        status: response.status,
-        body: response.body,
-        expiresAt: Date.now() + cacheTtlMs,
-      });
+    activeRequestService.startRequest({
+      requestId,
+      path: options.path,
+      modelSlug,
+    });
+    try {
+      const response = await handleRequest(
+        options.converter(merged),
+        options.clientFormat,
+        { requestId }
+      );
+      if (cacheTtlMs && cacheKey && response.status === 200) {
+        responseCache.set(cacheKey, {
+          status: response.status,
+          body: response.body,
+          expiresAt: Date.now() + cacheTtlMs,
+        });
+      }
+      return c.json(response.body, response.status);
+    } finally {
+      activeRequestService.finishRequest(requestId);
     }
-    return c.json(response.body, response.status);
   });
 
   return app;

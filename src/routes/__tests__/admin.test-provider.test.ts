@@ -4,6 +4,8 @@ import { APICallError } from "ai";
 import { createApp } from "../../app";
 import { getDb, type SqliteDatabase } from "../../db";
 import { providers } from "../../db/schema";
+import { gatewayCircuitBreaker } from "../../services/gatewayService";
+import { providerRecoveryService } from "../../services/providerRecoveryService";
 import { createProvider } from "../../services/providerService";
 import { configureTestDatabase } from "../../test/testDb";
 
@@ -32,6 +34,12 @@ beforeAll(() => {
 beforeEach(() => {
   db.delete(providers).run();
   mockedCall.mockReset();
+  gatewayCircuitBreaker.reset(1);
+  gatewayCircuitBreaker.reset(2);
+  gatewayCircuitBreaker.reset(3);
+  gatewayCircuitBreaker.reset(4);
+  providerRecoveryService.resetAll();
+  providerRecoveryService.stop();
 });
 
 describe("POST /admin/providers/:id/test", () => {
@@ -113,6 +121,37 @@ describe("POST /admin/providers/:id/test", () => {
     expect(body.ok).toBe(false);
     expect(body.errorType).toBe("unknown");
     expect(body.message).toBe("upstream failed");
+  });
+
+  it("restores a recovering provider when the manual test succeeds", async () => {
+    const provider = await createProvider({
+      name: "Recovering Provider",
+      protocol: "openai",
+      baseUrl: "https://api.example.com",
+      apiKey: "sk-recover",
+      balance: 10,
+      isActive: true,
+      priority: 1,
+    });
+    providerRecoveryService.markRecovering({
+      providerId: provider!.id,
+      errorType: "server",
+      probeModel: "gpt-4o",
+    });
+    gatewayCircuitBreaker.open(provider!.id, 30_000);
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request(`/admin/providers/${provider!.id}/test`, {
+      method: "POST",
+      headers: authHeader,
+    });
+
+    expect(res.status).toBe(200);
+    expect(providerRecoveryService.isRecovering(provider!.id)).toBe(false);
+    expect(gatewayCircuitBreaker.isOpen(provider!.id)).toBe(false);
   });
 
   it("returns model_not_found for new-api providers when upstream reports an unsupported model", async () => {

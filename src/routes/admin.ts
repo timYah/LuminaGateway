@@ -11,15 +11,11 @@ import {
   getProviderById,
   updateProvider,
 } from "../services/providerService";
-import {
-  callUpstreamNonStreaming,
-  classifyUpstreamError,
-  getUpstreamErrorMessage,
-  type UpstreamRequestParams,
-} from "../services/upstreamService";
-import { runProvidersHealthCheck } from "../services/healthService";
+import { checkProviderHealth, runProvidersHealthCheck } from "../services/healthService";
 import { getFailureStats } from "../services/failureStatsService";
 import { getUsageSummary } from "../services/usageSummaryService";
+import { providerRecoveryService } from "../services/providerRecoveryService";
+import { activeRequestService } from "../services/activeRequestService";
 
 const providerSchema = z.object({
   name: z.string().min(1),
@@ -58,9 +54,28 @@ const requestErrorTypeSet = new Set<string>(requestErrorTypes);
 
 export const adminRoutes = new Hono();
 
+function withRecovery(provider: Awaited<ReturnType<typeof getProviderById>>) {
+  if (!provider) return provider;
+  const entry = providerRecoveryService.getEntry(provider.id);
+  if (!entry) return provider;
+  return {
+    ...provider,
+    recovery: {
+      state: "recovering" as const,
+      triggerErrorType: entry.triggerErrorType,
+      probeModel: entry.probeModel,
+      startedAt: entry.startedAt,
+      nextProbeAt: entry.nextProbeAt,
+      lastProbeAt: entry.lastProbeAt,
+      lastProbeErrorType: entry.lastProbeErrorType,
+      lastProbeMessage: entry.lastProbeMessage,
+    },
+  };
+}
+
 adminRoutes.get("/admin/providers", async (c) => {
   const providers = await getAllProviders();
-  return c.json({ providers });
+  return c.json({ providers: providers.map((provider) => withRecovery(provider)) });
 });
 
 adminRoutes.post("/admin/providers", async (c) => {
@@ -104,27 +119,26 @@ adminRoutes.post("/admin/providers/:id/test", async (c) => {
   }
 
   const modelSlug = c.req.query("model")?.trim() || "gpt-4o";
-  const start = Date.now();
-  try {
-    const testParams: UpstreamRequestParams = {
-      messages: [{ role: "user", content: "hi" }],
-      maxOutputTokens: 1,
-    };
-    await callUpstreamNonStreaming(provider, modelSlug, testParams);
-    return c.json({ ok: true, latencyMs: Date.now() - start, model: modelSlug });
-  } catch (err) {
-    const errorType = classifyUpstreamError(err);
-    return c.json({
-      ok: false,
-      errorType,
-      message: getUpstreamErrorMessage(err),
-    });
+  const result = await checkProviderHealth(provider, modelSlug, {
+    recoverOnSuccess: true,
+    updateRecoveryFailure: true,
+  });
+  if (result.status === "healthy") {
+    return c.json({ ok: true, latencyMs: result.latencyMs, model: modelSlug });
   }
+  return c.json({
+    ok: false,
+    model: modelSlug,
+    errorType: result.errorType,
+    message: result.message,
+  });
 });
 
 adminRoutes.post("/admin/providers/health", async (c) => {
   const modelSlug = c.req.query("model")?.trim() || "gpt-4o";
-  const results = await runProvidersHealthCheck(modelSlug);
+  const results = await runProvidersHealthCheck(modelSlug, {
+    recoverOnSuccess: true,
+  });
   return c.json({ results });
 });
 
@@ -132,17 +146,32 @@ adminRoutes.get("/admin/circuit-breakers", async (c) => {
   const providers = await getAllProviders();
   const openEntries = gatewayCircuitBreaker.getOpenEntries();
   const openMap = new Map(openEntries.map((entry) => [entry.providerId, entry.openUntil]));
+  const recoveryMap = new Map(
+    providerRecoveryService.getEntries().map((entry) => [entry.providerId, entry])
+  );
   const now = Date.now();
   const breakers = providers
-    .filter((provider) => openMap.has(provider.id))
+    .filter((provider) => openMap.has(provider.id) || recoveryMap.has(provider.id))
     .map((provider) => {
       const openUntil = openMap.get(provider.id) ?? now;
+      const recovery = recoveryMap.get(provider.id) ?? null;
+      const state =
+        openMap.has(provider.id) && recovery
+          ? "cooldown+recovering"
+          : recovery
+            ? "recovering"
+            : "cooldown";
+      const remainingTarget = recovery ? recovery.nextProbeAt.getTime() : openUntil;
       return {
         providerId: provider.id,
         name: provider.name,
         protocol: provider.protocol,
         openUntil,
-        remainingMs: Math.max(openUntil - now, 0),
+        state,
+        remainingMs: Math.max(remainingTarget - now, 0),
+        nextProbeAt: recovery?.nextProbeAt ?? null,
+        triggerErrorType: recovery?.triggerErrorType ?? null,
+        probeModel: recovery?.probeModel ?? null,
       };
     })
     .sort((a, b) => a.remainingMs - b.remainingMs || a.providerId - b.providerId);
@@ -156,7 +185,8 @@ adminRoutes.post("/admin/providers/:id/reset", async (c) => {
     return c.json({ error: { message: "Provider not found" } }, 404);
   }
   gatewayCircuitBreaker.reset(id);
-  return c.json({ ok: true, provider });
+  providerRecoveryService.reset(id);
+  return c.json({ ok: true, provider: withRecovery(provider) });
 });
 
 adminRoutes.get("/admin/failure-stats", (c) => {
@@ -165,6 +195,10 @@ adminRoutes.get("/admin/failure-stats", (c) => {
 
 adminRoutes.get("/admin/usage/summary", (c) => {
   return c.json(getUsageSummary());
+});
+
+adminRoutes.get("/admin/active-requests", (c) => {
+  return c.json({ activeRequests: activeRequestService.getEntries() });
 });
 
 adminRoutes.get("/admin/usage", async (c) => {

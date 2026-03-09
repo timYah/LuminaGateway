@@ -9,11 +9,12 @@ import {
   type UpstreamUsage,
 } from "./upstreamService";
 import type { UpstreamRequestParams } from "./upstreamService";
-import { deactivateProvider } from "./providerService";
 import { billUsage } from "./billingService";
 import { recordFailure } from "./failureStatsService";
 import { createRequestLog } from "./requestLogService";
+import { activeRequestService } from "./activeRequestService";
 import { gatewayInflightLimiter } from "./inflightService";
+import { applyProviderFailurePolicy } from "./providerFailurePolicy";
 import type {
   OpenAIChatCompletionResponse,
   OpenAIResponsesResponse,
@@ -36,6 +37,10 @@ export type ClientFormat = "openai" | "openai-responses" | "anthropic";
 
 export type GatewayRequestParams = UpstreamRequestParams & {
   model: string;
+};
+
+type GatewayRequestContext = {
+  requestId?: string | null;
 };
 
 type OpenAIErrorResponse = {
@@ -66,9 +71,6 @@ export type GatewayStreamingResponse =
   | { status: ContentfulStatusCode; stream: ReadableStream<Uint8Array> }
   | { status: ContentfulStatusCode; body: OpenAIErrorResponse | AnthropicErrorResponse };
 
-const RATE_LIMIT_COOLDOWN_MS = 60_000;
-const SERVER_COOLDOWN_MS = 30_000;
-const QUOTA_COOLDOWN_MS = 300_000;
 const DEFAULT_RETRY_BASE_MS = 200;
 
 function parseRetryValue(value: string | undefined) {
@@ -158,37 +160,26 @@ async function recordRequestLogSafe(input: Parameters<typeof createRequestLog>[0
 async function handleUpstreamError(
   error: unknown,
   providerId: number,
+  modelSlug: string,
   clientFormat: ClientFormat,
   errorTypeOverride?: UpstreamErrorType
 ): Promise<"continue" | GatewayErrorResponse> {
   const errorType = errorTypeOverride ?? classifyUpstreamError(error);
   recordFailure(providerId, errorType);
-  if (errorType === "quota") {
-    gatewayCircuitBreaker.open(providerId, QUOTA_COOLDOWN_MS);
-    return "continue";
-  }
-  if (errorType === "model_not_found") {
-    return "continue";
-  }
-  if (errorType === "rate_limit") {
-    gatewayCircuitBreaker.open(providerId, RATE_LIMIT_COOLDOWN_MS);
-    return "continue";
-  }
-  if (errorType === "auth") {
-    await deactivateProvider(providerId);
-    return "continue";
-  }
   if (errorType === "network") {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.warn("[gateway] upstream network error; failing over", {
       providerId,
       message,
     });
-    gatewayCircuitBreaker.open(providerId, SERVER_COOLDOWN_MS);
-    return "continue";
   }
-  if (errorType === "server") {
-    gatewayCircuitBreaker.open(providerId, SERVER_COOLDOWN_MS);
+  const shouldFailover = await applyProviderFailurePolicy({
+    breaker: gatewayCircuitBreaker,
+    providerId,
+    modelSlug,
+    errorType,
+  });
+  if (shouldFailover) {
     return "continue";
   }
   return {
@@ -215,7 +206,8 @@ function formatSuccessResponseBody(
 
 export async function handleRequest(
   requestParams: GatewayRequestParams,
-  clientFormat: ClientFormat
+  clientFormat: ClientFormat,
+  requestContext: GatewayRequestContext = {}
 ): Promise<GatewayResponse> {
   const { model: modelSlug, ...params } = requestParams;
   const candidates = await gatewayRouter.getAllCandidates(modelSlug);
@@ -232,6 +224,13 @@ export async function handleRequest(
     if (!gatewayInflightLimiter.tryAcquire(provider.id, provider.name)) {
       continue;
     }
+    if (requestContext.requestId) {
+      activeRequestService.startAttempt({
+        requestId: requestContext.requestId,
+        providerId: provider.id,
+        providerName: provider.name,
+      });
+    }
     const start = Date.now();
     try {
       const { result, usage } = await callWithRetries(
@@ -242,6 +241,7 @@ export async function handleRequest(
       await billUsage(provider, modelSlug, usage);
       await recordRequestLogSafe({
         providerId: provider.id,
+        requestId: requestContext.requestId,
         modelSlug,
         result: "success",
         latencyMs: Date.now() - start,
@@ -260,8 +260,16 @@ export async function handleRequest(
       };
     } catch (error) {
       const errorType = classifyUpstreamError(error);
+      if (requestContext.requestId) {
+        activeRequestService.failAttempt({
+          requestId: requestContext.requestId,
+          providerId: provider.id,
+          errorType,
+        });
+      }
       await recordRequestLogSafe({
         providerId: provider.id,
+        requestId: requestContext.requestId,
         modelSlug,
         result: "failure",
         errorType,
@@ -270,6 +278,7 @@ export async function handleRequest(
       const result = await handleUpstreamError(
         error,
         provider.id,
+        modelSlug,
         clientFormat,
         errorType
       );
@@ -288,7 +297,8 @@ export async function handleRequest(
 
 export async function handleStreamingRequest(
   requestParams: GatewayRequestParams,
-  clientFormat: ClientFormat
+  clientFormat: ClientFormat,
+  requestContext: GatewayRequestContext = {}
 ): Promise<GatewayStreamingResponse> {
   const { model: modelSlug, ...params } = requestParams;
   const candidates = await gatewayRouter.getAllCandidates(modelSlug);
@@ -305,6 +315,13 @@ export async function handleStreamingRequest(
     if (!gatewayInflightLimiter.tryAcquire(provider.id, provider.name)) {
       continue;
     }
+    if (requestContext.requestId) {
+      activeRequestService.startAttempt({
+        requestId: requestContext.requestId,
+        providerId: provider.id,
+        providerName: provider.name,
+      });
+    }
     const start = Date.now();
     const release = () => gatewayInflightLimiter.release(provider.id);
     try {
@@ -317,6 +334,7 @@ export async function handleStreamingRequest(
         .then(async (usage: UpstreamUsage) => {
           await recordRequestLogSafe({
             providerId: provider.id,
+            requestId: requestContext.requestId,
             modelSlug,
             result: "success",
             latencyMs: Date.now() - start,
@@ -329,13 +347,27 @@ export async function handleStreamingRequest(
         })
         .catch(async (err: unknown) => {
           const errorType = classifyUpstreamError(err);
+          if (requestContext.requestId) {
+            activeRequestService.failAttempt({
+              requestId: requestContext.requestId,
+              providerId: provider.id,
+              errorType,
+            });
+          }
           recordFailure(provider.id, errorType);
           await recordRequestLogSafe({
             providerId: provider.id,
+            requestId: requestContext.requestId,
             modelSlug,
             result: "failure",
             errorType,
             latencyMs: Date.now() - start,
+          });
+          await applyProviderFailurePolicy({
+            breaker: gatewayCircuitBreaker,
+            providerId: provider.id,
+            modelSlug,
+            errorType,
           });
           console.error("Streaming failed", err);
         });
@@ -352,13 +384,28 @@ export async function handleStreamingRequest(
             : relayAsOpenAIStream(upstream.stream, modelSlug);
       return {
         status: 200,
-        stream: wrapStreamWithFinalizer(stream, release),
+        stream: wrapStreamWithFinalizer(stream, {
+          onFinalize: () => {
+            release();
+            if (requestContext.requestId) {
+              activeRequestService.finishRequest(requestContext.requestId);
+            }
+          },
+        }),
       };
     } catch (error) {
       release();
       const errorType = classifyUpstreamError(error);
+      if (requestContext.requestId) {
+        activeRequestService.failAttempt({
+          requestId: requestContext.requestId,
+          providerId: provider.id,
+          errorType,
+        });
+      }
       await recordRequestLogSafe({
         providerId: provider.id,
+        requestId: requestContext.requestId,
         modelSlug,
         result: "failure",
         errorType,
@@ -367,6 +414,7 @@ export async function handleStreamingRequest(
       const result = await handleUpstreamError(
         error,
         provider.id,
+        modelSlug,
         clientFormat,
         errorType
       );

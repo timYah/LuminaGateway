@@ -21,6 +21,16 @@ type Provider = {
   priority: number;
   healthStatus?: "healthy" | "unhealthy" | "unknown";
   lastHealthCheckAt?: string;
+  recovery?: {
+    state: "recovering";
+    triggerErrorType: FailureReason;
+    probeModel: string;
+    startedAt: string;
+    nextProbeAt: string;
+    lastProbeAt?: string | null;
+    lastProbeErrorType?: FailureReason | null;
+    lastProbeMessage?: string | null;
+  } | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -112,6 +122,7 @@ watch(testModel, (value) => {
 
 const createOpen = ref(false);
 const editOpen = ref(false);
+const createAdvancedOpen = ref(false);
 const createWorking = ref(false);
 const editWorking = ref(false);
 const createError = ref("");
@@ -175,6 +186,7 @@ const resetCreate = () => {
   createForm.outputPrice = "";
   createForm.isActive = true;
   createForm.priority = "1";
+  createAdvancedOpen.value = false;
 };
 
 const openEdit = (provider: Provider) => {
@@ -451,6 +463,47 @@ const testResultLabel = (result: { ok: boolean; latencyMs?: number; errorType?: 
   return map[result.errorType ?? ""] ?? t("providers.test.unknownError");
 };
 
+const recoveryReasonLabel = (reason?: string | null) => {
+  const map: Record<string, string> = {
+    quota: t("providers.failures.quota"),
+    rate_limit: t("providers.failures.rate_limit"),
+    server: t("providers.failures.server"),
+    auth: t("providers.failures.auth"),
+    model_not_found: t("providers.failures.model_not_found"),
+    network: t("providers.failures.network"),
+    unknown: t("providers.failures.unknown"),
+  };
+  return map[reason ?? ""] ?? t("providers.failures.unknown");
+};
+
+const formatTimestamp = (value?: string | null) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "—";
+  return date.toLocaleString();
+};
+
+const recoverySummary = (provider: Provider) => {
+  const recovery = provider.recovery;
+  if (!recovery) return "";
+  return t("providers.recovery.summary", {
+    reason: recoveryReasonLabel(recovery.triggerErrorType),
+    model: recovery.probeModel,
+    time: formatTimestamp(recovery.nextProbeAt),
+  });
+};
+
+const recoveryLastResult = (provider: Provider) => {
+  const recovery = provider.recovery;
+  if (!recovery?.lastProbeAt) return "";
+  return t("providers.recovery.lastResult", {
+    reason: recoveryReasonLabel(recovery.lastProbeErrorType),
+    time: formatTimestamp(recovery.lastProbeAt),
+  });
+};
+
+const recoveryTone = () => "bg-amber-100 text-amber-700";
+
 const healthLabel = (provider: Provider) => {
   const status = provider.healthStatus ?? "unknown";
   if (status === "healthy") return t("providers.health.healthy");
@@ -470,10 +523,15 @@ const codexModeLabel = (provider: Provider) =>
     ? t("providers.codex.transform")
     : t("providers.codex.passthrough");
 
-const codexModeTone = (provider: Provider) =>
+const codexModeTooltip = (provider: Provider) =>
   provider.codexTransform
-    ? "bg-amber-100 text-amber-700"
-    : "bg-sky-100 text-sky-700";
+    ? t("providers.codex.tooltip.transform")
+    : t("providers.codex.tooltip.passthrough");
+
+const codexModeIconTone = (provider: Provider) =>
+  provider.codexTransform
+    ? "border-amber-200 bg-amber-50 text-amber-700"
+    : "border-sky-200 bg-sky-50 text-sky-700";
 
 const refreshAll = async () => {
   await Promise.all([refresh(), refreshFailureStats()]);
@@ -568,6 +626,9 @@ const refreshAll = async () => {
               {{ $t("providers.refresh") }}
             </UButton>
           </div>
+          <p class="text-xs text-slate-500">
+            {{ $t("providers.recovery.hint") }}
+          </p>
         </div>
       </div>
 
@@ -629,29 +690,43 @@ const refreshAll = async () => {
                 </th>
               </tr>
             </thead>
-          <tbody>
+          <tbody class="[&_tr+tr_td]:pt-1 md:[&_tr+tr_td]:pt-1.5">
               <tr
                 v-for="(provider, index) in providers"
                 :key="provider.id"
                 class="group border-b border-slate-200/50 staggered hover:bg-slate-50/70"
                 :style="{ '--index': index }"
               >
-                <td class="py-3.5 pr-4 align-top">
+                <td class="py-2 pr-4 align-middle">
+                  <div class="flex min-h-[3.25rem] flex-col justify-center">
                   <div class="font-medium text-slate-900">
                     {{ provider.name }}
                   </div>
-                  <div class="mt-1 max-w-[30rem] break-all text-xs text-slate-500">
-                    {{ provider.baseUrl }}
-                  </div>
-                  <div class="mt-2 hidden flex-wrap gap-1.5 md:flex">
-                    <span class="summary-pill" :class="codexModeTone(provider)">
-                      <span class="summary-pill__label">{{ codexModeLabel(provider) }}</span>
+                  <div class="mt-0.5 flex max-w-[30rem] items-end gap-2 text-xs text-slate-500">
+                    <span class="min-w-0 break-all">{{ provider.baseUrl }}</span>
+                    <span
+                      :title="codexModeTooltip(provider)"
+                      :aria-label="codexModeTooltip(provider)"
+                      class="inline-flex h-5 w-5 shrink-0 self-end cursor-help items-center justify-center rounded-md border"
+                      :class="codexModeIconTone(provider)"
+                    >
+                      <svg viewBox="0 0 20 20" fill="none" class="h-3.5 w-3.5" aria-hidden="true">
+                        <path
+                          d="M7.25 6.5 4.5 10l2.75 3.5M12.75 6.5 15.5 10l-2.75 3.5M11 4.5 9 15.5"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
                     </span>
                   </div>
-                  <div class="mt-2 flex flex-wrap gap-1.5 md:hidden">
-                    <span class="summary-pill" :class="codexModeTone(provider)">
-                      <span class="summary-pill__label">{{ codexModeLabel(provider) }}</span>
+                  <div class="mt-1 hidden flex-wrap gap-1.5 md:flex">
+                    <span v-if="provider.recovery" class="summary-pill" :class="recoveryTone()">
+                      <span class="summary-pill__label">{{ $t("providers.recovery.badge") }}</span>
                     </span>
+                  </div>
+                  <div class="mt-1 flex flex-wrap gap-1.5 md:hidden">
                     <span class="summary-pill">
                       <span class="summary-pill__label">{{ provider.protocol }}</span>
                     </span>
@@ -660,6 +735,9 @@ const refreshAll = async () => {
                     </span>
                     <span class="summary-pill" :class="healthTone(provider)">
                       <span class="summary-pill__label">{{ healthLabel(provider) }}</span>
+                    </span>
+                    <span v-if="provider.recovery" class="summary-pill" :class="recoveryTone()">
+                      <span class="summary-pill__label">{{ $t("providers.recovery.badge") }}</span>
                     </span>
                     <span
                       class="summary-pill"
@@ -672,30 +750,47 @@ const refreshAll = async () => {
                   </div>
                   <div
                     v-if="testResults.has(provider.id)"
-                    class="mt-2 text-xs font-medium"
+                    class="mt-1 text-xs font-medium"
                     :class="testResults.get(provider.id)?.ok ? 'text-emerald-600' : 'text-rose-600'"
                   >
                     {{ testResultLabel(testResults.get(provider.id)!) }}
                   </div>
+                  <div v-if="provider.recovery" class="mt-1 space-y-0.5 text-xs text-slate-500">
+                    <div>{{ recoverySummary(provider) }}</div>
+                    <div v-if="provider.recovery.lastProbeAt">{{ recoveryLastResult(provider) }}</div>
+                    <div v-if="provider.recovery.lastProbeMessage" class="break-all text-[11px] text-slate-400">
+                      {{ provider.recovery.lastProbeMessage }}
+                    </div>
+                  </div>
+                  </div>
                 </td>
-                <td class="hidden py-3.5 pr-4 align-top text-slate-600 capitalize md:table-cell">
+                <td class="hidden py-2 pr-4 align-middle text-slate-600 capitalize md:table-cell">
                   {{ provider.protocol }}
                 </td>
-                <td class="hidden py-3.5 pr-4 align-top mono-numbers text-slate-900 lg:table-cell">
+                <td class="hidden py-2 pr-4 align-middle mono-numbers text-slate-900 lg:table-cell">
                   {{ provider.balance.toFixed(4) }}
                 </td>
-                <td class="hidden py-3.5 pr-4 align-top mono-numbers text-slate-900 md:table-cell">
+                <td class="hidden py-2 pr-4 align-middle mono-numbers text-slate-900 md:table-cell">
                   {{ provider.priority }}
                 </td>
-                <td class="hidden py-3.5 align-top md:table-cell">
-                  <span
-                    class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap"
-                    :class="healthTone(provider)"
-                  >
-                    {{ healthLabel(provider) }}
-                  </span>
+                <td class="hidden py-2 align-middle md:table-cell">
+                  <div class="flex flex-wrap gap-1.5">
+                    <span
+                      class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap"
+                      :class="healthTone(provider)"
+                    >
+                      {{ healthLabel(provider) }}
+                    </span>
+                    <span
+                      v-if="provider.recovery"
+                      class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap"
+                      :class="recoveryTone()"
+                    >
+                      {{ $t("providers.recovery.badge") }}
+                    </span>
+                  </div>
                 </td>
-                <td class="hidden py-3.5 align-top md:table-cell">
+                <td class="hidden py-2 align-middle md:table-cell">
                   <span
                     class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap"
                     :class="
@@ -711,7 +806,7 @@ const refreshAll = async () => {
                     }}
                   </span>
                 </td>
-                <td class="py-3.5 align-top">
+                <td class="py-2 align-middle">
                   <div class="flex flex-wrap justify-start gap-1.5 md:justify-end">
                     <UButton
                       class="action-press"
@@ -749,7 +844,7 @@ const refreshAll = async () => {
 
     <UModal v-model:open="createOpen">
       <template #content>
-        <div class="surface radius-panel p-5 md:p-6 space-y-4">
+        <div class="surface radius-panel max-h-[85vh] overflow-y-auto p-5 md:p-6 space-y-4">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
               {{ $t("providers.create.title") }}
@@ -818,67 +913,91 @@ const refreshAll = async () => {
                 class="w-full"
               />
             </UFormGroup>
-            <UFormGroup
-              :label="$t('providers.form.balance')"
-              :help="$t('providers.form.help.balanceCreate')"
+          </div>
+
+          <div class="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 md:p-4">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-3 text-left"
+              @click="createAdvancedOpen = !createAdvancedOpen"
             >
-              <UInput
-                v-model="createForm.balance"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
-              :label="$t('providers.form.inputPrice')"
-              :help="$t('providers.form.help.inputPrice')"
+              <div>
+                <div class="text-sm font-medium text-slate-900">
+                  {{ $t("providers.advanced.title") }}
+                </div>
+                <p class="mt-1 text-xs text-slate-500">
+                  {{ $t("providers.advanced.hint") }}
+                </p>
+              </div>
+              <span class="text-xs font-medium text-slate-500">
+                {{
+                  createAdvancedOpen
+                    ? $t("providers.advanced.hide")
+                    : $t("providers.advanced.show")
+                }}
+              </span>
+            </button>
+
+            <div
+              v-if="createAdvancedOpen"
+              class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
             >
-              <UInput
-                v-model="createForm.inputPrice"
-                type="number"
-                min="0"
-                step="0.0001"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
-              :label="$t('providers.form.outputPrice')"
-              :help="$t('providers.form.help.outputPrice')"
-            >
-              <UInput
-                v-model="createForm.outputPrice"
-                type="number"
-                min="0"
-                step="0.0001"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
-              :label="$t('providers.form.priority')"
-              :help="$t('providers.form.help.priority')"
-            >
-              <UInput
-                v-model="createForm.priority"
-                type="number"
-                min="1"
-                step="1"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
-              :label="$t('providers.form.active')"
-              :help="$t('providers.form.help.active')"
-            >
-              <USwitch v-model="createForm.isActive" />
-            </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.balance')"
+                :help="$t('providers.form.help.balanceCreate')"
+              >
+                <UInput
+                  v-model="createForm.balance"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.inputPrice')"
+                :help="$t('providers.form.help.inputPrice')"
+              >
+                <UInput
+                  v-model="createForm.inputPrice"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.outputPrice')"
+                :help="$t('providers.form.help.outputPrice')"
+              >
+                <UInput
+                  v-model="createForm.outputPrice"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.priority')"
+                :help="$t('providers.form.help.priority')"
+              >
+                <UInput
+                  v-model="createForm.priority"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full"
+                />
+              </UFormGroup>
+            </div>
           </div>
 
           <p v-if="createError" class="text-sm text-rose-600">
             {{ createError }}
           </p>
 
-          <div class="flex items-center justify-end gap-2">
+          <div class="flex flex-wrap items-center justify-end gap-3">
             <UButton class="action-press" variant="outline" @click="createOpen = false">
               {{ $t("providers.cancel") }}
             </UButton>

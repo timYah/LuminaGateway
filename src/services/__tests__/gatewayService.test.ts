@@ -44,6 +44,7 @@ import {
   relayAsOpenAIResponsesStream,
   relayAsOpenAIStream,
 } from "../streamRelay";
+import { providerRecoveryService } from "../providerRecoveryService";
 
 const providerA = {
   id: 1,
@@ -103,6 +104,8 @@ describe("gatewayService", () => {
     breakerOpenSpy.mockReset();
     gatewayCircuitBreaker.reset(providerA.id);
     gatewayCircuitBreaker.reset(providerB.id);
+    providerRecoveryService.resetAll();
+    providerRecoveryService.stop();
     gatewayInflightLimiter.reset();
     delete process.env.PROVIDER_MAX_INFLIGHT;
     delete process.env.PROVIDER_MAX_INFLIGHT_OVERRIDES;
@@ -372,5 +375,38 @@ describe("gatewayService", () => {
       providerA.id,
       expect.any(Number)
     );
+  });
+
+  it("marks provider recovering when a streaming request fails mid-flight", async () => {
+    const stream =
+      (async function* () {
+        yield { type: "text-delta", id: "1", text: "hi" };
+      })() as unknown as AsyncIterableStream<TextStreamPart<ToolSet>>;
+
+    callUpstreamStreamingMock.mockReturnValue({
+      stream,
+      usagePromise: Promise.reject(
+        new APICallError({
+          message: "rate limited",
+          url: "https://example.com",
+          requestBodyValues: {},
+          statusCode: 429,
+        })
+      ),
+    });
+
+    const response = await handleStreamingRequest(
+      { model: "gpt-4o", messages: [] },
+      "openai"
+    );
+
+    expect(response.status).toBe(200);
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(providerRecoveryService.isRecovering(providerA.id)).toBe(true);
+    expect(providerRecoveryService.getEntry(providerA.id)?.probeModel).toBe("gpt-4o");
+    expect(breakerOpenSpy).toHaveBeenCalledWith(providerA.id, 60_000);
   });
 });

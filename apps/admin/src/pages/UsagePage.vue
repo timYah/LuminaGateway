@@ -68,6 +68,31 @@ type RequestLogResponse = {
   offset: number;
 };
 
+type ActiveRequestAttempt = {
+  providerId: number;
+  providerName: string;
+  status: "active" | "failed";
+  startedAt: string;
+  finishedAt?: string | null;
+  elapsedMs: number;
+  errorType?: string | null;
+};
+
+type ActiveRequestRow = {
+  requestId: string;
+  path: string;
+  modelSlug: string;
+  startedAt: string;
+  elapsedMs: number;
+  currentProviderId?: number | null;
+  currentProviderName?: string | null;
+  attempts: ActiveRequestAttempt[];
+};
+
+type ActiveRequestResponse = {
+  activeRequests: ActiveRequestRow[];
+};
+
 const { t } = useI18n();
 const ALL_PROVIDERS = "all";
 const ALL_ERROR_TYPES = "all";
@@ -172,6 +197,16 @@ const {
 });
 
 const {
+  data: activeRequestData,
+  pending: activeRequestPending,
+  error: activeRequestError,
+  execute: executeActiveRequests,
+} = useGatewayFetch<ActiveRequestResponse>("/admin/active-requests", {
+  immediate: false,
+  watch: false,
+});
+
+const {
   data: statsData,
   pending: statsPending,
   error: statsError,
@@ -192,6 +227,10 @@ const { authHeader } = useApiKey();
 const requestRows = computed(() => requestData.value?.requests ?? []);
 const requestEmpty = computed(
   () => !requestPending.value && requestRows.value.length === 0
+);
+const activeRequestRows = computed(() => activeRequestData.value?.activeRequests ?? []);
+const activeRequestEmpty = computed(
+  () => !activeRequestPending.value && activeRequestRows.value.length === 0
 );
 
 const providerNameMap = computed(() => {
@@ -324,13 +363,52 @@ const requestResultLabel = (value: RequestLogRow["result"]) =>
     ? t("usage.requests.result.success")
     : t("usage.requests.result.failure");
 
+const requestErrorTypeLabel = (value?: string | null) => {
+  const map: Record<string, string> = {
+    quota: t("usage.requests.errorType.quota"),
+    rate_limit: t("usage.requests.errorType.rate_limit"),
+    server: t("usage.requests.errorType.server"),
+    auth: t("usage.requests.errorType.auth"),
+    model_not_found: t("usage.requests.errorType.model_not_found"),
+    network: t("usage.requests.errorType.network"),
+    unknown: t("usage.requests.errorType.unknown"),
+  };
+  if (!value) return "—";
+  return map[value] ?? t("usage.requests.errorType.unknown");
+};
+
+const formatElapsed = (value?: number | null) => {
+  if (value === null || value === undefined) return "—";
+  if (value < 1000) return `${value}ms`;
+  if (value < 10_000) return `${(value / 1000).toFixed(1)}s`;
+  return `${Math.round(value / 1000)}s`;
+};
+
+const activeRequestProviderLabel = (row: ActiveRequestRow) =>
+  row.currentProviderName || t("usage.activeRequests.routing");
+
+const activeAttemptStatusLabel = (status: ActiveRequestAttempt["status"]) =>
+  status === "active"
+    ? t("usage.activeRequests.status.active")
+    : t("usage.activeRequests.status.failed");
+
+const activeAttemptStatusTone = (status: ActiveRequestAttempt["status"]) =>
+  status === "active"
+    ? "bg-sky-100 text-sky-700"
+    : "bg-rose-100 text-rose-700";
+
 const refreshAll = async () => {
   await execute();
   await executeStats();
+  await executeActiveRequests();
 };
 
 const refreshRequests = async () => {
   await executeRequests();
+};
+
+const refreshActiveRequests = async () => {
+  await executeActiveRequests();
 };
 
 watch(
@@ -341,6 +419,7 @@ watch(
     await execute();
     await executeStats();
     await executeRequests();
+    await executeActiveRequests();
   },
   { immediate: true }
 );
@@ -691,6 +770,138 @@ watch(
                 </td>
                 <td class="py-2.5 pr-4 align-top mono-numbers text-slate-900">
                   {{ row.cost.toFixed(4) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="surface radius-panel section-shell divide-y divide-slate-200/60">
+      <div class="section-shell__header">
+        <div class="section-shell__headline">
+          <div class="section-shell__title">
+            {{ $t("usage.activeRequests.title") }}
+          </div>
+          <p class="section-shell__subtitle">
+            {{ $t("usage.activeRequests.subtitle") }}
+          </p>
+        </div>
+        <UButton class="action-press" variant="outline" @click="refreshActiveRequests">
+          {{ $t("usage.activeRequests.refresh") }}
+        </UButton>
+      </div>
+
+      <div class="section-shell__body pt-0">
+        <div v-if="activeRequestPending" class="space-y-2">
+          <div class="h-9 radius-soft skeleton"></div>
+          <div class="h-9 radius-soft skeleton"></div>
+        </div>
+
+        <div
+          v-else-if="activeRequestError"
+          class="radius-card border border-rose-200 bg-rose-50 p-4"
+        >
+          <div class="text-sm font-medium text-rose-700">
+            {{ $t("usage.activeRequests.errorTitle") }}
+          </div>
+          <p class="text-sm text-rose-600">
+            {{ $t("usage.activeRequests.errorHint") }}
+          </p>
+        </div>
+
+        <div
+          v-else-if="activeRequestEmpty"
+          class="radius-card border border-slate-200/60 p-5"
+        >
+          <div class="text-sm font-medium text-slate-800">
+            {{ $t("usage.activeRequests.emptyTitle") }}
+          </div>
+          <p class="mt-2 text-sm text-slate-500">
+            {{ $t("usage.activeRequests.emptyHint") }}
+          </p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="w-full min-w-0 text-sm md:min-w-[1120px]">
+            <thead class="text-xs uppercase tracking-[0.2em] text-slate-500">
+              <tr class="border-b border-slate-200/60">
+                <th class="py-2 text-left font-medium">
+                  {{ $t("usage.activeRequests.table.time") }}
+                </th>
+                <th class="py-2 text-left font-medium">
+                  {{ $t("usage.activeRequests.table.request") }}
+                </th>
+                <th class="hidden py-2 text-left font-medium md:table-cell">
+                  {{ $t("usage.activeRequests.table.model") }}
+                </th>
+                <th class="hidden py-2 text-left font-medium lg:table-cell">
+                  {{ $t("usage.activeRequests.table.provider") }}
+                </th>
+                <th class="py-2 text-left font-medium">
+                  {{ $t("usage.activeRequests.table.attempts") }}
+                </th>
+                <th class="py-2 text-left font-medium">
+                  {{ $t("usage.activeRequests.table.elapsed") }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(row, index) in activeRequestRows"
+                :key="row.requestId"
+                class="border-b border-slate-200/50 staggered transition-colors hover:bg-slate-50/70"
+                :style="{ '--index': index }"
+              >
+                <td class="py-2.5 pr-4 align-top text-slate-700">
+                  {{ formatDate(row.startedAt) }}
+                </td>
+                <td class="py-2.5 pr-4 align-top text-slate-900">
+                  <div class="font-medium text-slate-900">{{ row.path }}</div>
+                  <div class="mt-1 break-all text-xs text-slate-500 mono-numbers">
+                    {{ row.requestId }}
+                  </div>
+                  <div class="mt-1 text-xs text-slate-500 md:hidden">
+                    {{ row.modelSlug }} · {{ activeRequestProviderLabel(row) }}
+                  </div>
+                </td>
+                <td class="hidden py-2.5 pr-4 align-top text-slate-900 md:table-cell">
+                  {{ row.modelSlug }}
+                </td>
+                <td class="hidden py-2.5 pr-4 align-top text-slate-700 lg:table-cell">
+                  {{ activeRequestProviderLabel(row) }}
+                </td>
+                <td class="py-2.5 pr-4 align-top">
+                  <div v-if="row.attempts.length === 0" class="text-xs text-slate-500">
+                    {{ $t("usage.activeRequests.routing") }}
+                  </div>
+                  <div v-else class="flex flex-wrap gap-1.5">
+                    <div
+                      v-for="attempt in row.attempts"
+                      :key="`${row.requestId}-${attempt.providerId}-${attempt.startedAt}`"
+                      class="min-w-[10rem] rounded-2xl border border-slate-200/70 bg-slate-50 px-2.5 py-2"
+                    >
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium text-slate-900">{{ attempt.providerName }}</span>
+                        <span
+                          class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap"
+                          :class="activeAttemptStatusTone(attempt.status)"
+                        >
+                          {{ activeAttemptStatusLabel(attempt.status) }}
+                        </span>
+                      </div>
+                      <div class="mt-1 text-[11px] text-slate-500">
+                        {{ formatElapsed(attempt.elapsedMs) }}
+                        <span v-if="attempt.errorType">
+                          · {{ requestErrorTypeLabel(attempt.errorType) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td class="py-2.5 align-top mono-numbers text-slate-700">
+                  {{ formatElapsed(row.elapsedMs) }}
                 </td>
               </tr>
             </tbody>

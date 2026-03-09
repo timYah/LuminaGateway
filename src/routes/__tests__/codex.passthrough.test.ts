@@ -39,6 +39,7 @@ import * as billingService from "../../services/billingService";
 import * as failureStatsService from "../../services/failureStatsService";
 import { gatewayCircuitBreaker, gatewayRouter } from "../../services/gatewayService";
 import * as providerService from "../../services/providerService";
+import { providerRecoveryService } from "../../services/providerRecoveryService";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../../services/quotaService";
 import * as requestLogService from "../../services/requestLogService";
 
@@ -115,6 +116,10 @@ describe("codex passthrough route", () => {
     deactivateProviderMock.mockClear();
     billUsageMock.mockClear();
     getAllCandidatesSpy.mockResolvedValue([providerA]);
+    gatewayCircuitBreaker.reset(providerA.id);
+    gatewayCircuitBreaker.reset(providerB.id);
+    providerRecoveryService.resetAll();
+    providerRecoveryService.stop();
   });
 
   afterEach(() => {
@@ -439,6 +444,46 @@ describe("codex passthrough route", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(recordFailureMock).toHaveBeenNthCalledWith(2, 2, "quota");
     expect(openCircuitSpy).toHaveBeenNthCalledWith(2, 2, 300_000);
+  });
+
+  it("marks provider recovering when the upstream stream fails after the first byte", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('data: {"id":"resp_1"}\n\n'));
+            controller.error(new Error("socket timeout"));
+          },
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        }
+      )
+    );
+
+    const res = await app.request("/codex/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "gpt-5.2", input: [], stream: true }),
+    });
+
+    expect(res.status).toBe(200);
+    await expect(res.text()).rejects.toThrow("socket timeout");
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(providerRecoveryService.isRecovering(providerA.id)).toBe(true);
+    expect(providerRecoveryService.getEntry(providerA.id)?.probeModel).toBe("gpt-5.2");
+    expect(openCircuitSpy).toHaveBeenCalledWith(providerA.id, 30_000);
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: providerA.id,
+        modelSlug: "gpt-5.2",
+        result: "failure",
+      })
+    );
   });
 
   it("does not fail over on non-retryable provider errors", async () => {
