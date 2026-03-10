@@ -1,6 +1,6 @@
 # Lumina Gateway
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, and a dedicated Codex passthrough entrypoint. It routes requests by provider priority and health, then fails over when a provider is rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, plus dedicated Codex and Claude passthrough entrypoints. It routes requests by provider priority and health, then fails over when a provider is rate limited or out of quota.
 
 ## Features
 
@@ -10,12 +10,13 @@ Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI 
 - Streaming SSE relay for all supported client formats.
 - Priority-based routing with automatic failover.
 - Dedicated `/codex/responses` passthrough for Codex-style Responses traffic.
+- Dedicated `/claude/v1/messages` passthrough for raw Anthropic Messages traffic.
 - Admin routes for provider management and usage queries.
 - Vue + Nuxt UI admin dashboard for providers and usage.
 
 ## Quick start
 
-Set `GATEWAY_API_KEY` before you start the server because `/v1/*`, `/codex/*`, and `/admin/*` require Bearer auth. The gateway auto-loads `.env` at startup.
+Set `GATEWAY_API_KEY` before you start the server because `/v1/*`, `/codex/*`, `/claude/*`, and `/admin/*` require Bearer auth. The gateway auto-loads `.env` at startup.
 
 ```bash
 npm install

@@ -1,10 +1,10 @@
 # Lumina Gateway — Documentation
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, and a dedicated Codex passthrough route. It routes traffic by provider priority and health, and fails over when providers are rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, plus dedicated passthrough routes for Codex and Claude traffic. It routes traffic by provider priority and health, and fails over when providers are rate limited or out of quota.
 
 ## What Lumina Gateway is
 
-The gateway exposes four client-facing routes: an OpenAI-compatible chat completions endpoint, an OpenAI-compatible responses endpoint, an Anthropic-compatible messages endpoint, and `POST /codex/responses` for Codex passthrough. The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The dedicated Codex route keeps the request and response bodies intact and proxies them straight to the selected upstream `/responses` endpoint.
+The gateway exposes five client-facing routes: an OpenAI-compatible chat completions endpoint, an OpenAI-compatible responses endpoint, an Anthropic-compatible messages endpoint, `POST /codex/responses` for Codex passthrough, and `POST /claude/v1/messages` for raw Anthropic passthrough. The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The dedicated Codex and Claude routes keep the request and response bodies intact and proxy them straight to the selected upstream endpoint.
 
 ## Status
 
@@ -30,7 +30,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, and `/admin/*` routes. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, `/claude/*`, and `/admin/*` routes. |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
@@ -69,6 +69,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
 | `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
+| `CLAUDE_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/claude/v1/messages` upstream requests before failover. |
 | `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` | `300000` | Base interval (ms) for automatic recovery probes after recoverable provider failures; each run adds a random `1-10s` jitter. |
 | `PORT` | `3000` | Server listen port. |
 | `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
@@ -88,7 +89,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 
 ### Authentication
 
-All `/v1/*`, `/codex/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`.
+All `/v1/*`, `/codex/*`, `/claude/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`.
 
 Set `JWT_SECRET` to enable per-user authentication. When it is set, the gateway also requires a JWT in the header defined by `JWT_HEADER` (default `X-User-Token`). The gateway reads the user and group claims from `JWT_USER_CLAIM` and `JWT_GROUP_CLAIM` and enforces any configured user or group quotas.
 
@@ -184,6 +185,27 @@ Content-Type: application/json
 ```
 
 Supported fields match the Anthropic subset used by the validators: `model`, `messages`, `system`, `stream`, `temperature`, `max_tokens`, and `tools`.
+
+### Claude passthrough endpoint
+
+```http [Request]
+POST /claude/v1/messages
+Authorization: Bearer <GATEWAY_API_KEY>
+Content-Type: application/json
+Anthropic-Version: 2023-06-01
+
+{
+  "model": "claude-sonnet-4-20250514",
+  "messages": [{"role": "user", "content": "Hello"}],
+  "system": "You are a helpful assistant.",
+  "stream": true,
+  "max_tokens": 1000
+}
+```
+
+`POST /claude/v1/messages` forwards the raw JSON body to the selected upstream `/v1/messages` endpoint and returns the upstream response body unchanged. The gateway only selects providers with `protocol=anthropic`, and it only fails over to another provider before the first byte reaches the client. Once streaming starts, the gateway never replays the request to a second provider.
+
+If your client builds the path as `POST /messages` relative to its configured base URL, you can use the alias `POST /claude/messages`.
 
 ### Streaming responses
 
@@ -361,6 +383,7 @@ src/
 ├── routes/
 │   ├── openai.ts            # /v1/chat/completions + /v1/responses handlers
 │   ├── codex.ts             # /codex/responses raw passthrough handler
+│   ├── claude.ts            # /claude/v1/messages raw passthrough handler
 │   ├── anthropic.ts         # /v1/messages handler
 │   └── admin.ts             # /admin/* management routes
 ├── services/
