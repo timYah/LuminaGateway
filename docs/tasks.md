@@ -713,6 +713,11 @@
 - [x] **T-72.1** 统一 Providers 页面“新增/编辑提供商”弹窗高度与滚动行为，并将价格字段改为默认折叠
 - [x] **T-72.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build:admin`
 
+## Phase 72 — Dedicated Claude Endpoint
+
+- [x] **T-72.1** 新增 Claude 透传端点：支持 `POST /claude/v1/messages`（以及 `/claude/messages` alias），仅选用 `protocol=anthropic` Provider，并原样透传请求体与响应体（首字节前可 failover），补充自动化测试
+- [ ] **T-72.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，确认 `/claude/*` 中间件、透传与 failover 行为正常
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
