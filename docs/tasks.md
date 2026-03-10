@@ -703,6 +703,11 @@
 - [x] **T-70.1** 网关注入运行时 API key / baseUrl 到 admin，并在前端读取以避免 `/admin` 面板 401/404
 - [x] **T-70.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/usage` 不再报 Dashboard failed
 
+## Phase 71 — Dedicated Claude Endpoint
+
+- [x] **T-71.1** 新增 Claude 透传端点：支持 `POST /claude/v1/messages`（以及 `/claude/messages` alias），仅选用 `protocol=anthropic` Provider，并原样透传请求体与响应体（首字节前可 failover），补充自动化测试
+- [ ] **T-71.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，确认 `/claude/*` 中间件、透传与 failover 行为正常
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -772,4 +777,5 @@
 | Phase 68 | 2 | Admin Nav Fix |
 | Phase 69 | 2 | Usage Layout & Paging |
 | Phase 70 | 2 | Admin Runtime Config |
-| **合计** | **285** | |
+| Phase 71 | 2 | Dedicated Claude Endpoint |
+| **合计** | **287** | |

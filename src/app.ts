@@ -10,6 +10,7 @@ import { adminRoutes } from "./routes/admin";
 import { anthropicRoutes } from "./routes/anthropic";
 import { openaiRoutes } from "./routes/openai";
 import { codexRoutes } from "./routes/codex";
+import { claudeRoutes } from "./routes/claude";
 import { renderMetrics } from "./services/metricsService";
 
 function registerAdminUi(app: Hono) {
@@ -77,15 +78,19 @@ export function createApp() {
 
   app.use("/v1/*", cors(corsOptions));
   app.use("/codex/*", cors(corsOptions));
+  app.use("/claude/*", cors(corsOptions));
   app.use("/admin/*", cors(corsOptions));
   app.use("/v1/*", rateLimitMiddleware());
   app.use("/codex/*", rateLimitMiddleware());
+  app.use("/claude/*", rateLimitMiddleware());
   app.use("/admin/*", rateLimitMiddleware());
   app.use("/v1/*", authMiddleware());
   app.use("/codex/*", authMiddleware());
+  app.use("/claude/*", authMiddleware());
   app.use("/admin/*", authMiddleware());
   app.route("/", openaiRoutes);
   app.route("/", codexRoutes);
+  app.route("/", claudeRoutes);
   app.route("/", anthropicRoutes);
   app.route("/", adminRoutes);
   registerAdminUi(app);
