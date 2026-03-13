@@ -2,6 +2,7 @@ import { asSchema } from "ai";
 import { describe, expect, it } from "vitest";
 import {
   convertOpenAIResponsesToUniversal,
+  convertOpenAIResponsesResponseToUniversal,
   convertOpenAIToUniversal,
   convertUniversalToOpenAIResponse,
   convertUniversalToOpenAIResponsesResponse,
@@ -183,5 +184,29 @@ Prefer bullet points`);
     expect(response.usage?.input_tokens).toBe(4);
     expect(response.usage?.output_tokens).toBe(6);
     expect(response.usage?.total_tokens).toBe(10);
+  });
+
+  it("converts OpenAI Responses response to universal format", () => {
+    const universal = convertOpenAIResponsesResponseToUniversal({
+      id: "resp_1",
+      object: "response",
+      created_at: 123,
+      status: "completed",
+      model: "gpt-5.2",
+      error: null,
+      incomplete_details: null,
+      output: [],
+      output_text: "Hello",
+      usage: {
+        input_tokens: 5,
+        output_tokens: 7,
+        total_tokens: 12,
+      },
+    });
+
+    expect(universal.model).toBe("gpt-5.2");
+    expect(universal.text).toBe("Hello");
+    expect(universal.usage?.promptTokens).toBe(5);
+    expect(universal.usage?.completionTokens).toBe(7);
   });
 });
