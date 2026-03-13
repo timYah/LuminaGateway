@@ -27,7 +27,7 @@
 ## Phase 06 — OpenAI Passthrough Route
 - [x] T-06.0 Implement `POST /openai/v1/responses` passthrough
 - [x] T-06.1 Add route tests for OpenAI passthrough
-- [ ] T-06.2 ✅ Run route tests
+- [x] T-06.2 ✅ Run route tests
 
 ## Phase 07 — Gemini Passthrough Route
 - [ ] T-07.0 Implement `POST /google/v1beta/models/:model:generateContent` passthrough
