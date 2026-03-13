@@ -471,6 +471,31 @@ export function convertGeminiResponseToUniversal(
   };
 }
 
+export function convertUniversalToGeminiResponse(
+  result: UniversalResponse
+): GeminiGenerateContentResponse {
+  return {
+    candidates: [
+      {
+        content: {
+          role: "model",
+          parts: [{ text: result.text }],
+        },
+        finishReason: result.finishReason ?? undefined,
+        index: 0,
+      },
+    ],
+    usageMetadata: result.usage
+      ? {
+          promptTokenCount: result.usage.promptTokens,
+          candidatesTokenCount: result.usage.completionTokens,
+          totalTokenCount: result.usage.promptTokens + result.usage.completionTokens,
+        }
+      : undefined,
+    modelVersion: result.model || undefined,
+  };
+}
+
 export type ToolFormat = "openai" | "anthropic";
 
 export type AnthropicToolChoice =
