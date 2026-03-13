@@ -1,0 +1,691 @@
+openapi: 3.0.3
+info:
+  title: Lumina Gateway API
+  version: 0.1.0
+  description: >-
+    Lumina Gateway backend interface summary (Swagger-style). This document focuses on
+    endpoint coverage and brief functional descriptions with minimal schemas.
+servers:
+  - url: http://localhost:3000
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+  schemas:
+    GatewayError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            code:
+              type: string
+      required: [error]
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+    AdminProvider:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        protocol:
+          type: string
+        baseUrl:
+          type: string
+        apiKey:
+          type: string
+        apiMode:
+          type: string
+        codexTransform:
+          type: boolean
+        balance:
+          type: number
+        inputPrice:
+          type: number
+          nullable: true
+        outputPrice:
+          type: number
+          nullable: true
+        isActive:
+          type: boolean
+        priority:
+          type: integer
+        healthStatus:
+          type: string
+      required: [name, protocol, baseUrl, apiKey]
+    AdminProviderCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        protocol:
+          type: string
+          enum: [openai, anthropic, google, new-api]
+        baseUrl:
+          type: string
+        apiKey:
+          type: string
+        apiMode:
+          type: string
+          enum: [responses, chat]
+        codexTransform:
+          type: boolean
+        balance:
+          type: number
+        inputPrice:
+          type: number
+          nullable: true
+        outputPrice:
+          type: number
+          nullable: true
+        isActive:
+          type: boolean
+        priority:
+          type: integer
+      required: [name, protocol, baseUrl, apiKey]
+    AdminProviderUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        protocol:
+          type: string
+          enum: [openai, anthropic, google, new-api]
+        baseUrl:
+          type: string
+        apiKey:
+          type: string
+        apiMode:
+          type: string
+          enum: [responses, chat]
+        codexTransform:
+          type: boolean
+        balance:
+          type: number
+        inputPrice:
+          type: number
+          nullable: true
+        outputPrice:
+          type: number
+          nullable: true
+        isActive:
+          type: boolean
+        priority:
+          type: integer
+    AdminCircuitBreaker:
+      type: object
+      properties:
+        providerId:
+          type: integer
+        name:
+          type: string
+        protocol:
+          type: string
+        modelSlug:
+          type: string
+          nullable: true
+        state:
+          type: string
+        remainingMs:
+          type: integer
+        openUntil:
+          type: integer
+        nextProbeAt:
+          type: string
+          format: date-time
+          nullable: true
+        triggerErrorType:
+          type: string
+          nullable: true
+        probeModel:
+          type: string
+          nullable: true
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns gateway health status.
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: Returns Prometheus-compatible metrics.
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+  /v1/chat/completions:
+    post:
+      summary: OpenAI Chat Completions (non-streaming or streaming)
+      description: Validates and routes OpenAI chat completion requests.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model:
+                  type: string
+                messages:
+                  type: array
+                  items:
+                    type: object
+                stream:
+                  type: boolean
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '503':
+          description: No provider available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /v1/responses:
+    post:
+      summary: OpenAI Responses API (non-streaming or streaming)
+      description: Validates and routes OpenAI Responses requests.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model:
+                  type: string
+                input:
+                  type: array
+                stream:
+                  type: boolean
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '503':
+          description: No provider available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /v1/messages:
+    post:
+      summary: Anthropic Messages (non-streaming or streaming)
+      description: Validates and routes Anthropic messages requests.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model:
+                  type: string
+                messages:
+                  type: array
+                  items:
+                    type: object
+                stream:
+                  type: boolean
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '503':
+          description: No provider available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /codex/responses:
+    post:
+      summary: Codex passthrough (Responses API)
+      description: Raw passthrough to upstream /responses with failover before first byte.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upstream response (raw)
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /claude/messages:
+    post:
+      summary: Claude passthrough (messages)
+      description: Raw passthrough to Anthropic messages API.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upstream response (raw)
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /claude/v1/messages:
+    post:
+      summary: Claude passthrough (v1/messages)
+      description: Raw passthrough to Anthropic v1/messages.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upstream response (raw)
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /admin/providers:
+    get:
+      summary: List providers
+      description: Returns all configured providers with optional recovery metadata.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminProvider'
+    post:
+      summary: Create provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminProviderCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  provider:
+                    $ref: '#/components/schemas/AdminProvider'
+  /admin/providers/{id}:
+    patch:
+      summary: Update provider
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminProviderUpdate'
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: Delete provider
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /admin/providers/{id}/test:
+    post:
+      summary: Test provider connectivity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: model
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /admin/providers/{id}/reset:
+    post:
+      summary: Reset provider breakers
+      description: Clears all model-scoped breaker/recovery entries for the provider.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /admin/providers/health:
+    post:
+      summary: Run health checks
+      parameters:
+        - name: model
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /admin/circuit-breakers:
+    get:
+      summary: List circuit breakers (per model)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  breakers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminCircuitBreaker'
+  /admin/failure-stats:
+    get:
+      summary: Failure stats
+      responses:
+        '200':
+          description: OK
+  /admin/usage:
+    get:
+      summary: Usage logs
+      parameters:
+        - name: providerId
+          in: query
+          schema:
+            type: integer
+        - name: modelSlug
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /admin/usage/summary:
+    get:
+      summary: Usage summary by API key and route
+      responses:
+        '200':
+          description: OK
+  /admin/usage/stats:
+    get:
+      summary: Usage trend and distribution
+      responses:
+        '200':
+          description: OK
+  /admin/request-logs:
+    get:
+      summary: Request logs
+      parameters:
+        - name: providerId
+          in: query
+          schema:
+            type: integer
+        - name: modelSlug
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: errorType
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+  /admin/active-requests:
+    get:
+      summary: Active requests
+      responses:
+        '200':
+          description: OK
+  /admin/config/export:
+    get:
+      summary: Export providers and settings
+      responses:
+        '200':
+          description: OK
+  /admin/config/import:
+    post:
+      summary: Import providers and settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                providers:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AdminProviderCreate'
+                models:
+                  type: array
+                  items:
+                    type: object
+                settings:
+                  type: object
+      responses:
+        '200':
+          description: OK
+  /:
+    get:
+      summary: Admin UI entry
+      description: Serves the admin UI index when built.
+      security: []
+      responses:
+        '200':
+          description: HTML
+          content:
+            text/html:
+              schema:
+                type: string
+  /providers:
+    get:
+      summary: Admin UI providers page
+      description: Serves the admin UI providers route.
+      security: []
+      responses:
+        '200':
+          description: HTML
+          content:
+            text/html:
+              schema:
+                type: string
+  /usage:
+    get:
+      summary: Admin UI usage page
+      description: Serves the admin UI usage route.
+      security: []
+      responses:
+        '200':
+          description: HTML
+          content:
+            text/html:
+              schema:
+                type: string
+  /assets/{path}:
+    get:
+      summary: Admin UI static assets
+      description: Serves the built admin UI assets.
+      security: []
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Static asset
+          content:
+            application/javascript:
+              schema:
+                type: string
