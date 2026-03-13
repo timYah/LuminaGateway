@@ -36,7 +36,7 @@
 
 ## Phase 08 — Convert Routes (HTTP)
 - [x] T-08.0 Implement convert service (validate -> detect -> convert)
-- [ ] T-08.1 Add convert routes for OpenAI / Claude / Gemini
+- [x] T-08.1 Add convert routes for OpenAI / Claude / Gemini
 - [ ] T-08.2 Add tests for convert behavior and 422 errors
 - [ ] T-08.3 ✅ Run route tests
 

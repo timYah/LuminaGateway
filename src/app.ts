@@ -14,6 +14,7 @@ import { codexRoutes } from "./routes/codex";
 import { claudeRoutes } from "./routes/claude";
 import { renderMetrics } from "./services/metricsService";
 import { geminiPassthroughRoutes } from "./routes/geminiPassthrough";
+import { convertRoutes } from "./routes/convert";
 
 function registerAdminUi(app: Hono) {
   const adminDistRoot = process.env.ADMIN_DIST_ROOT || "./apps/admin/dist";
@@ -95,6 +96,7 @@ export function createApp() {
   app.route("/", codexRoutes);
   app.route("/", claudeRoutes);
   app.route("/", geminiPassthroughRoutes);
+  app.route("/", convertRoutes);
   app.route("/", anthropicRoutes);
   app.route("/", adminRoutes);
   registerAdminUi(app);
