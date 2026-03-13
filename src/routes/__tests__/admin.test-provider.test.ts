@@ -138,7 +138,7 @@ describe("POST /admin/providers/:id/test", () => {
       errorType: "server",
       probeModel: "gpt-4o",
     });
-    gatewayCircuitBreaker.open(provider!.id, 30_000);
+    gatewayCircuitBreaker.open(provider!.id, 30_000, "gpt-4o");
     mockedCall.mockResolvedValue({
       result: {} as never,
       usage: { promptTokens: 1, completionTokens: 1 },

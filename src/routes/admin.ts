@@ -145,27 +145,44 @@ adminRoutes.post("/admin/providers/health", async (c) => {
 adminRoutes.get("/admin/circuit-breakers", async (c) => {
   const providers = await getAllProviders();
   const openEntries = gatewayCircuitBreaker.getOpenEntries();
-  const openMap = new Map(openEntries.map((entry) => [entry.providerId, entry.openUntil]));
-  const recoveryMap = new Map(
-    providerRecoveryService.getEntries().map((entry) => [entry.providerId, entry])
+  const openMap = new Map(
+    openEntries.map((entry) => [
+      `${entry.providerId}:${entry.modelSlug ?? "*"}`,
+      entry,
+    ])
   );
+  const recoveryMap = new Map(
+    providerRecoveryService.getEntries().map((entry) => [
+      `${entry.providerId}:${entry.probeModel}`,
+      entry,
+    ])
+  );
+  const providerMap = new Map(providers.map((provider) => [provider.id, provider]));
   const now = Date.now();
-  const breakers = providers
-    .filter((provider) => openMap.has(provider.id) || recoveryMap.has(provider.id))
-    .map((provider) => {
-      const openUntil = openMap.get(provider.id) ?? now;
-      const recovery = recoveryMap.get(provider.id) ?? null;
+  const keys = new Set<string>([...openMap.keys(), ...recoveryMap.keys()]);
+  const breakers = [...keys]
+    .map((key) => {
+      const [providerIdRaw, modelSlugRaw] = key.split(":");
+      const providerId = Number(providerIdRaw);
+      const provider = providerMap.get(providerId);
+      if (!provider) return null;
+      const openEntry = openMap.get(key) ?? null;
+      const recovery = recoveryMap.get(key) ?? null;
       const state =
-        openMap.has(provider.id) && recovery
+        openEntry && recovery
           ? "cooldown+recovering"
           : recovery
             ? "recovering"
             : "cooldown";
+      const openUntil = openEntry?.openUntil ?? now;
       const remainingTarget = recovery ? recovery.nextProbeAt.getTime() : openUntil;
+      const modelSlug =
+        recovery?.probeModel ?? openEntry?.modelSlug ?? (modelSlugRaw === "*" ? null : modelSlugRaw);
       return {
         providerId: provider.id,
         name: provider.name,
         protocol: provider.protocol,
+        modelSlug,
         openUntil,
         state,
         remainingMs: Math.max(remainingTarget - now, 0),
@@ -174,7 +191,13 @@ adminRoutes.get("/admin/circuit-breakers", async (c) => {
         probeModel: recovery?.probeModel ?? null,
       };
     })
-    .sort((a, b) => a.remainingMs - b.remainingMs || a.providerId - b.providerId);
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+    .sort(
+      (a, b) =>
+        a.remainingMs - b.remainingMs ||
+        a.providerId - b.providerId ||
+        String(a.modelSlug ?? "").localeCompare(String(b.modelSlug ?? ""))
+    );
   return c.json({ breakers });
 });
 

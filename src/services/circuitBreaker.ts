@@ -1,34 +1,77 @@
-export class CircuitBreaker {
-  private readonly openUntil = new Map<number, number>();
+type CircuitBreakerEntry = {
+  providerId: number;
+  modelSlug: string | null;
+  openUntil: number;
+};
 
-  open(providerId: number, cooldownMs: number) {
-    this.openUntil.set(providerId, Date.now() + cooldownMs);
+export class CircuitBreaker {
+  private readonly openUntil = new Map<string, CircuitBreakerEntry>();
+
+  private buildKey(providerId: number, modelSlug: string | null) {
+    return `${providerId}:${modelSlug ?? "*"}`;
   }
 
-  isOpen(providerId: number) {
-    const until = this.openUntil.get(providerId);
-    if (!until) return false;
-    if (Date.now() >= until) {
-      this.openUntil.delete(providerId);
+  open(providerId: number, cooldownMs: number, modelSlug?: string) {
+    const key = this.buildKey(providerId, modelSlug ?? null);
+    this.openUntil.set(key, {
+      providerId,
+      modelSlug: modelSlug ?? null,
+      openUntil: Date.now() + cooldownMs,
+    });
+  }
+
+  private isEntryOpen(key: string, now: number) {
+    const entry = this.openUntil.get(key);
+    if (!entry) return false;
+    if (now >= entry.openUntil) {
+      this.openUntil.delete(key);
       return false;
     }
     return true;
   }
 
-  getOpenEntries() {
+  isOpen(providerId: number, modelSlug?: string) {
     const now = Date.now();
-    const entries: { providerId: number; openUntil: number }[] = [];
-    for (const [providerId, until] of this.openUntil.entries()) {
-      if (now >= until) {
-        this.openUntil.delete(providerId);
+    if (modelSlug) {
+      return (
+        this.isEntryOpen(this.buildKey(providerId, modelSlug), now) ||
+        this.isEntryOpen(this.buildKey(providerId, null), now)
+      );
+    }
+    let open = false;
+    for (const [key, entry] of this.openUntil.entries()) {
+      if (entry.providerId !== providerId) continue;
+      if (now >= entry.openUntil) {
+        this.openUntil.delete(key);
         continue;
       }
-      entries.push({ providerId, openUntil: until });
+      open = true;
+    }
+    return open;
+  }
+
+  getOpenEntries() {
+    const now = Date.now();
+    const entries: CircuitBreakerEntry[] = [];
+    for (const [key, entry] of this.openUntil.entries()) {
+      if (now >= entry.openUntil) {
+        this.openUntil.delete(key);
+        continue;
+      }
+      entries.push(entry);
     }
     return entries;
   }
 
-  reset(providerId: number) {
-    this.openUntil.delete(providerId);
+  reset(providerId: number, modelSlug?: string) {
+    if (modelSlug) {
+      this.openUntil.delete(this.buildKey(providerId, modelSlug));
+      return;
+    }
+    for (const [key, entry] of this.openUntil.entries()) {
+      if (entry.providerId === providerId) {
+        this.openUntil.delete(key);
+      }
+    }
   }
 }

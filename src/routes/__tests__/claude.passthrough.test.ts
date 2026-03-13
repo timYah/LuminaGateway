@@ -299,7 +299,11 @@ describe("claude passthrough routes", () => {
     expect(res.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(recordFailureMock).toHaveBeenCalledWith(1, "rate_limit");
-    expect(openCircuitSpy).toHaveBeenCalledWith(1, 60_000);
+    expect(openCircuitSpy).toHaveBeenCalledWith(
+      1,
+      60_000,
+      "claude-sonnet-4-20250514"
+    );
   });
 
   it("fails over when the upstream request times out", async () => {
@@ -334,6 +338,10 @@ describe("claude passthrough routes", () => {
     });
 
     expect(res.status).toBe(200);
-    expect(openCircuitSpy).toHaveBeenCalledWith(1, 30_000);
+    expect(openCircuitSpy).toHaveBeenCalledWith(
+      1,
+      60_000,
+      "claude-sonnet-4-20250514"
+    );
   });
 });

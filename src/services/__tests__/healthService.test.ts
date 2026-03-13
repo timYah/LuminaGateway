@@ -92,8 +92,8 @@ describe("healthService", () => {
     });
 
     expect(result.status).toBe("healthy");
-    expect(breakerReset).toHaveBeenCalledWith(provider.id);
-    expect(recoveryReset).toHaveBeenCalledWith(provider.id);
+    expect(breakerReset).toHaveBeenCalledWith(provider.id, "gpt-4o");
+    expect(recoveryReset).toHaveBeenCalledWith(provider.id, "gpt-4o");
   });
 
   it("marks provider unhealthy when probe fails", async () => {
@@ -119,7 +119,7 @@ describe("healthService", () => {
       updateRecoveryFailure: true,
     });
 
-    expect(recordProbeFailure).toHaveBeenCalledWith(provider.id, {
+    expect(recordProbeFailure).toHaveBeenCalledWith(provider.id, "gpt-4o", {
       ok: false,
       errorType: "server",
       message: "downstream failed",

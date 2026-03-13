@@ -79,6 +79,19 @@ describe("routerService", () => {
     expect(selected.name).toBe("Provider B");
   });
 
+  it("keeps provider available for other models when model-scoped breaker is open", async () => {
+    const inserted = await seed();
+    const breaker = new CircuitBreaker();
+    const router = new RouterService(breaker);
+    breaker.open(inserted[0].id, 1000, "gpt-4o");
+
+    const blocked = await router.selectProvider("gpt-4o");
+    const allowed = await router.selectProvider("gpt-4.1");
+
+    expect(blocked.name).toBe("Provider B");
+    expect(allowed.name).toBe("Provider A");
+  });
+
   it("filters recovering providers", async () => {
     const inserted = await seed();
     const recovery = new ProviderRecoveryService();

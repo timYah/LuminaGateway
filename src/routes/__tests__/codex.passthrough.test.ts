@@ -328,7 +328,7 @@ describe("codex passthrough route", () => {
     expect(res.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(recordFailureMock).toHaveBeenCalledWith(1, "rate_limit");
-    expect(openCircuitSpy).toHaveBeenCalledWith(1, 60_000);
+    expect(openCircuitSpy).toHaveBeenCalledWith(1, 60_000, "gpt-5.2");
   });
 
   it("fails over when the upstream request times out", async () => {
@@ -363,7 +363,7 @@ describe("codex passthrough route", () => {
     });
 
     expect(res.status).toBe(200);
-    expect(openCircuitSpy).toHaveBeenCalledWith(1, 30_000);
+    expect(openCircuitSpy).toHaveBeenCalledWith(1, 60_000, "gpt-5.2");
   });
 
   it("enforces token rate limits", async () => {
@@ -443,7 +443,7 @@ describe("codex passthrough route", () => {
     expect(await res.text()).toContain("Quota exceeded");
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(recordFailureMock).toHaveBeenNthCalledWith(2, 2, "quota");
-    expect(openCircuitSpy).toHaveBeenNthCalledWith(2, 2, 300_000);
+    expect(openCircuitSpy).toHaveBeenNthCalledWith(2, 2, 60_000, "gpt-5.2");
   });
 
   it("marks provider recovering when the upstream stream fails after the first byte", async () => {
@@ -474,9 +474,11 @@ describe("codex passthrough route", () => {
     await Promise.resolve();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(providerRecoveryService.isRecovering(providerA.id)).toBe(true);
-    expect(providerRecoveryService.getEntry(providerA.id)?.probeModel).toBe("gpt-5.2");
-    expect(openCircuitSpy).toHaveBeenCalledWith(providerA.id, 30_000);
+    expect(providerRecoveryService.isRecovering(providerA.id, "gpt-5.2")).toBe(true);
+    expect(providerRecoveryService.getEntry(providerA.id, "gpt-5.2")?.probeModel).toBe(
+      "gpt-5.2"
+    );
+    expect(openCircuitSpy).toHaveBeenCalledWith(providerA.id, 60_000, "gpt-5.2");
     expect(createRequestLogMock).toHaveBeenCalledWith(
       expect.objectContaining({
         providerId: providerA.id,

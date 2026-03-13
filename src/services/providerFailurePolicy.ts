@@ -6,9 +6,7 @@ import {
 import type { CircuitBreaker } from "./circuitBreaker";
 import type { UpstreamErrorType } from "./upstreamService";
 
-export const RATE_LIMIT_COOLDOWN_MS = 60_000;
-export const SERVER_COOLDOWN_MS = 30_000;
-export const QUOTA_COOLDOWN_MS = 300_000;
+export const MODEL_FAILURE_COOLDOWN_MS = 60_000;
 
 function isRecoveryEligibleErrorType(
   errorType: UpstreamErrorType
@@ -29,11 +27,13 @@ export async function applyProviderFailurePolicy(input: {
 }): Promise<boolean> {
   const { breaker, providerId, modelSlug, errorType } = input;
   if (errorType === "quota") {
-    breaker.open(providerId, QUOTA_COOLDOWN_MS);
+    breaker.open(providerId, MODEL_FAILURE_COOLDOWN_MS, modelSlug);
   } else if (errorType === "rate_limit") {
-    breaker.open(providerId, RATE_LIMIT_COOLDOWN_MS);
+    breaker.open(providerId, MODEL_FAILURE_COOLDOWN_MS, modelSlug);
   } else if (errorType === "network" || errorType === "server") {
-    breaker.open(providerId, SERVER_COOLDOWN_MS);
+    breaker.open(providerId, MODEL_FAILURE_COOLDOWN_MS, modelSlug);
+  } else if (errorType === "model_not_found") {
+    breaker.open(providerId, MODEL_FAILURE_COOLDOWN_MS, modelSlug);
   }
 
   if (isRecoveryEligibleErrorType(errorType)) {
@@ -41,6 +41,7 @@ export async function applyProviderFailurePolicy(input: {
       providerId,
       errorType,
       probeModel: modelSlug,
+      intervalMs: MODEL_FAILURE_COOLDOWN_MS,
     });
     return true;
   }
@@ -56,4 +57,3 @@ export async function applyProviderFailurePolicy(input: {
 
   return false;
 }
-

@@ -90,7 +90,8 @@ export class RouterService {
     const providers = await getActiveProvidersByModel(modelSlug);
     const candidates = providers.filter(
       (provider) =>
-        !this.breaker.isOpen(provider.id) && !this.recovery.isRecovering(provider.id)
+        !this.breaker.isOpen(provider.id, modelSlug) &&
+        !this.recovery.isRecovering(provider.id, modelSlug)
     );
     if (candidates.length <= 1) return candidates;
     const strategy = this.resolveStrategy();

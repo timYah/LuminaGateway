@@ -188,7 +188,8 @@ describe("gatewayService", () => {
     expect(response.status).toBe(200);
     expect(breakerOpenSpy).toHaveBeenCalledWith(
       providerA.id,
-      expect.any(Number)
+      expect.any(Number),
+      "gpt-4o"
     );
   });
 
@@ -373,7 +374,8 @@ describe("gatewayService", () => {
     expect(response.status).toBe(200);
     expect(breakerOpenSpy).toHaveBeenCalledWith(
       providerA.id,
-      expect.any(Number)
+      expect.any(Number),
+      "gpt-4o"
     );
   });
 
@@ -405,8 +407,10 @@ describe("gatewayService", () => {
     await Promise.resolve();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(providerRecoveryService.isRecovering(providerA.id)).toBe(true);
-    expect(providerRecoveryService.getEntry(providerA.id)?.probeModel).toBe("gpt-4o");
-    expect(breakerOpenSpy).toHaveBeenCalledWith(providerA.id, 60_000);
+    expect(providerRecoveryService.isRecovering(providerA.id, "gpt-4o")).toBe(true);
+    expect(providerRecoveryService.getEntry(providerA.id, "gpt-4o")?.probeModel).toBe(
+      "gpt-4o"
+    );
+    expect(breakerOpenSpy).toHaveBeenCalledWith(providerA.id, 60_000, "gpt-4o");
   });
 });

@@ -49,8 +49,8 @@ export async function checkProviderHealth(
     const latencyMs = Date.now() - start;
     await updateProviderHealth(provider.id, "healthy");
     if (options?.recoverOnSuccess) {
-      gatewayCircuitBreaker.reset(provider.id);
-      providerRecoveryService.reset(provider.id);
+      gatewayCircuitBreaker.reset(provider.id, modelSlug);
+      providerRecoveryService.reset(provider.id, modelSlug);
     }
     return {
       providerId: provider.id,
@@ -63,8 +63,11 @@ export async function checkProviderHealth(
     const errorType = classifyUpstreamError(error);
     const message = getUpstreamErrorMessage(error);
     await updateProviderHealth(provider.id, "unhealthy");
-    if (options?.updateRecoveryFailure && providerRecoveryService.isRecovering(provider.id)) {
-      providerRecoveryService.recordProbeFailure(provider.id, {
+    if (
+      options?.updateRecoveryFailure &&
+      providerRecoveryService.isRecovering(provider.id, modelSlug)
+    ) {
+      providerRecoveryService.recordProbeFailure(provider.id, modelSlug, {
         ok: false,
         errorType,
         message,

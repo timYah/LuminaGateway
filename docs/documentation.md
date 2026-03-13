@@ -242,11 +242,11 @@ GET    /admin/providers          — list all providers
 POST   /admin/providers          — create a provider
 PATCH  /admin/providers/:id      — update provider fields
 POST   /admin/providers/:id/test — test provider connectivity
-POST   /admin/providers/:id/reset — reset circuit breaker state
+POST   /admin/providers/:id/reset — reset circuit breaker state (all models)
 DELETE /admin/providers/:id      — delete provider (also removes usage logs)
 POST   /admin/providers/health   — run a health check for all providers
 GET    /admin/failure-stats      — get error type distribution for recent requests
-GET    /admin/circuit-breakers   — list open circuit breakers
+GET    /admin/circuit-breakers   — list open circuit breakers (per model)
 GET    /admin/usage              — query usage logs
 GET    /admin/usage/summary      — usage + cost summary by API key and route
 GET    /admin/usage/stats        — trend + provider/model distribution
@@ -258,13 +258,13 @@ POST   /admin/config/import      — import providers + settings
 
 `POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false`. When it stays `false`, the provider remains eligible for raw `/codex/responses` passthrough routing. When it is `true`, the provider is reserved for a future transformed Codex flow and is excluded from `/codex/*` routing for now. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
 
-`POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug. If the provider is recovering, a successful manual test also clears the in-memory recovery gate and circuit breaker so the provider can re-enter routing immediately.
+`POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug. If the provider is recovering, a successful manual test also clears the model-scoped recovery gate and circuit breaker so the provider can re-enter routing immediately for that model.
 
-`POST /admin/providers/:id/reset` clears the in-memory circuit breaker and recovery gate for the provider so it can re-enter routing immediately. `GET /admin/circuit-breakers` returns providers currently cooling down and/or recovering, including `state`, `remainingMs`, and recovery probe metadata when available.
+`POST /admin/providers/:id/reset` clears all in-memory circuit breaker and recovery entries for the provider so it can re-enter routing immediately for every model. `GET /admin/circuit-breakers` returns model-scoped entries currently cooling down and/or recovering, including `modelSlug`, `state`, `remainingMs`, and recovery probe metadata when available.
 
 `POST /admin/providers/health` accepts an optional `model` query parameter and returns the health results for each provider. A successful probe also restores any recovering provider to routing immediately. `GET /admin/failure-stats` aggregates recent request failures by error type.
 
-When a provider hits a recoverable upstream failure (`quota`, `rate_limit`, `network`, or `server`), Lumina Gateway keeps it out of routing until a recovery probe succeeds. Automatic probes run every `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` plus a random `1-10s` delay to avoid fixed-interval patterns. `GET /admin/providers` includes a `recovery` object for providers currently in this state, with the trigger error type, probe model, next probe time, and the latest failed probe details.
+When a provider hits a recoverable upstream failure (`quota`, `rate_limit`, `network`, or `server`), Lumina Gateway keeps that provider-model pair out of routing until a recovery probe succeeds. Automatic probes run every `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` (or 60 seconds for model-scoped failures) plus a random `1-10s` delay to avoid fixed-interval patterns. `GET /admin/providers` includes a `recovery` object for providers currently in this state, with the trigger error type, probe model, next probe time, and the latest failed probe details.
 
 For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 
@@ -317,11 +317,11 @@ Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at b
 
 ## Provider selection and failover
 
-For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. It skips providers that are currently circuit-broken and forwards the requested model slug directly to the upstream provider.
+For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. It skips providers that are circuit-broken for the requested model and forwards the requested model slug directly to the upstream provider.
 
 For `POST /codex/responses`, the gateway uses only `openai` and `new-api` providers with `codexTransform = false`. It forwards the raw request body to upstream `/responses`, preserves the upstream response as-is, and can fail over only before the first byte reaches the client.
 
-On upstream failures, the gateway reacts to the classified error type. Quota exhaustion opens a 5-minute circuit breaker, rate limits open a 60-second circuit breaker, and 5xx server errors open a 30-second circuit breaker before retrying the next provider. Authentication errors deactivate the provider immediately, model-not-found errors skip to the next provider, and unknown errors return a `500` without failover. Codex passthrough follows the same classification rules, but if every retryable upstream attempt fails before the first byte, it returns the last upstream error response instead of synthesizing a converted payload.
+On upstream failures, the gateway reacts to the classified error type. Quota exhaustion, rate limits, network failures, server errors, and model-not-found errors open a 60-second circuit breaker for that model before retrying the next provider. Authentication errors deactivate the provider immediately, and unknown errors return a `500` without failover. Codex passthrough follows the same classification rules, but if every retryable upstream attempt fails before the first byte, it returns the last upstream error response instead of synthesizing a converted payload.
 
 ## Billing and usage
 

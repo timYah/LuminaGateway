@@ -620,5 +620,6 @@ This phase upgrades the admin from a soft, marketing-like shell to a denser oper
 - Use the Vercel AI SDK as the unified upstream interface and convert client requests to a universal parameter shape before calling providers.
 - Relay streaming responses by re-framing `text-delta` parts into OpenAI or Anthropic SSE events, and bill after the usage promise resolves at stream end.
 - Apply circuit breaker cooldowns for rate limits (60s), quota exhaustion (5m), and upstream 5xx errors (30s); deactivate providers on auth failures.
+- Scope circuit breakers and recovery entries to provider+model so failures only block a specific model; use a 60s cooldown for model-scoped failures while auth still deactivates the provider.
 - Standardize gateway errors as `gateway_error` for both API formats, while unhandled exceptions return `server_error` via the global error handler.
 - Paginate admin usage queries with `limit` and `offset`, return results sorted by newest first, and include filters for provider, model slug, and date range.
