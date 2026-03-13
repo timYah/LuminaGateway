@@ -47,7 +47,7 @@
 - [x] T-09.3 ✅ Run tests
 
 ## Phase 10 — Middleware and CORS Coverage
-- [ ] T-10.0 Apply CORS/auth/rate-limit/quota to `/openai/*`, `/google/*`, `/convert/*`
+- [x] T-10.0 Apply CORS/auth/rate-limit/quota to `/openai/*`, `/google/*`, `/convert/*`
 - [ ] T-10.1 ✅ Run tests
 
 ## Phase 11 — Documentation + Final Verification
