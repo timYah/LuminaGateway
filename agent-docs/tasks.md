@@ -48,7 +48,7 @@
 
 ## Phase 10 — Middleware and CORS Coverage
 - [x] T-10.0 Apply CORS/auth/rate-limit/quota to `/openai/*`, `/google/*`, `/convert/*`
-- [ ] T-10.1 ✅ Run tests
+- [x] T-10.1 ✅ Run tests
 
 ## Phase 11 — Documentation + Final Verification
 - [ ] T-11.0 Update docs (`docs/documentation.md`, `docs/swagger.yaml`, README if needed)
