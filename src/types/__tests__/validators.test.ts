@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   anthropicMessagesSchema,
+  anthropicMessagesResponseSchema,
   geminiGenerateContentSchema,
   openaiChatCompletionSchema,
   openaiResponsesSchema,
+  openaiResponsesResponseSchema,
 } from "../validators";
 
 describe("validators", () => {
@@ -117,5 +119,46 @@ describe("validators", () => {
       contents: [{ role: "user" }],
     });
     expect(result.success).toBe(false);
+  });
+
+  it("validates OpenAI Responses response", () => {
+    const result = openaiResponsesResponseSchema.safeParse({
+      id: "resp_1",
+      object: "response",
+      created_at: 123,
+      status: "completed",
+      model: "gpt-5.2",
+      error: null,
+      incomplete_details: null,
+      output_text: "Hello",
+      output: [
+        {
+          id: "msg_1",
+          type: "message",
+          role: "assistant",
+          status: "completed",
+          content: [{ type: "output_text", text: "Hello", annotations: [] }],
+        },
+      ],
+      usage: {
+        input_tokens: 1,
+        output_tokens: 2,
+        total_tokens: 3,
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("validates Anthropic response", () => {
+    const result = anthropicMessagesResponseSchema.safeParse({
+      id: "msg_1",
+      type: "message",
+      role: "assistant",
+      content: [{ type: "text", text: "Hello" }],
+      model: "claude-sonnet-4-20250514",
+      stop_reason: "end_turn",
+      usage: { input_tokens: 1, output_tokens: 2 },
+    });
+    expect(result.success).toBe(true);
   });
 });

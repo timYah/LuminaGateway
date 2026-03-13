@@ -15,7 +15,7 @@
 
 ## Phase 04 — Response Validators
 - [x] T-04.0 Add Gemini response/request types and validators
-- [ ] T-04.1 Add response validators for OpenAI Responses and Claude Messages
+- [x] T-04.1 Add response validators for OpenAI Responses and Claude Messages
 - [ ] T-04.2 ✅ Run unit tests for validators
 
 ## Phase 05 — Universal Response Conversion
