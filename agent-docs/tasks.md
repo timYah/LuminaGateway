@@ -42,7 +42,7 @@
 
 ## Phase 09 — Realtime WebSocket Proxy
 - [x] T-09.0 Implement WebSocket proxy service and upgrade handling
-- [ ] T-09.1 Add `/openai/v1/realtime` and `/convert/openai/v1/realtime` routes
+- [x] T-09.1 Add `/openai/v1/realtime` and `/convert/openai/v1/realtime` routes
 - [ ] T-09.2 Add WebSocket proxy tests or smoke validation
 - [ ] T-09.3 ✅ Run tests
 

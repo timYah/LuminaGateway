@@ -19,7 +19,10 @@ import { activeRequestService } from "./activeRequestService";
 import { createRequestLog } from "./requestLogService";
 import { normalizeOpenAiBaseUrl } from "./aiSdkFactory";
 
-const REALTIME_PATHS = new Set(["/openai/v1/realtime"]);
+const REALTIME_PATHS = new Set([
+  "/openai/v1/realtime",
+  "/convert/openai/v1/realtime",
+]);
 
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
