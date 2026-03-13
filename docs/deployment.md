@@ -196,6 +196,23 @@ curl "http://localhost:3000/admin/circuit-breakers" \
   -H "Authorization: Bearer dev-token"
 ```
 
+Response entries are model-scoped and include the model slug:
+
+```json
+{
+  "breakers": [
+    {
+      "providerId": 1,
+      "name": "OpenAI Main",
+      "protocol": "openai",
+      "modelSlug": "gpt-4o",
+      "state": "cooldown",
+      "remainingMs": 42000
+    }
+  ]
+}
+```
+
 ```bash [Terminal]
 curl "http://localhost:3000/admin/usage/summary" \
   -H "Authorization: Bearer dev-token"
