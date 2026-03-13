@@ -14,6 +14,7 @@ import type {
   AnthropicMessagesRequest,
   AnthropicMessagesResponse,
 } from "../types/anthropic";
+import type { GeminiGenerateContentResponse } from "../types/gemini";
 import type { UpstreamRequestParams, UpstreamUsage } from "./upstreamService";
 
 export type UniversalRequest = UpstreamRequestParams & {
@@ -390,6 +391,83 @@ export function convertUniversalToAnthropicResponse(
           output_tokens: result.usage.completionTokens,
         }
       : undefined,
+  };
+}
+
+function extractOpenAIResponsesText(response: OpenAIResponsesResponse) {
+  if (typeof response.output_text === "string") {
+    return response.output_text;
+  }
+  return "";
+}
+
+function convertOpenAIResponsesUsageToUniversal(
+  usage: OpenAIResponsesResponse["usage"]
+): UpstreamUsage | null {
+  if (!usage) return null;
+  return {
+    promptTokens: usage.input_tokens ?? 0,
+    completionTokens: usage.output_tokens ?? 0,
+  };
+}
+
+export function convertOpenAIResponsesResponseToUniversal(
+  response: OpenAIResponsesResponse
+): UniversalResponse {
+  return {
+    model: response.model,
+    text: extractOpenAIResponsesText(response),
+    finishReason: null,
+    usage: convertOpenAIResponsesUsageToUniversal(response.usage),
+  };
+}
+
+function extractAnthropicText(response: AnthropicMessagesResponse) {
+  if (!Array.isArray(response.content)) return "";
+  return response.content
+    .map((block) => (block && typeof block.text === "string" ? block.text : ""))
+    .filter((text) => text.length > 0)
+    .join("\n");
+}
+
+export function convertAnthropicResponseToUniversal(
+  response: AnthropicMessagesResponse
+): UniversalResponse {
+  return {
+    model: response.model,
+    text: extractAnthropicText(response),
+    finishReason: response.stop_reason ?? null,
+    usage: response.usage
+      ? {
+          promptTokens: response.usage.input_tokens ?? 0,
+          completionTokens: response.usage.output_tokens ?? 0,
+        }
+      : null,
+  };
+}
+
+function extractGeminiText(response: GeminiGenerateContentResponse) {
+  const candidate = response.candidates?.[0];
+  if (!candidate?.content?.parts) return "";
+  return candidate.content.parts
+    .map((part) => (typeof part.text === "string" ? part.text : ""))
+    .filter((text) => text.length > 0)
+    .join("\n");
+}
+
+export function convertGeminiResponseToUniversal(
+  response: GeminiGenerateContentResponse
+): UniversalResponse {
+  return {
+    model: response.modelVersion ?? "",
+    text: extractGeminiText(response),
+    finishReason: response.candidates?.[0]?.finishReason ?? null,
+    usage: response.usageMetadata
+      ? {
+          promptTokens: response.usageMetadata.promptTokenCount ?? 0,
+          completionTokens: response.usageMetadata.candidatesTokenCount ?? 0,
+        }
+      : null,
   };
 }
 

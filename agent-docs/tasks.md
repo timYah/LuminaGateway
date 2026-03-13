@@ -19,7 +19,7 @@
 - [x] T-04.2 ✅ Run unit tests for validators
 
 ## Phase 05 — Universal Response Conversion
-- [ ] T-05.0 Implement response-to-universal conversions (OpenAI Responses / Claude / Gemini)
+- [x] T-05.0 Implement response-to-universal conversions (OpenAI Responses / Claude / Gemini)
 - [ ] T-05.1 Implement universal-to-target conversions (including Gemini)
 - [ ] T-05.2 Add unit tests for conversion utilities
 - [ ] T-05.3 ✅ Run unit tests
