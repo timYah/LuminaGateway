@@ -9,6 +9,7 @@ import { rateLimitMiddleware } from "./middleware/rateLimit";
 import { adminRoutes } from "./routes/admin";
 import { anthropicRoutes } from "./routes/anthropic";
 import { openaiRoutes } from "./routes/openai";
+import { openaiPassthroughRoutes } from "./routes/openaiPassthrough";
 import { codexRoutes } from "./routes/codex";
 import { claudeRoutes } from "./routes/claude";
 import { renderMetrics } from "./services/metricsService";
@@ -89,6 +90,7 @@ export function createApp() {
   app.use("/claude/*", authMiddleware());
   app.use("/admin/*", authMiddleware());
   app.route("/", openaiRoutes);
+  app.route("/", openaiPassthroughRoutes);
   app.route("/", codexRoutes);
   app.route("/", claudeRoutes);
   app.route("/", anthropicRoutes);

@@ -25,7 +25,7 @@
 - [x] T-05.3 ✅ Run unit tests
 
 ## Phase 06 — OpenAI Passthrough Route
-- [ ] T-06.0 Implement `POST /openai/v1/responses` passthrough
+- [x] T-06.0 Implement `POST /openai/v1/responses` passthrough
 - [ ] T-06.1 Add route tests for OpenAI passthrough
 - [ ] T-06.2 ✅ Run route tests
 
