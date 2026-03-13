@@ -38,7 +38,7 @@
 - [x] T-08.0 Implement convert service (validate -> detect -> convert)
 - [x] T-08.1 Add convert routes for OpenAI / Claude / Gemini
 - [x] T-08.2 Add tests for convert behavior and 422 errors
-- [ ] T-08.3 ✅ Run route tests
+- [x] T-08.3 ✅ Run route tests
 
 ## Phase 09 — Realtime WebSocket Proxy
 - [ ] T-09.0 Implement WebSocket proxy service and upgrade handling
