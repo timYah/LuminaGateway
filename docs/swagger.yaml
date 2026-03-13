@@ -344,6 +344,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GatewayError'
+  /openai/v1/responses:
+    post:
+      summary: OpenAI passthrough (Responses API)
+      description: Raw passthrough to upstream /responses with failover before first byte.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upstream response (raw)
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
   /claude/messages:
     post:
       summary: Claude passthrough (messages)
@@ -392,6 +418,178 @@ paths:
                 type: string
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  "/google/v1beta/models/{model}:generateContent":
+    post:
+      summary: Gemini passthrough (generateContent)
+      description: Raw passthrough to Google Gemini generateContent API.
+      parameters:
+        - name: model
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upstream response (raw)
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /convert/openai/v1/responses:
+    post:
+      summary: Convert response to OpenAI Responses format
+      description: Proxies request upstream and normalizes JSON responses to OpenAI Responses shape.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Converted response
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '422':
+          description: Unrecognized response format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /convert/claude/v1/messages:
+    post:
+      summary: Convert response to Anthropic Messages format
+      description: Proxies request upstream and normalizes JSON responses to Anthropic Messages shape.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Converted response
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '422':
+          description: Unrecognized response format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  "/convert/google/v1beta/models/{model}:generateContent":
+    post:
+      summary: Convert response to Gemini generateContent format
+      description: Proxies request upstream and normalizes JSON responses to Gemini generateContent shape.
+      parameters:
+        - name: model
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Converted response
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '422':
+          description: Unrecognized response format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /openai/v1/realtime:
+    get:
+      summary: OpenAI Realtime WebSocket proxy
+      description: Upgrade to WebSocket and proxy frames to the selected provider.
+      responses:
+        '101':
+          description: Switching Protocols
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '503':
+          description: No provider available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /convert/openai/v1/realtime:
+    get:
+      summary: OpenAI Realtime WebSocket proxy (convert alias)
+      description: Upgrade to WebSocket and proxy frames to the selected provider.
+      responses:
+        '101':
+          description: Switching Protocols
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '503':
+          description: No provider available
           content:
             application/json:
               schema:

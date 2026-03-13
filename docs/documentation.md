@@ -4,7 +4,7 @@ Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple pro
 
 ## What Lumina Gateway is
 
-The gateway exposes five client-facing routes: an OpenAI-compatible chat completions endpoint, an OpenAI-compatible responses endpoint, an Anthropic-compatible messages endpoint, `POST /codex/responses` for Codex passthrough, and `POST /claude/v1/messages` for raw Anthropic passthrough. The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The dedicated Codex and Claude routes keep the request and response bodies intact and proxy them straight to the selected upstream endpoint.
+The gateway exposes the standard `/v1/*` routes plus raw passthrough endpoints for `POST /codex/responses`, `POST /claude/v1/messages`, `POST /openai/v1/responses`, and `POST /google/v1beta/models/{model}:generateContent`. It also includes convert endpoints under `/convert/*` that normalize upstream JSON responses to a target format, and a WebSocket proxy for the OpenAI Realtime API at `/openai/v1/realtime` (plus `/convert/openai/v1/realtime` as an alias). The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The passthrough routes keep request and response bodies intact and proxy them straight to the selected upstream endpoint.
 
 ## Status
 
@@ -30,7 +30,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, `/claude/*`, and `/admin/*` routes. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes (including realtime WS upgrades). |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
@@ -89,7 +89,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 
 ### Authentication
 
-All `/v1/*`, `/codex/*`, `/claude/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`.
+All `/v1/*`, `/codex/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`. For WebSocket upgrades, the `Authorization` header must be included in the upgrade request.
 
 Set `JWT_SECRET` to enable per-user authentication. When it is set, the gateway also requires a JWT in the header defined by `JWT_HEADER` (default `X-User-Token`). The gateway reads the user and group claims from `JWT_USER_CLAIM` and `JWT_GROUP_CLAIM` and enforces any configured user or group quotas.
 
@@ -162,6 +162,22 @@ Codex CLI can use either `POST /v1/responses` or the dedicated `POST /codex/resp
 
 `POST /codex/responses` requires a JSON request body with a string `model`. The gateway forwards the raw request body to the selected upstream `/responses` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Once streaming starts, the gateway never replays the request to a second provider.
 
+### OpenAI passthrough endpoint
+
+```http [Request]
+POST /openai/v1/responses
+Authorization: Bearer <GATEWAY_API_KEY>
+Content-Type: application/json
+
+{
+  "model": "gpt-5.2",
+  "input": "Hello",
+  "stream": false
+}
+```
+
+`POST /openai/v1/responses` forwards the raw JSON body to the selected upstream `/responses` endpoint (OpenAI or OpenAI-compatible providers). It preserves the upstream response body and headers, and only fails over to another provider before the first byte reaches the client.
+
 ### Caching
 
 Set `CACHE_TTL_MS` to enable in-memory caching for non-streaming `/v1/*` responses. You can override (or disable) caching per request with the `x-cache-ttl-ms` header. A value of `0` disables caching for that request.
@@ -207,6 +223,28 @@ Anthropic-Version: 2023-06-01
 
 If your client builds the path as `POST /messages` relative to its configured base URL, you can use the alias `POST /claude/messages`.
 
+### Gemini passthrough endpoint
+
+```http [Request]
+POST /google/v1beta/models/gemini-2.5-pro:generateContent
+Authorization: Bearer <GATEWAY_API_KEY>
+Content-Type: application/json
+
+{
+  "contents": [{"role": "user", "parts": [{"text": "Hello"}]}]
+}
+```
+
+`POST /google/v1beta/models/{model}:generateContent` forwards the raw JSON body to the selected Google provider and preserves the upstream response body and headers. It only fails over before the first byte is returned to the client.
+
+### Convert endpoints
+
+The convert routes proxy the request to the selected provider and normalize JSON responses into the target format. Requests use the same payloads as the corresponding provider APIs, while non-JSON responses and streaming responses are passed through unchanged.
+
+- `POST /convert/openai/v1/responses`
+- `POST /convert/claude/v1/messages`
+- `POST /convert/google/v1beta/models/{model}:generateContent`
+
 ### Streaming responses
 
 OpenAI Chat Completions streaming returns `text/event-stream` with chat completion chunks followed by `[DONE]`.
@@ -234,6 +272,12 @@ data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text
 event: message_stop
 data: {"type":"message_stop"}
 ```
+
+Convert endpoints only transform non-streaming JSON responses. If an upstream response is streaming or not JSON, the gateway streams it back to the client without conversion.
+
+### Realtime WebSocket proxy
+
+Connect to `/openai/v1/realtime` (or `/convert/openai/v1/realtime`) with a standard WebSocket client and include `Authorization: Bearer <GATEWAY_API_KEY>` in the upgrade request. The gateway proxies frames to a selected OpenAI-compatible provider and does not rewrite the payload.
 
 ### Admin routes
 
@@ -319,13 +363,13 @@ Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at b
 
 For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. It skips providers that are circuit-broken for the requested model and forwards the requested model slug directly to the upstream provider.
 
-For `POST /codex/responses`, the gateway uses only `openai` and `new-api` providers with `codexTransform = false`. It forwards the raw request body to upstream `/responses`, preserves the upstream response as-is, and can fail over only before the first byte reaches the client.
+For `POST /codex/responses`, the gateway uses only `openai` and `new-api` providers with `codexTransform = false`. It forwards the raw request body to upstream `/responses`, preserves the upstream response as-is, and can fail over only before the first byte reaches the client. The same "fail over before first byte" behavior applies to `/openai/v1/responses`, `/google/v1beta/models/{model}:generateContent`, and the `/convert/*` HTTP routes. Realtime WebSocket sessions stay pinned to a single provider and are not replayed.
 
 On upstream failures, the gateway reacts to the classified error type. Quota exhaustion, rate limits, network failures, server errors, and model-not-found errors open a 60-second circuit breaker for that model before retrying the next provider. Authentication errors deactivate the provider immediately, and unknown errors return a `500` without failover. Codex passthrough follows the same classification rules, but if every retryable upstream attempt fails before the first byte, it returns the last upstream error response instead of synthesizing a converted payload.
 
 ## Billing and usage
 
-Billing uses usage numbers from the Vercel AI SDK. Missing token counts are normalized to `0` before billing.
+Billing uses usage numbers from the Vercel AI SDK for `/v1/*` routes. Passthrough and convert routes (except `/codex/responses`) use request-based estimates for usage and cost because upstream responses may not include billing metadata. Missing token counts are normalized to `0` before billing.
 
 ```text [Formula]
 inputCost  = (promptTokens / 1,000,000) × inputPrice
@@ -384,6 +428,9 @@ src/
 │   ├── openai.ts            # /v1/chat/completions + /v1/responses handlers
 │   ├── codex.ts             # /codex/responses raw passthrough handler
 │   ├── claude.ts            # /claude/v1/messages raw passthrough handler
+│   ├── openaiPassthrough.ts # /openai/v1/responses raw passthrough handler
+│   ├── geminiPassthrough.ts # /google/v1beta/models/* raw passthrough handler
+│   ├── convert.ts           # /convert/* response normalization handlers
 │   ├── anthropic.ts         # /v1/messages handler
 │   └── admin.ts             # /admin/* management routes
 ├── services/
@@ -393,6 +440,8 @@ src/
 │   ├── gatewayService.ts    # orchestrator (route → call → bill → respond)
 │   ├── circuitBreaker.ts    # per-provider health tracking
 │   ├── protocolConverter.ts # OpenAI ↔ Anthropic format conversion
+│   ├── convertService.ts    # detect + convert response payloads
+│   ├── realtimeProxy.ts     # OpenAI Realtime WS proxy
 │   └── streamRelay.ts       # SSE stream re-framing
 ├── middleware/
 │   ├── auth.ts              # Bearer token verification
@@ -400,7 +449,8 @@ src/
 │   └── errorHandler.ts      # standardized error responses
 ├── types/
 │   ├── openai.ts            # OpenAI request/response types
-│   └── anthropic.ts         # Anthropic request/response types
+│   ├── anthropic.ts         # Anthropic request/response types
+│   └── gemini.ts            # Gemini request/response types
 └── utils/
     └── requestId.ts         # unique request ID generation
 docs/

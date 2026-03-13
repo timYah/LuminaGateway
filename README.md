@@ -1,6 +1,6 @@
 # Lumina Gateway
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, plus dedicated Codex and Claude passthrough entrypoints. It routes requests by provider priority and health, then fails over when a provider is rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, plus dedicated Codex, Claude, OpenAI, and Gemini passthrough entrypoints along with convert routes and an OpenAI Realtime WebSocket proxy. It routes requests by provider priority and health, then fails over when a provider is rate limited or out of quota.
 
 ## Features
 
@@ -11,12 +11,16 @@ Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI 
 - Priority-based routing with automatic failover.
 - Dedicated `/codex/responses` passthrough for Codex-style Responses traffic.
 - Dedicated `/claude/v1/messages` passthrough for raw Anthropic Messages traffic.
+- Dedicated `/openai/v1/responses` passthrough for raw OpenAI Responses traffic.
+- Dedicated `/google/v1beta/models/{model}:generateContent` passthrough for Gemini traffic.
+- `/convert/*` routes that normalize upstream JSON responses into target formats.
+- `/openai/v1/realtime` WebSocket proxy for OpenAI Realtime.
 - Admin routes for provider management and usage queries.
 - Vue + Nuxt UI admin dashboard for providers and usage.
 
 ## Quick start
 
-Set `GATEWAY_API_KEY` before you start the server because `/v1/*`, `/codex/*`, `/claude/*`, and `/admin/*` require Bearer auth. The gateway auto-loads `.env` at startup.
+Set `GATEWAY_API_KEY` before you start the server because `/v1/*`, `/codex/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` require Bearer auth. The gateway auto-loads `.env` at startup.
 
 ```bash
 npm install
@@ -116,7 +120,7 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, and `/admin/*` routes. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes. |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
@@ -166,6 +170,13 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 - `POST /v1/responses` — OpenAI-compatible responses endpoint
 - `POST /v1/messages` — Anthropic-compatible endpoint
 - `POST /codex/responses` — raw Codex passthrough to upstream `/responses`
+- `POST /claude/v1/messages` — raw Anthropic passthrough
+- `POST /openai/v1/responses` — raw OpenAI passthrough
+- `POST /google/v1beta/models/{model}:generateContent` — raw Gemini passthrough
+- `POST /convert/openai/v1/responses` — convert to OpenAI Responses format
+- `POST /convert/claude/v1/messages` — convert to Anthropic Messages format
+- `POST /convert/google/v1beta/models/{model}:generateContent` — convert to Gemini generateContent format
+- `GET /openai/v1/realtime` — OpenAI Realtime WebSocket proxy
 - `GET /admin/providers` — list providers
 - `POST /admin/providers` — create provider (`codexTransform` defaults to `false`)
 - `PATCH /admin/providers/:id` — update provider, including the Codex transform flag

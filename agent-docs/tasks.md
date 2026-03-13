@@ -51,5 +51,5 @@
 - [x] T-10.1 ✅ Run tests
 
 ## Phase 11 — Documentation + Final Verification
-- [ ] T-11.0 Update docs (`docs/documentation.md`, `docs/swagger.yaml`, README if needed)
+- [x] T-11.0 Update docs (`docs/documentation.md`, `docs/swagger.yaml`, README if needed)
 - [ ] T-11.1 ✅ Run `npm run lint && npm run typecheck && npm run test`
