@@ -44,7 +44,7 @@
 - [x] T-09.0 Implement WebSocket proxy service and upgrade handling
 - [x] T-09.1 Add `/openai/v1/realtime` and `/convert/openai/v1/realtime` routes
 - [x] T-09.2 Add WebSocket proxy tests or smoke validation
-- [ ] T-09.3 ✅ Run tests
+- [x] T-09.3 ✅ Run tests
 
 ## Phase 10 — Middleware and CORS Coverage
 - [ ] T-10.0 Apply CORS/auth/rate-limit/quota to `/openai/*`, `/google/*`, `/convert/*`
