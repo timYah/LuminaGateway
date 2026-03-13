@@ -33,7 +33,7 @@ import {
   convertUniversalToOpenAIResponsesResponse,
 } from "./protocolConverter";
 
-export type ClientFormat = "openai" | "openai-responses" | "anthropic";
+export type ClientFormat = "openai" | "openai-responses" | "anthropic" | "gemini";
 
 export type GatewayRequestParams = UpstreamRequestParams & {
   model: string;

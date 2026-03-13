@@ -30,7 +30,7 @@
 - [x] T-06.2 ✅ Run route tests
 
 ## Phase 07 — Gemini Passthrough Route
-- [ ] T-07.0 Implement `POST /google/v1beta/models/:model:generateContent` passthrough
+- [x] T-07.0 Implement `POST /google/v1beta/models/:model:generateContent` passthrough
 - [ ] T-07.1 Add route tests for Gemini passthrough
 - [ ] T-07.2 ✅ Run route tests
 

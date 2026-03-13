@@ -57,6 +57,20 @@ function extractResponsesInputText(input: unknown) {
 }
 
 function extractText(clientFormat: ClientFormat, payload: Record<string, unknown>) {
+  if (clientFormat === "gemini") {
+    const contents = Array.isArray(payload.contents) ? payload.contents : [];
+    const contentText = contents
+      .map((content) => (content as { parts?: unknown }).parts)
+      .flatMap((parts) => extractStringParts(parts))
+      .join("\n");
+    const systemInstruction = payload.systemInstruction;
+    const systemText = extractStringParts(
+      typeof systemInstruction === "object" && systemInstruction !== null
+        ? (systemInstruction as { parts?: unknown }).parts ?? systemInstruction
+        : systemInstruction
+    ).join("\n");
+    return [systemText, contentText].filter(Boolean).join("\n");
+  }
   if (clientFormat === "anthropic") {
     const messages = Array.isArray(payload.messages) ? payload.messages : [];
     const messageText = messages
@@ -79,6 +93,16 @@ function extractText(clientFormat: ClientFormat, payload: Record<string, unknown
 }
 
 function extractMaxTokens(clientFormat: ClientFormat, payload: Record<string, unknown>) {
+  if (clientFormat === "gemini") {
+    const config = payload.generationConfig;
+    if (config && typeof config === "object") {
+      const record = config as Record<string, unknown>;
+      const value =
+        record.maxOutputTokens ?? record.max_output_tokens ?? record.maxTokens;
+      return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
+    }
+    return 0;
+  }
   if (clientFormat === "openai-responses") {
     const value = payload.max_output_tokens;
     return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
