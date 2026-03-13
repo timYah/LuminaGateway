@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   anthropicMessagesSchema,
+  geminiGenerateContentSchema,
   openaiChatCompletionSchema,
   openaiResponsesSchema,
 } from "../validators";
@@ -94,6 +95,26 @@ describe("validators", () => {
   it("rejects invalid Anthropic request", () => {
     const result = anthropicMessagesSchema.safeParse({
       model: "claude-sonnet-4-20250514",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("validates Gemini generateContent request", () => {
+    const result = geminiGenerateContentSchema.safeParse({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: "Hello" }],
+        },
+      ],
+      generationConfig: { temperature: 0.7 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid Gemini generateContent request", () => {
+    const result = geminiGenerateContentSchema.safeParse({
+      contents: [{ role: "user" }],
     });
     expect(result.success).toBe(false);
   });

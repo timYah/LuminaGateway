@@ -14,7 +14,7 @@
 - [x] T-03.1 ✅ Verification for existing passthrough routes (pre-existing)
 
 ## Phase 04 — Response Validators
-- [ ] T-04.0 Add Gemini response/request types and validators
+- [x] T-04.0 Add Gemini response/request types and validators
 - [ ] T-04.1 Add response validators for OpenAI Responses and Claude Messages
 - [ ] T-04.2 ✅ Run unit tests for validators
 

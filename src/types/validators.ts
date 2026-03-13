@@ -183,3 +183,49 @@ export const anthropicMessagesSchema = z.object({
   temperature: z.number().optional(),
   tools: z.array(anthropicToolSchema).optional(),
 });
+
+const geminiPartSchema = z.object({
+  text: z.string().optional(),
+});
+
+const geminiContentSchema = z
+  .object({
+    role: z.enum(["user", "model", "system"]).optional(),
+    parts: z.array(geminiPartSchema),
+  })
+  .passthrough();
+
+export const geminiGenerateContentSchema = z
+  .object({
+    contents: z.array(geminiContentSchema),
+    systemInstruction: z
+      .union([geminiContentSchema, z.object({ parts: z.array(geminiPartSchema) })])
+      .optional(),
+    tools: z.array(z.record(z.string(), z.unknown())).optional(),
+    toolConfig: z.record(z.string(), z.unknown()).optional(),
+    safetySettings: z.array(z.record(z.string(), z.unknown())).optional(),
+    generationConfig: z.record(z.string(), z.unknown()).optional(),
+  })
+  .passthrough();
+
+const geminiCandidateSchema = z
+  .object({
+    content: geminiContentSchema,
+    finishReason: z.string().optional(),
+    index: z.number().int().optional(),
+  })
+  .passthrough();
+
+export const geminiGenerateContentResponseSchema = z
+  .object({
+    candidates: z.array(geminiCandidateSchema),
+    usageMetadata: z
+      .object({
+        promptTokenCount: z.number().int().optional(),
+        candidatesTokenCount: z.number().int().optional(),
+        totalTokenCount: z.number().int().optional(),
+      })
+      .optional(),
+    modelVersion: z.string().optional(),
+  })
+  .passthrough();
