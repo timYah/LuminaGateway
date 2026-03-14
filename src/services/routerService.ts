@@ -79,11 +79,23 @@ export class RouterService {
     return [selected, ...remaining];
   }
 
-  private applyPriority<T extends { id: number; priority: number }>(providers: T[]) {
+  private applyPriority<T extends { id: number; priority: number; modelPriority?: number | null }>(
+    providers: T[]
+  ) {
     if (providers.length <= 1) return providers;
     return providers
       .slice()
-      .sort((a, b) => b.priority - a.priority || a.id - b.id);
+      .sort((a, b) => {
+        const effectiveA = a.modelPriority ?? a.priority;
+        const effectiveB = b.modelPriority ?? b.priority;
+        if (effectiveB !== effectiveA) {
+          return effectiveB - effectiveA;
+        }
+        if (b.priority !== a.priority) {
+          return b.priority - a.priority;
+        }
+        return a.id - b.id;
+      });
   }
 
   async getAllCandidates(modelSlug: string) {

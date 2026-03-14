@@ -57,6 +57,13 @@
       "when": 1778284800000,
       "tag": "0007_add_request_log_request_id",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1773454236706,
+      "tag": "0008_add_model_priorities",
+      "breakpoints": true
     }
   ]
 }
