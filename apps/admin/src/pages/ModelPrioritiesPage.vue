@@ -165,8 +165,11 @@ const submitCreate = async () => {
     });
     createOpen.value = false;
     await refresh();
-  } catch {
-    createError.value = t("modelPriorities.error.create");
+  } catch (err) {
+    createError.value =
+      err instanceof Error && err.message
+        ? err.message
+        : t("modelPriorities.error.create");
   } finally {
     createWorking.value = false;
   }
@@ -188,8 +191,11 @@ const submitEdit = async () => {
     editOpen.value = false;
     editingId.value = null;
     await refresh();
-  } catch {
-    editError.value = t("modelPriorities.error.update");
+  } catch (err) {
+    editError.value =
+      err instanceof Error && err.message
+        ? err.message
+        : t("modelPriorities.error.update");
   } finally {
     editWorking.value = false;
   }
@@ -205,8 +211,11 @@ const submitDelete = async () => {
     });
     closeDelete();
     await refresh();
-  } catch {
-    deleteError.value = t("modelPriorities.error.delete");
+  } catch (err) {
+    deleteError.value =
+      err instanceof Error && err.message
+        ? err.message
+        : t("modelPriorities.error.delete");
   } finally {
     deleteWorking.value = false;
   }
