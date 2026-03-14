@@ -149,4 +149,42 @@ describe("admin model priorities", () => {
     expect(importedBody.importedModels).toBe(1);
     expect(importedBody.ignoredModels).toBe(0);
   });
+
+  it("overwrites existing model priorities when configured", async () => {
+    const imported = await app.request("/admin/config/import", {
+      method: "POST",
+      headers: { ...authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "replace",
+        modelConflictPolicy: "overwrite",
+        providers: [
+          {
+            name: "Override",
+            protocol: "openai",
+            baseUrl: "https://override.example.com/v1",
+            apiKey: "sk-override",
+            balance: 0,
+            priority: 1,
+          },
+        ],
+        models: [
+          {
+            providerName: "Override",
+            modelSlug: "gpt-4o",
+            priority: 2,
+          },
+          {
+            providerName: "Override",
+            modelSlug: "gpt-4o",
+            priority: 10,
+          },
+        ],
+      }),
+    });
+
+    expect(imported.status).toBe(200);
+    const rows = await db.select().from(modelPriorities);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.priority).toBe(10);
+  });
 });
