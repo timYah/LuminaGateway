@@ -9,6 +9,7 @@ Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI 
 - Anthropic-compatible messages endpoint.
 - Streaming SSE relay for all supported client formats.
 - Priority-based routing with automatic failover.
+- Model-level provider priorities when using priority routing.
 - Dedicated `/codex/responses` passthrough for Codex-style Responses traffic.
 - Dedicated `/claude/v1/messages` passthrough for raw Anthropic Messages traffic.
 - Dedicated `/openai/v1/responses` passthrough for raw OpenAI Responses traffic.

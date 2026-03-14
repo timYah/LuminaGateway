@@ -126,6 +126,43 @@ components:
           type: boolean
         priority:
           type: integer
+    ModelPriority:
+      type: object
+      properties:
+        id:
+          type: integer
+        providerId:
+          type: integer
+        providerName:
+          type: string
+          nullable: true
+        modelSlug:
+          type: string
+        priority:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    ModelPriorityCreate:
+      type: object
+      properties:
+        providerId:
+          type: integer
+        modelSlug:
+          type: string
+        priority:
+          type: integer
+      required: [providerId, modelSlug, priority]
+    ModelPriorityUpdate:
+      type: object
+      properties:
+        providerId:
+          type: integer
+        modelSlug:
+          type: string
+        priority:
+          type: integer
     AdminCircuitBreaker:
       type: object
       properties:
@@ -687,6 +724,77 @@ paths:
       responses:
         '200':
           description: OK
+  /admin/model-priorities:
+    get:
+      summary: List model priorities
+      parameters:
+        - name: providerId
+          in: query
+          schema:
+            type: integer
+        - name: modelSlug
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  modelPriorities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModelPriority'
+    post:
+      summary: Create model priority
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelPriorityCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  modelPriority:
+                    $ref: '#/components/schemas/ModelPriority'
+  /admin/model-priorities/{id}:
+    patch:
+      summary: Update model priority
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelPriorityUpdate'
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: Delete model priority
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
   /admin/providers/health:
     post:
       summary: Run health checks
@@ -828,6 +936,15 @@ paths:
                   type: array
                   items:
                     type: object
+                    properties:
+                      providerId:
+                        type: integer
+                      providerName:
+                        type: string
+                      modelSlug:
+                        type: string
+                      priority:
+                        type: integer
                 settings:
                   type: object
       responses:

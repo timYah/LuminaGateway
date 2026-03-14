@@ -288,6 +288,10 @@ PATCH  /admin/providers/:id      — update provider fields
 POST   /admin/providers/:id/test — test provider connectivity
 POST   /admin/providers/:id/reset — reset circuit breaker state (all models)
 DELETE /admin/providers/:id      — delete provider (also removes usage logs)
+GET    /admin/model-priorities   — list model-level provider priorities
+POST   /admin/model-priorities   — create model-level provider priority
+PATCH  /admin/model-priorities/:id — update model-level provider priority
+DELETE /admin/model-priorities/:id — delete model-level provider priority
 POST   /admin/providers/health   — run a health check for all providers
 GET    /admin/failure-stats      — get error type distribution for recent requests
 GET    /admin/circuit-breakers   — list open circuit breakers (per model)
@@ -318,7 +322,7 @@ For `new-api`, use the OpenAI-compatible base URL (for example `https://your-new
 
 `GET /admin/usage/stats` returns `{ trend, byProvider, byModel }` for the selected date range. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first. `GET /admin/active-requests` returns `{ activeRequests }` for the requests currently in flight, including the active provider and failover attempt details for each request. Historical request logs now also include `requestId` so current in-flight requests can be correlated with completed provider-attempt logs.
 
-`GET /admin/config/export` returns `{ providers, models, settings }` and includes `codexTransform` in each provider entry. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode? }`, where `mode` is `replace` or `merge`.
+`GET /admin/config/export` returns `{ providers, models, settings }` and includes `codexTransform` in each provider entry. The `models` array contains `{ providerId, providerName, modelSlug, priority }`. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode? }`, where each model entry may use `providerId` or `providerName`. `mode` is `replace` or `merge`.
 
 ### Admin dashboard
 
@@ -361,7 +365,7 @@ Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at b
 
 ## Provider selection and failover
 
-For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. It skips providers that are circuit-broken for the requested model and forwards the requested model slug directly to the upstream provider.
+For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. When `ROUTING_STRATEGY=priority` and model-level priorities are configured, the router uses the model priority for the requested model and falls back to the provider priority when a model priority is missing. Other strategies ignore model-level priorities. It skips providers that are circuit-broken for the requested model and forwards the requested model slug directly to the upstream provider.
 
 For `POST /codex/responses`, the gateway uses only `openai` and `new-api` providers with `codexTransform = false`. It forwards the raw request body to upstream `/responses`, preserves the upstream response as-is, and can fail over only before the first byte reaches the client. The same "fail over before first byte" behavior applies to `/openai/v1/responses`, `/google/v1beta/models/{model}:generateContent`, and the `/convert/*` HTTP routes. Realtime WebSocket sessions stay pinned to a single provider and are not replayed.
 

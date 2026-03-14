@@ -59,6 +59,6 @@
 - [x] T-12.1 Add model priority schema + migration
 - [x] T-12.2 Apply model priority ordering in model/router services
 - [x] T-12.3 Add admin CRUD + config import/export for model priorities
-- [ ] T-12.4 Update docs for model priorities
+- [x] T-12.4 Update docs for model priorities
 - [ ] T-12.5 Add tests for model priority routing and admin endpoints
 - [ ] T-12.6 ✅ Run `npm run lint && npm run typecheck && npm run test`
