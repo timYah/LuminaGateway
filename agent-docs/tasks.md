@@ -103,3 +103,8 @@
 - [x] T-18.2 Update docs and admin UI copy for removed /codex
 - [x] T-18.3 Remove /codex tests and update references
 - [x] T-18.4 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 19 — Model Priority UI Layout Refresh
+- [x] T-19.0 Update task list and documentation
+- [ ] T-19.1 Redesign model priority create/edit layout for provider selector
+- [ ] T-19.2 ✅ Run `npm run lint && npm run typecheck && npm run test`

@@ -348,6 +348,7 @@ The admin dashboard provides a web UI for provider management and usage visibili
 - Health status and failure mix visibility for providers.
 - Usage trends, current in-flight request visibility, and request log visibility.
 - Config export/import for provider portability.
+- Model priorities management page with responsive create/edit forms.
 
 **Setup**
 
