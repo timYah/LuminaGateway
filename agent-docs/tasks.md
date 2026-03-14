@@ -133,3 +133,8 @@
 - [x] T-24.0 Update task list and documentation
 - [x] T-24.1 Default-collapse pricing + priority panel in provider forms
 - [x] T-24.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 25 — Requests Provider Visibility Fix
+- [x] T-25.0 Update task list and documentation
+- [x] T-25.1 Ensure providers refresh and fallback labels in /requests
+- [x] T-25.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
