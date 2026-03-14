@@ -379,26 +379,37 @@ const submitDelete = async () => {
             </p>
           </div>
 
-          <UFormGroup :label="$t('modelPriorities.form.provider')">
-            <USelect v-model="createForm.providerId" :items="providerOptions" />
-          </UFormGroup>
+          <div class="grid grid-cols-1 gap-3 md:gap-4">
+            <UFormGroup :label="$t('modelPriorities.form.provider')">
+              <USelect
+                v-model="createForm.providerId"
+                :items="providerOptions"
+                class="w-full"
+              />
+            </UFormGroup>
+          </div>
 
-          <UFormGroup
-            :label="$t('modelPriorities.form.modelSlug')"
-            :help="$t('modelPriorities.form.help.modelSlug')"
+          <div
+            class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.6fr)] md:gap-4"
           >
-            <UInput
-              v-model="createForm.modelSlug"
-              :placeholder="$t('modelPriorities.form.placeholder.modelSlug')"
-            />
-          </UFormGroup>
+            <UFormGroup
+              :label="$t('modelPriorities.form.modelSlug')"
+              :help="$t('modelPriorities.form.help.modelSlug')"
+            >
+              <UInput
+                v-model="createForm.modelSlug"
+                :placeholder="$t('modelPriorities.form.placeholder.modelSlug')"
+                class="w-full"
+              />
+            </UFormGroup>
 
-          <UFormGroup
-            :label="$t('modelPriorities.form.priority')"
-            :help="$t('modelPriorities.form.help.priority')"
-          >
-            <UInput v-model="createForm.priority" />
-          </UFormGroup>
+            <UFormGroup
+              :label="$t('modelPriorities.form.priority')"
+              :help="$t('modelPriorities.form.help.priority')"
+            >
+              <UInput v-model="createForm.priority" class="w-full" />
+            </UFormGroup>
+          </div>
 
           <p v-if="createError" class="text-sm text-rose-600">
             {{ createError }}
@@ -437,26 +448,37 @@ const submitDelete = async () => {
             </p>
           </div>
 
-          <UFormGroup :label="$t('modelPriorities.form.provider')">
-            <USelect v-model="editForm.providerId" :items="providerOptions" />
-          </UFormGroup>
+          <div class="grid grid-cols-1 gap-3 md:gap-4">
+            <UFormGroup :label="$t('modelPriorities.form.provider')">
+              <USelect
+                v-model="editForm.providerId"
+                :items="providerOptions"
+                class="w-full"
+              />
+            </UFormGroup>
+          </div>
 
-          <UFormGroup
-            :label="$t('modelPriorities.form.modelSlug')"
-            :help="$t('modelPriorities.form.help.modelSlug')"
+          <div
+            class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.6fr)] md:gap-4"
           >
-            <UInput
-              v-model="editForm.modelSlug"
-              :placeholder="$t('modelPriorities.form.placeholder.modelSlug')"
-            />
-          </UFormGroup>
+            <UFormGroup
+              :label="$t('modelPriorities.form.modelSlug')"
+              :help="$t('modelPriorities.form.help.modelSlug')"
+            >
+              <UInput
+                v-model="editForm.modelSlug"
+                :placeholder="$t('modelPriorities.form.placeholder.modelSlug')"
+                class="w-full"
+              />
+            </UFormGroup>
 
-          <UFormGroup
-            :label="$t('modelPriorities.form.priority')"
-            :help="$t('modelPriorities.form.help.priority')"
-          >
-            <UInput v-model="editForm.priority" />
-          </UFormGroup>
+            <UFormGroup
+              :label="$t('modelPriorities.form.priority')"
+              :help="$t('modelPriorities.form.help.priority')"
+            >
+              <UInput v-model="editForm.priority" class="w-full" />
+            </UFormGroup>
+          </div>
 
           <p v-if="editError" class="text-sm text-rose-600">
             {{ editError }}
