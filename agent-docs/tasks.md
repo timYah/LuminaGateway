@@ -117,4 +117,4 @@
 ## Phase 21 — Provider Pricing Always Visible
 - [x] T-21.0 Update task list and documentation
 - [x] T-21.1 Keep pricing inputs always visible in provider forms
-- [ ] T-21.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+- [x] T-21.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
