@@ -66,7 +66,7 @@
 ## Phase 13 — Admin UI Model Priorities + Import Override
 - [x] T-13.0 Update task list and documentation
 - [x] T-13.1 Add model priority import conflict policy (overwrite) on backend
-- [ ] T-13.2 Build Admin UI model priorities management page
+- [x] T-13.2 Build Admin UI model priorities management page
 - [ ] T-13.3 Extend config import UI for model priorities override
 - [ ] T-13.4 Update docs/i18n for model priority UI + import policy
 - [ ] T-13.5 Add tests for model priority import overwrite

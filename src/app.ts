@@ -51,6 +51,7 @@ function registerAdminUi(app: Hono) {
 
   app.get("/", serveAdminIndex);
   app.get("/providers", serveAdminIndex);
+  app.get("/model-priorities", serveAdminIndex);
   app.get("/usage", serveAdminIndex);
   app.notFound((c) => {
     const accept = c.req.header("accept") || "";

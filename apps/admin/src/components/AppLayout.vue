@@ -22,12 +22,18 @@ const navPrefix = computed(() =>
   route.fullPath.startsWith("/admin") ? "/admin" : ""
 );
 const providersHref = computed(() => `${navPrefix.value}/providers`);
+const modelPrioritiesHref = computed(() => `${navPrefix.value}/model-priorities`);
 const usageHref = computed(() => `${navPrefix.value}/usage`);
 const isProviders = computed(() => route.path === "/providers");
+const isModelPriorities = computed(() => route.path === "/model-priorities");
 const isUsage = computed(() => route.path === "/usage");
 const goProviders = () => {
   if (isProviders.value) return;
   router.push(providersHref.value);
+};
+const goModelPriorities = () => {
+  if (isModelPriorities.value) return;
+  router.push(modelPrioritiesHref.value);
 };
 const goUsage = () => {
   if (isUsage.value) return;
@@ -78,6 +84,13 @@ watch(
                   @click="goProviders"
                 >
                   {{ $t("nav.providers") }}
+                </button>
+                <button
+                  type="button"
+                  :class="[navBaseClass, isModelPriorities ? navActiveClass : '']"
+                  @click="goModelPriorities"
+                >
+                  {{ $t("nav.modelPriorities") }}
                 </button>
                 <button
                   type="button"
