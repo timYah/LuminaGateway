@@ -128,3 +128,8 @@
 - [x] T-23.0 Update task list and documentation
 - [x] T-23.1 Normalize add/edit provider pricing + priority layout
 - [x] T-23.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 24 — Provider Pricing Panel Default Collapse
+- [x] T-24.0 Update task list and documentation
+- [ ] T-24.1 Default-collapse pricing + priority panel in provider forms
+- [ ] T-24.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
