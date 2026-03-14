@@ -89,4 +89,4 @@
 - [x] T-16.0 Update task list and documentation
 - [x] T-16.1 Improve model priority error mapping for missing table/duplicates
 - [x] T-16.2 Add tests for duplicate model priority creation
-- [ ] T-16.3 ✅ Run `npm run lint && npm run typecheck && npm run test`
+- [x] T-16.3 ✅ Run `npm run lint && npm run typecheck && npm run test`
