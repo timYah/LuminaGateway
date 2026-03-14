@@ -76,4 +76,4 @@
 - [x] T-14.0 Update task list and documentation
 - [x] T-14.1 Handle missing model_priorities table in admin routes
 - [x] T-14.2 Add tests or coverage for graceful model priorities load
-- [ ] T-14.3 ✅ Run `npm run lint && npm run typecheck && npm run test`
+- [x] T-14.3 ✅ Run `npm run lint && npm run typecheck && npm run test`
