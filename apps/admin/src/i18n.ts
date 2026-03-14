@@ -17,6 +17,7 @@ const messages = {
     },
     nav: {
       providers: "Providers",
+      modelPriorities: "Model priorities",
       usage: "Usage",
     },
     apiKey: {
@@ -107,13 +108,14 @@ const messages = {
         import: "Import config",
         exportError: "Export failed. Try again.",
         importTitle: "Import configuration",
-        importSubtitle: "Paste the exported JSON to restore providers.",
+        importSubtitle: "Paste the exported JSON to restore providers and model priorities.",
         importLabel: "Config JSON",
         importPlaceholder: "{\n  \"providers\": [...]\n}",
         importSubmit: "Import now",
         importInvalid: "Invalid JSON payload.",
         importError: "Import failed. Check the payload and try again.",
         replace: "Replace existing providers",
+        modelOverwrite: "Overwrite existing model priorities",
       },
       test: {
         success: "OK \u00b7 {latency}ms",
@@ -325,6 +327,75 @@ const messages = {
         },
       },
     },
+    modelPriorities: {
+      title: "Model routing overrides",
+      intro: "Override provider priority per model slug when using priority routing.",
+      refresh: "Refresh list",
+      add: "Add model priority",
+      roster: "Model priority roster",
+      rosterHint: "Higher numbers are preferred for the selected model.",
+      errorTitle: "Model priorities failed to load.",
+      errorHint: "Verify the API key and refresh.",
+      emptyTitle: "No model priorities configured yet.",
+      emptyHint: "Add a model override to control routing by model.",
+      table: {
+        model: "Model",
+        provider: "Provider",
+        priority: "Priority",
+        actions: "Actions",
+      },
+      filters: {
+        provider: "Provider",
+        modelSlug: "Model slug",
+        help: {
+          provider: "Filter by provider.",
+          modelSlug: "Exact model slug value.",
+        },
+        placeholder: {
+          modelSlug: "gpt-4o",
+        },
+      },
+      action: {
+        edit: "Edit",
+        delete: "Delete",
+      },
+      form: {
+        provider: "Provider",
+        modelSlug: "Model slug",
+        priority: "Priority",
+        help: {
+          modelSlug: "Exact model slug value.",
+          priority: "Higher values take precedence.",
+        },
+        placeholder: {
+          modelSlug: "gpt-4o",
+        },
+      },
+      validation: {
+        required: "Provider and model slug are required.",
+      },
+      error: {
+        create: "Create failed. Check the inputs and try again.",
+        update: "Update failed. Check the inputs and try again.",
+        delete: "Delete failed. Try again.",
+      },
+      create: {
+        title: "New model priority",
+        subtitle: "Add a model-specific routing override.",
+        submit: "Add model priority",
+      },
+      edit: {
+        title: "Edit model priority",
+        subtitle: "Adjust model-specific routing override.",
+        submit: "Save changes",
+      },
+      delete: {
+        title: "Delete model priority",
+        subtitle: "This removes the model override.",
+        confirm: "Delete override",
+      },
+      cancel: "Cancel",
+    },
     common: {
       allProviders: "All providers",
     },
@@ -343,6 +414,7 @@ const messages = {
     },
     nav: {
       providers: "提供商",
+      modelPriorities: "模型优先级",
       usage: "用量",
     },
     apiKey: {
@@ -433,13 +505,14 @@ const messages = {
         import: "导入配置",
         exportError: "导出失败，请重试。",
         importTitle: "导入配置",
-        importSubtitle: "粘贴导出的 JSON 以恢复提供商。",
+        importSubtitle: "粘贴导出的 JSON 以恢复提供商与模型优先级。",
         importLabel: "配置 JSON",
         importPlaceholder: "{\n  \"providers\": [...]\n}",
         importSubmit: "开始导入",
         importInvalid: "JSON 格式不正确。",
         importError: "导入失败，请检查内容后重试。",
         replace: "覆盖现有提供商",
+        modelOverwrite: "覆盖现有模型优先级",
       },
       test: {
         success: "正常 \u00b7 {latency}ms",
@@ -650,6 +723,75 @@ const messages = {
           },
         },
       },
+    },
+    modelPriorities: {
+      title: "模型路由优先级",
+      intro: "在优先级路由策略下，为指定模型配置专属优先级。",
+      refresh: "刷新列表",
+      add: "新增模型优先级",
+      roster: "模型优先级列表",
+      rosterHint: "数值越高越优先。",
+      errorTitle: "模型优先级加载失败。",
+      errorHint: "请检查 API key 后刷新。",
+      emptyTitle: "暂无模型优先级配置。",
+      emptyHint: "新增模型覆盖以控制路由顺序。",
+      table: {
+        model: "模型",
+        provider: "提供商",
+        priority: "优先级",
+        actions: "操作",
+      },
+      filters: {
+        provider: "提供商",
+        modelSlug: "模型标识",
+        help: {
+          provider: "按提供商筛选。",
+          modelSlug: "精确模型标识。",
+        },
+        placeholder: {
+          modelSlug: "gpt-4o",
+        },
+      },
+      action: {
+        edit: "编辑",
+        delete: "删除",
+      },
+      form: {
+        provider: "提供商",
+        modelSlug: "模型标识",
+        priority: "优先级",
+        help: {
+          modelSlug: "精确模型标识。",
+          priority: "数值越大优先级越高。",
+        },
+        placeholder: {
+          modelSlug: "gpt-4o",
+        },
+      },
+      validation: {
+        required: "请选择提供商并填写模型标识。",
+      },
+      error: {
+        create: "创建失败，请检查后重试。",
+        update: "更新失败，请检查后重试。",
+        delete: "删除失败，请重试。",
+      },
+      create: {
+        title: "新增模型优先级",
+        subtitle: "添加模型级路由覆盖。",
+        submit: "新增",
+      },
+      edit: {
+        title: "编辑模型优先级",
+        subtitle: "调整模型级路由覆盖。",
+        submit: "保存",
+      },
+      delete: {
+        title: "删除模型优先级",
+        subtitle: "删除该模型覆盖。",
+        confirm: "删除覆盖",
+      },
+      cancel: "取消",
     },
     common: {
       allProviders: "全部提供商",

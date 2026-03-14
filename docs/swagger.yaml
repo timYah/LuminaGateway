@@ -945,6 +945,9 @@ paths:
                         type: string
                       priority:
                         type: integer
+                modelConflictPolicy:
+                  type: string
+                  enum: [overwrite, skip]
                 settings:
                   type: object
       responses:

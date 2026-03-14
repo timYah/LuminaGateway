@@ -322,7 +322,7 @@ For `new-api`, use the OpenAI-compatible base URL (for example `https://your-new
 
 `GET /admin/usage/stats` returns `{ trend, byProvider, byModel }` for the selected date range. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first. `GET /admin/active-requests` returns `{ activeRequests }` for the requests currently in flight, including the active provider and failover attempt details for each request. Historical request logs now also include `requestId` so current in-flight requests can be correlated with completed provider-attempt logs.
 
-`GET /admin/config/export` returns `{ providers, models, settings }` and includes `codexTransform` in each provider entry. The `models` array contains `{ providerId, providerName, modelSlug, priority }`. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode? }`, where each model entry may use `providerId` or `providerName`. `mode` is `replace` or `merge`.
+`GET /admin/config/export` returns `{ providers, models, settings }` and includes `codexTransform` in each provider entry. The `models` array contains `{ providerId, providerName, modelSlug, priority }`. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode?, modelConflictPolicy? }`, where each model entry may use `providerId` or `providerName`. `mode` is `replace` or `merge`. `modelConflictPolicy` is `overwrite` (default) or `skip` for existing model priority rows.
 
 ### Admin dashboard
 
