@@ -108,3 +108,8 @@
 - [x] T-19.0 Update task list and documentation
 - [x] T-19.1 Redesign model priority create/edit layout for provider selector
 - [x] T-19.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 20 — Provider Pricing Foldout
+- [x] T-20.0 Update task list and documentation
+- [ ] T-20.1 Fold balance + health check model into pricing sections (create/edit)
+- [ ] T-20.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
