@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { getDb, type SqliteDatabase } from "../../db";
-import { providers } from "../../db/schema";
+import { modelPriorities, providers } from "../../db/schema";
 import { CircuitBreaker } from "../circuitBreaker";
 import { ProviderRecoveryService } from "../providerRecoveryService";
 import { NoProviderAvailableError, RouterService } from "../routerService";
@@ -17,6 +17,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   db.delete(providers).run();
+  db.delete(modelPriorities).run();
 });
 
 afterEach(() => {
@@ -68,6 +69,18 @@ describe("routerService", () => {
     const router = new RouterService(new CircuitBreaker());
     const selected = await router.selectProvider("gpt-4o");
     expect(selected.name).toBe("Provider A");
+  });
+
+  it("uses model-level priority when configured", async () => {
+    const inserted = await seed();
+    await db.insert(modelPriorities).values({
+      providerId: inserted[1].id,
+      modelSlug: "gpt-4o",
+      priority: 5,
+    });
+    const router = new RouterService(new CircuitBreaker());
+    const selected = await router.selectProvider("gpt-4o");
+    expect(selected.name).toBe("Provider B");
   });
 
   it("filters circuit-open providers", async () => {

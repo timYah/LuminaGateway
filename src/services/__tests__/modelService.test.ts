@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { getDb, type SqliteDatabase } from "../../db";
-import { providers } from "../../db/schema";
+import { modelPriorities, providers } from "../../db/schema";
 import { getActiveProvidersByModel } from "../modelService";
 import { configureTestDatabase } from "../../test/testDb";
 
@@ -15,6 +15,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   db.delete(providers).run();
+  db.delete(modelPriorities).run();
 });
 
 async function seedProviders() {
@@ -72,5 +73,20 @@ describe("modelService", () => {
       "Provider C",
       "Provider D",
     ]);
+  });
+
+  it("includes model-level priority when configured", async () => {
+    const inserted = await seedProviders();
+    const providerB = inserted.find((row) => row.name === "Provider B");
+    expect(providerB).toBeDefined();
+    await db.insert(modelPriorities).values({
+      providerId: providerB!.id,
+      modelSlug: "gpt-4o",
+      priority: 7,
+    });
+
+    const list = await getActiveProvidersByModel("gpt-4o");
+    const row = list.find((item) => item.id === providerB!.id);
+    expect(row?.modelPriority).toBe(7);
   });
 });
