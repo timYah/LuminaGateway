@@ -61,6 +61,35 @@ describe("admin model priorities", () => {
     );
   });
 
+  it("returns helpful error when create fails due to missing table", async () => {
+    db.run("DROP TABLE IF EXISTS model_priorities");
+
+    const provider = await seedProvider("Missing Table");
+    const res = await app.request("/admin/model-priorities", {
+      method: "POST",
+      headers: { ...authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        providerId: provider.id,
+        modelSlug: "gpt-4o",
+        priority: 3,
+      }),
+    });
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error?.message).toBe("Model priorities not initialized. Run migrations.");
+
+    db.run(
+      "CREATE TABLE IF NOT EXISTS model_priorities (id integer PRIMARY KEY AUTOINCREMENT NOT NULL, provider_id integer NOT NULL, model_slug text NOT NULL, priority integer NOT NULL DEFAULT 0, created_at integer NOT NULL DEFAULT (unixepoch()), updated_at integer NOT NULL DEFAULT (unixepoch()), FOREIGN KEY (provider_id) REFERENCES providers(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+    );
+    db.run(
+      "CREATE UNIQUE INDEX IF NOT EXISTS model_priorities_provider_model_unique ON model_priorities (provider_id, model_slug)"
+    );
+    db.run(
+      "CREATE INDEX IF NOT EXISTS model_priorities_model_slug_idx ON model_priorities (model_slug)"
+    );
+  });
+
   it("creates and lists model priorities", async () => {
     const provider = await seedProvider();
     const res = await app.request("/admin/model-priorities", {
