@@ -123,6 +123,8 @@ watch(testModel, (value) => {
 const createOpen = ref(false);
 const editOpen = ref(false);
 const createAdvancedOpen = ref(false);
+const createPricingOpen = ref(false);
+const editPricingOpen = ref(false);
 const createWorking = ref(false);
 const editWorking = ref(false);
 const createError = ref("");
@@ -187,6 +189,7 @@ const resetCreate = () => {
   createForm.isActive = true;
   createForm.priority = "1";
   createAdvancedOpen.value = false;
+  createPricingOpen.value = false;
 };
 
 const openEdit = (provider: Provider) => {
@@ -211,6 +214,7 @@ const openEdit = (provider: Provider) => {
   editForm.isActive = provider.isActive;
   editForm.priority = provider.priority.toString();
   editError.value = "";
+  editPricingOpen.value = false;
   editOpen.value = true;
 };
 
@@ -260,6 +264,7 @@ watch(editOpen, (open) => {
   }
   editWorking.value = false;
   editError.value = "";
+  editPricingOpen.value = false;
   editingId.value = null;
 });
 
@@ -955,30 +960,6 @@ const refreshAll = async () => {
                 />
               </UFormGroup>
               <UFormGroup
-                :label="$t('providers.form.inputPrice')"
-                :help="$t('providers.form.help.inputPrice')"
-              >
-                <UInput
-                  v-model="createForm.inputPrice"
-                  type="number"
-                  min="0"
-                  step="0.0001"
-                  class="w-full"
-                />
-              </UFormGroup>
-              <UFormGroup
-                :label="$t('providers.form.outputPrice')"
-                :help="$t('providers.form.help.outputPrice')"
-              >
-                <UInput
-                  v-model="createForm.outputPrice"
-                  type="number"
-                  min="0"
-                  step="0.0001"
-                  class="w-full"
-                />
-              </UFormGroup>
-              <UFormGroup
                 :label="$t('providers.form.priority')"
                 :help="$t('providers.form.help.priority')"
               >
@@ -990,6 +971,59 @@ const refreshAll = async () => {
                   class="w-full"
                 />
               </UFormGroup>
+              <div class="rounded-2xl border border-slate-200/70 bg-white/80 p-3 md:col-span-2">
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between gap-3 text-left"
+                  @click="createPricingOpen = !createPricingOpen"
+                >
+                  <div>
+                    <div class="text-sm font-medium text-slate-900">
+                      {{ $t("providers.pricing.title") }}
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">
+                      {{ $t("providers.pricing.hint") }}
+                    </p>
+                  </div>
+                  <span class="text-xs font-medium text-slate-500">
+                    {{
+                      createPricingOpen
+                        ? $t("providers.pricing.hide")
+                        : $t("providers.pricing.show")
+                    }}
+                  </span>
+                </button>
+
+                <div
+                  v-if="createPricingOpen"
+                  class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
+                >
+                  <UFormGroup
+                    :label="$t('providers.form.inputPrice')"
+                    :help="$t('providers.form.help.inputPrice')"
+                  >
+                    <UInput
+                      v-model="createForm.inputPrice"
+                      type="number"
+                      min="0"
+                      step="0.0001"
+                      class="w-full"
+                    />
+                  </UFormGroup>
+                  <UFormGroup
+                    :label="$t('providers.form.outputPrice')"
+                    :help="$t('providers.form.help.outputPrice')"
+                  >
+                    <UInput
+                      v-model="createForm.outputPrice"
+                      type="number"
+                      min="0"
+                      step="0.0001"
+                      class="w-full"
+                    />
+                  </UFormGroup>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1016,7 +1050,7 @@ const refreshAll = async () => {
 
     <UModal v-model:open="editOpen">
       <template #content>
-        <div class="surface radius-panel p-5 md:p-6 space-y-4">
+        <div class="surface radius-panel max-h-[85vh] overflow-y-auto p-5 md:p-6 space-y-4">
           <div>
             <div class="text-xs uppercase tracking-[0.3em] text-slate-500">
               {{ $t("providers.edit.title") }}
@@ -1098,30 +1132,6 @@ const refreshAll = async () => {
               />
             </UFormGroup>
             <UFormGroup
-              :label="$t('providers.form.inputPrice')"
-              :help="$t('providers.form.help.inputPrice')"
-            >
-              <UInput
-                v-model="editForm.inputPrice"
-                type="number"
-                min="0"
-                step="0.0001"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
-              :label="$t('providers.form.outputPrice')"
-              :help="$t('providers.form.help.outputPrice')"
-            >
-              <UInput
-                v-model="editForm.outputPrice"
-                type="number"
-                min="0"
-                step="0.0001"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
               :label="$t('providers.form.priority')"
               :help="$t('providers.form.help.priority')"
             >
@@ -1139,6 +1149,60 @@ const refreshAll = async () => {
             >
               <USwitch v-model="editForm.isActive" />
             </UFormGroup>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 md:p-4">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-3 text-left"
+              @click="editPricingOpen = !editPricingOpen"
+            >
+              <div>
+                <div class="text-sm font-medium text-slate-900">
+                  {{ $t("providers.pricing.title") }}
+                </div>
+                <p class="mt-1 text-xs text-slate-500">
+                  {{ $t("providers.pricing.hint") }}
+                </p>
+              </div>
+              <span class="text-xs font-medium text-slate-500">
+                {{
+                  editPricingOpen
+                    ? $t("providers.pricing.hide")
+                    : $t("providers.pricing.show")
+                }}
+              </span>
+            </button>
+
+            <div
+              v-if="editPricingOpen"
+              class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
+            >
+              <UFormGroup
+                :label="$t('providers.form.inputPrice')"
+                :help="$t('providers.form.help.inputPrice')"
+              >
+                <UInput
+                  v-model="editForm.inputPrice"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.outputPrice')"
+                :help="$t('providers.form.help.outputPrice')"
+              >
+                <UInput
+                  v-model="editForm.outputPrice"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  class="w-full"
+                />
+              </UFormGroup>
+            </div>
           </div>
 
           <p v-if="editError" class="text-sm text-rose-600">

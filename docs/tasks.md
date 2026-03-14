@@ -703,6 +703,11 @@
 - [x] **T-70.1** 网关注入运行时 API key / baseUrl 到 admin，并在前端读取以避免 `/admin` 面板 401/404
 - [x] **T-70.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/usage` 不再报 Dashboard failed
 
+## Phase 71 — Provider Modal Consistency
+
+- [x] **T-71.1** 统一 Providers 页面“新增/编辑提供商”弹窗高度与滚动行为，并将价格字段改为默认折叠
+- [x] **T-71.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build:admin`
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -772,4 +777,5 @@
 | Phase 68 | 2 | Admin Nav Fix |
 | Phase 69 | 2 | Usage Layout & Paging |
 | Phase 70 | 2 | Admin Runtime Config |
-| **合计** | **285** | |
+| Phase 71 | 2 | Provider Modal Consistency |
+| **合计** | **287** | |
