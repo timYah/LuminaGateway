@@ -127,6 +127,8 @@ watch(testModel, (value) => {
 
 const createOpen = ref(false);
 const editOpen = ref(false);
+const createAdvancedOpen = ref(false);
+const editAdvancedOpen = ref(false);
 const createWorking = ref(false);
 const createTestWorking = ref(false);
 const editWorking = ref(false);
@@ -200,6 +202,7 @@ const resetCreate = () => {
   createForm.priority = "1";
   createTestWorking.value = false;
   createTestResult.value = null;
+  createAdvancedOpen.value = false;
 };
 
 const openEdit = (provider: Provider) => {
@@ -225,6 +228,7 @@ const openEdit = (provider: Provider) => {
   editForm.isActive = provider.isActive;
   editForm.priority = provider.priority.toString();
   editError.value = "";
+  editAdvancedOpen.value = false;
   editOpen.value = true;
 };
 
@@ -279,6 +283,7 @@ watch(editOpen, (open) => {
   }
   editWorking.value = false;
   editError.value = "";
+  editAdvancedOpen.value = false;
   editingId.value = null;
 });
 
@@ -987,16 +992,33 @@ const refreshAll = async () => {
           </div>
 
           <div class="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 md:p-4">
-            <div>
-              <div class="text-sm font-medium text-slate-900">
-                {{ $t("providers.advanced.title") }}
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-3 text-left"
+              :aria-expanded="createAdvancedOpen"
+              aria-controls="create-advanced-panel"
+              @click="createAdvancedOpen = !createAdvancedOpen"
+            >
+              <div>
+                <div class="text-sm font-medium text-slate-900">
+                  {{ $t("providers.advanced.title") }}
+                </div>
+                <p class="mt-1 text-xs text-slate-500">
+                  {{ $t("providers.advanced.hint") }}
+                </p>
               </div>
-              <p class="mt-1 text-xs text-slate-500">
-                {{ $t("providers.advanced.hint") }}
-              </p>
-            </div>
+              <span class="text-xs font-medium text-slate-500">
+                {{
+                  createAdvancedOpen
+                    ? $t("providers.advanced.hide")
+                    : $t("providers.advanced.show")
+                }}
+              </span>
+            </button>
 
             <div
+              v-if="createAdvancedOpen"
+              id="create-advanced-panel"
               class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
             >
               <UFormGroup
@@ -1178,16 +1200,33 @@ const refreshAll = async () => {
           </div>
 
           <div class="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 md:p-4">
-            <div>
-              <div class="text-sm font-medium text-slate-900">
-                {{ $t("providers.advanced.title") }}
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-3 text-left"
+              :aria-expanded="editAdvancedOpen"
+              aria-controls="edit-advanced-panel"
+              @click="editAdvancedOpen = !editAdvancedOpen"
+            >
+              <div>
+                <div class="text-sm font-medium text-slate-900">
+                  {{ $t("providers.advanced.title") }}
+                </div>
+                <p class="mt-1 text-xs text-slate-500">
+                  {{ $t("providers.advanced.hint") }}
+                </p>
               </div>
-              <p class="mt-1 text-xs text-slate-500">
-                {{ $t("providers.advanced.hint") }}
-              </p>
-            </div>
+              <span class="text-xs font-medium text-slate-500">
+                {{
+                  editAdvancedOpen
+                    ? $t("providers.advanced.hide")
+                    : $t("providers.advanced.show")
+                }}
+              </span>
+            </button>
 
             <div
+              v-if="editAdvancedOpen"
+              id="edit-advanced-panel"
               class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
             >
               <UFormGroup
