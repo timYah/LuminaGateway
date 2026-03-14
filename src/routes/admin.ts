@@ -216,15 +216,25 @@ adminRoutes.post("/admin/model-priorities", async (c) => {
   if (!provider) {
     return c.json({ error: { message: "Provider not found" } }, 404);
   }
-  const existing = await listModelPriorities({
-    providerId: parsed.data.providerId,
-    modelSlug: parsed.data.modelSlug,
-  });
-  if (existing.length > 0) {
-    return c.json({ error: { message: "Model priority already exists" } }, 409);
+  try {
+    const existing = await listModelPriorities({
+      providerId: parsed.data.providerId,
+      modelSlug: parsed.data.modelSlug,
+    });
+    if (existing.length > 0) {
+      return c.json({ error: { message: "Model priority already exists" } }, 409);
+    }
+    const modelPriority = await createModelPriority(parsed.data);
+    return c.json({ modelPriority }, 201);
+  } catch (error) {
+    if (isMissingModelPriorityTable(error)) {
+      return c.json(
+        { error: { message: "Model priorities not initialized. Run migrations." } },
+        503
+      );
+    }
+    throw error;
   }
-  const modelPriority = await createModelPriority(parsed.data);
-  return c.json({ modelPriority }, 201);
 });
 
 adminRoutes.patch("/admin/model-priorities/:id", async (c) => {
@@ -235,39 +245,59 @@ adminRoutes.patch("/admin/model-priorities/:id", async (c) => {
     return c.json({ error: { message: "Invalid request" } }, 400);
   }
 
-  const existing = await getModelPriorityById(id);
-  if (!existing) {
-    return c.json({ error: { message: "Model priority not found" } }, 404);
-  }
-
-  if (parsed.data.providerId !== undefined) {
-    const provider = await getProviderById(parsed.data.providerId);
-    if (!provider) {
-      return c.json({ error: { message: "Provider not found" } }, 404);
+  try {
+    const existing = await getModelPriorityById(id);
+    if (!existing) {
+      return c.json({ error: { message: "Model priority not found" } }, 404);
     }
-  }
 
-  const nextProviderId = parsed.data.providerId ?? existing.providerId;
-  const nextModelSlug = parsed.data.modelSlug ?? existing.modelSlug;
-  const conflicts = await listModelPriorities({
-    providerId: nextProviderId,
-    modelSlug: nextModelSlug,
-  });
-  if (conflicts.some((row) => row.id !== id)) {
-    return c.json({ error: { message: "Model priority already exists" } }, 409);
-  }
+    if (parsed.data.providerId !== undefined) {
+      const provider = await getProviderById(parsed.data.providerId);
+      if (!provider) {
+        return c.json({ error: { message: "Provider not found" } }, 404);
+      }
+    }
 
-  const modelPriority = await updateModelPriority(id, parsed.data);
-  return c.json({ modelPriority });
+    const nextProviderId = parsed.data.providerId ?? existing.providerId;
+    const nextModelSlug = parsed.data.modelSlug ?? existing.modelSlug;
+    const conflicts = await listModelPriorities({
+      providerId: nextProviderId,
+      modelSlug: nextModelSlug,
+    });
+    if (conflicts.some((row) => row.id !== id)) {
+      return c.json({ error: { message: "Model priority already exists" } }, 409);
+    }
+
+    const modelPriority = await updateModelPriority(id, parsed.data);
+    return c.json({ modelPriority });
+  } catch (error) {
+    if (isMissingModelPriorityTable(error)) {
+      return c.json(
+        { error: { message: "Model priorities not initialized. Run migrations." } },
+        503
+      );
+    }
+    throw error;
+  }
 });
 
 adminRoutes.delete("/admin/model-priorities/:id", async (c) => {
   const id = Number(c.req.param("id"));
-  const modelPriority = await deleteModelPriority(id);
-  if (!modelPriority) {
-    return c.json({ error: { message: "Model priority not found" } }, 404);
+  try {
+    const modelPriority = await deleteModelPriority(id);
+    if (!modelPriority) {
+      return c.json({ error: { message: "Model priority not found" } }, 404);
+    }
+    return c.json({ modelPriority });
+  } catch (error) {
+    if (isMissingModelPriorityTable(error)) {
+      return c.json(
+        { error: { message: "Model priorities not initialized. Run migrations." } },
+        503
+      );
+    }
+    throw error;
   }
-  return c.json({ modelPriority });
 });
 
 adminRoutes.post("/admin/providers/:id/test", async (c) => {

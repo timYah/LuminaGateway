@@ -80,7 +80,7 @@
 
 ## Phase 15 — Fix Model Priority Create Error
 - [x] T-15.0 Update task list and documentation
-- [ ] T-15.1 Improve admin model priorities error handling (missing table)
+- [x] T-15.1 Improve admin model priorities error handling (missing table)
 - [ ] T-15.2 Improve UI error messaging for model priorities actions
 - [ ] T-15.3 Add tests for missing table create error response
 - [ ] T-15.4 ✅ Run `npm run lint && npm run typecheck && npm run test`
