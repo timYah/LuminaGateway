@@ -56,7 +56,7 @@
 
 ## Phase 12 — Model-Level Provider Priority
 - [x] T-12.0 Update task list and documentation
-- [ ] T-12.1 Add model priority schema + migration
+- [x] T-12.1 Add model priority schema + migration
 - [ ] T-12.2 Apply model priority ordering in model/router services
 - [ ] T-12.3 Add admin CRUD + config import/export for model priorities
 - [ ] T-12.4 Update docs for model priorities
