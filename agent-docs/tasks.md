@@ -127,4 +127,4 @@
 ## Phase 23 — Provider Forms Layout Normalization
 - [x] T-23.0 Update task list and documentation
 - [x] T-23.1 Normalize add/edit provider pricing + priority layout
-- [ ] T-23.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+- [x] T-23.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
