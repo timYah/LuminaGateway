@@ -122,4 +122,4 @@
 ## Phase 22 — Provider Forms Layout Audit
 - [x] T-22.0 Update task list and documentation
 - [x] T-22.1 Audit add/edit provider layout (create/edit forms)
-- [ ] T-22.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+- [x] T-22.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
