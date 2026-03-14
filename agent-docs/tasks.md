@@ -70,4 +70,4 @@
 - [x] T-13.3 Extend config import UI for model priorities override
 - [x] T-13.4 Update docs/i18n for model priority UI + import policy
 - [x] T-13.5 Add tests for model priority import overwrite
-- [ ] T-13.6 ✅ Run `npm run lint && npm run typecheck && npm run test`
+- [x] T-13.6 ✅ Run `npm run lint && npm run typecheck && npm run test`
