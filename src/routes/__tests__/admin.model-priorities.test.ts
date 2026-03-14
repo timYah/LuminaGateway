@@ -113,6 +113,29 @@ describe("admin model priorities", () => {
     expect(body.modelPriorities[0].providerName).toBe(provider.name);
   });
 
+  it("returns conflict on duplicate model priorities", async () => {
+    const provider = await seedProvider();
+    const payload = {
+      providerId: provider.id,
+      modelSlug: "gpt-4o",
+      priority: 4,
+    };
+
+    const first = await app.request("/admin/model-priorities", {
+      method: "POST",
+      headers: { ...authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    expect(first.status).toBe(201);
+
+    const second = await app.request("/admin/model-priorities", {
+      method: "POST",
+      headers: { ...authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    expect(second.status).toBe(409);
+  });
+
   it("updates and deletes model priorities", async () => {
     const provider = await seedProvider();
     const created = await app.request("/admin/model-priorities", {
