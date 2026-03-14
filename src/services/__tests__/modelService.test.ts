@@ -89,4 +89,37 @@ describe("modelService", () => {
     const row = list.find((item) => item.id === providerB!.id);
     expect(row?.modelPriority).toBe(7);
   });
+
+  it("matches wildcard model priorities with specificity and exact overrides", async () => {
+    const inserted = await seedProviders();
+    const providerB = inserted.find((row) => row.name === "Provider B");
+    expect(providerB).toBeDefined();
+
+    await db.insert(modelPriorities).values([
+      {
+        providerId: providerB!.id,
+        modelSlug: "gpt-5*",
+        priority: 9,
+      },
+      {
+        providerId: providerB!.id,
+        modelSlug: "gpt-5.4*",
+        priority: 2,
+      },
+    ]);
+
+    const wildcardList = await getActiveProvidersByModel("gpt-5.4-xhigh");
+    const wildcardRow = wildcardList.find((item) => item.id === providerB!.id);
+    expect(wildcardRow?.modelPriority).toBe(2);
+
+    await db.insert(modelPriorities).values({
+      providerId: providerB!.id,
+      modelSlug: "gpt-5.4-xhigh",
+      priority: 5,
+    });
+
+    const exactList = await getActiveProvidersByModel("gpt-5.4-xhigh");
+    const exactRow = exactList.find((item) => item.id === providerB!.id);
+    expect(exactRow?.modelPriority).toBe(5);
+  });
 });
