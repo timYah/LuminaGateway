@@ -132,4 +132,4 @@
 ## Phase 24 — Provider Pricing Panel Default Collapse
 - [x] T-24.0 Update task list and documentation
 - [x] T-24.1 Default-collapse pricing + priority panel in provider forms
-- [ ] T-24.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+- [x] T-24.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
