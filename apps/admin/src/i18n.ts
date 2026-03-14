@@ -46,6 +46,12 @@ const messages = {
         show: "Show",
         hide: "Hide",
       },
+      pricing: {
+        title: "Pricing",
+        hint: "Optional input and output pricing. Leave empty to use the global default.",
+        show: "Show",
+        hide: "Hide",
+      },
       testModel: {
         label: "Test model",
         help: "Used for connectivity checks only.",
@@ -439,6 +445,12 @@ const messages = {
       advanced: {
         title: "定价与优先级",
         hint: "可选填写余额、定价与优先级设置。",
+        show: "展开",
+        hide: "收起",
+      },
+      pricing: {
+        title: "价格设置",
+        hint: "可选填写输入与输出价格。留空则使用全局默认值。",
         show: "展开",
         hide: "收起",
       },
