@@ -81,9 +81,21 @@ type RequestErrorType = (typeof requestErrorTypes)[number];
 const requestErrorTypeSet = new Set<string>(requestErrorTypes);
 
 function isMissingModelPriorityTable(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
   return (
-    error instanceof Error &&
-    error.message.toLowerCase().includes("no such table: model_priorities")
+    message.includes("no such table: model_priorities") ||
+    message.includes("relation \"model_priorities\" does not exist")
+  );
+}
+
+function isModelPriorityUniqueViolation(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("unique constraint failed: model_priorities") ||
+    message.includes("model_priorities_provider_model_unique") ||
+    message.includes("duplicate key value violates unique constraint")
   );
 }
 
@@ -224,8 +236,15 @@ adminRoutes.post("/admin/model-priorities", async (c) => {
     if (existing.length > 0) {
       return c.json({ error: { message: "Model priority already exists" } }, 409);
     }
-    const modelPriority = await createModelPriority(parsed.data);
-    return c.json({ modelPriority }, 201);
+    try {
+      const modelPriority = await createModelPriority(parsed.data);
+      return c.json({ modelPriority }, 201);
+    } catch (error) {
+      if (isModelPriorityUniqueViolation(error)) {
+        return c.json({ error: { message: "Model priority already exists" } }, 409);
+      }
+      throw error;
+    }
   } catch (error) {
     if (isMissingModelPriorityTable(error)) {
       return c.json(
@@ -268,8 +287,15 @@ adminRoutes.patch("/admin/model-priorities/:id", async (c) => {
       return c.json({ error: { message: "Model priority already exists" } }, 409);
     }
 
-    const modelPriority = await updateModelPriority(id, parsed.data);
-    return c.json({ modelPriority });
+    try {
+      const modelPriority = await updateModelPriority(id, parsed.data);
+      return c.json({ modelPriority });
+    } catch (error) {
+      if (isModelPriorityUniqueViolation(error)) {
+        return c.json({ error: { message: "Model priority already exists" } }, 409);
+      }
+      throw error;
+    }
   } catch (error) {
     if (isMissingModelPriorityTable(error)) {
       return c.json(
