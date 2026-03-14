@@ -17,6 +17,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  migrate(db, { migrationsFolder: "drizzle" });
   db.delete(modelPriorities).run();
   db.delete(providers).run();
 });
@@ -38,6 +39,28 @@ async function seedProvider(name = "Primary Provider") {
 }
 
 describe("admin model priorities", () => {
+  it("returns empty list when model priorities table is missing", async () => {
+    db.run("DROP TABLE IF EXISTS model_priorities");
+
+    const res = await app.request("/admin/model-priorities", {
+      headers: authHeader,
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.modelPriorities).toEqual([]);
+
+    db.run(
+      "CREATE TABLE IF NOT EXISTS model_priorities (id integer PRIMARY KEY AUTOINCREMENT NOT NULL, provider_id integer NOT NULL, model_slug text NOT NULL, priority integer NOT NULL DEFAULT 0, created_at integer NOT NULL DEFAULT (unixepoch()), updated_at integer NOT NULL DEFAULT (unixepoch()), FOREIGN KEY (provider_id) REFERENCES providers(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+    );
+    db.run(
+      "CREATE UNIQUE INDEX IF NOT EXISTS model_priorities_provider_model_unique ON model_priorities (provider_id, model_slug)"
+    );
+    db.run(
+      "CREATE INDEX IF NOT EXISTS model_priorities_model_slug_idx ON model_priorities (model_slug)"
+    );
+  });
+
   it("creates and lists model priorities", async () => {
     const provider = await seedProvider();
     const res = await app.request("/admin/model-priorities", {
