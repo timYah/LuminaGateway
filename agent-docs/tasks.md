@@ -107,4 +107,4 @@
 ## Phase 19 — Model Priority UI Layout Refresh
 - [x] T-19.0 Update task list and documentation
 - [x] T-19.1 Redesign model priority create/edit layout for provider selector
-- [ ] T-19.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+- [x] T-19.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
