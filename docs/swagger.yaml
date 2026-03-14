@@ -52,6 +52,9 @@ components:
           type: string
         codexTransform:
           type: boolean
+        healthCheckModel:
+          type: string
+          nullable: true
         balance:
           type: number
         inputPrice:
@@ -84,6 +87,9 @@ components:
           enum: [responses, chat]
         codexTransform:
           type: boolean
+        healthCheckModel:
+          type: string
+          nullable: true
         balance:
           type: number
         inputPrice:
@@ -114,6 +120,9 @@ components:
           enum: [responses, chat]
         codexTransform:
           type: boolean
+        healthCheckModel:
+          type: string
+          nullable: true
         balance:
           type: number
         inputPrice:
@@ -126,6 +135,27 @@ components:
           type: boolean
         priority:
           type: integer
+    AdminProviderTest:
+      type: object
+      properties:
+        name:
+          type: string
+        protocol:
+          type: string
+          enum: [openai, anthropic, google, new-api]
+        baseUrl:
+          type: string
+        apiKey:
+          type: string
+        apiMode:
+          type: string
+          enum: [responses, chat]
+        codexTransform:
+          type: boolean
+        healthCheckModel:
+          type: string
+          nullable: true
+      required: [protocol, baseUrl, apiKey]
     ModelPriority:
       type: object
       properties:
@@ -354,6 +384,32 @@ paths:
                 $ref: '#/components/schemas/GatewayError'
         '503':
           description: No provider available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+  /openai/v1/chat/completions:
+    post:
+      summary: OpenAI passthrough (Chat Completions)
+      description: Raw passthrough to upstream /chat/completions with failover before first byte.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upstream response (raw)
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -685,6 +741,24 @@ paths:
           required: false
           schema:
             type: string
+      responses:
+        '200':
+          description: OK
+  /admin/providers/test:
+    post:
+      summary: Test provider connectivity without saving
+      parameters:
+        - name: model
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminProviderTest'
       responses:
         '200':
           description: OK

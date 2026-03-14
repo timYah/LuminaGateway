@@ -31,12 +31,32 @@ const HEALTHCHECK_MESSAGE: NonNullable<UpstreamRequestParams["messages"]> = [
   { role: "user", content: "ping" },
 ];
 
+const DEFAULT_HEALTHCHECK_FALLBACK_MODEL = "gpt-4o";
+
+function normalizeModelName(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export function resolveHealthCheckModel(
+  provider: Provider,
+  overrideModel?: string | null
+) {
+  return (
+    normalizeModelName(overrideModel) ??
+    normalizeModelName(provider.healthCheckModel) ??
+    normalizeModelName(process.env.DEFAULT_HEALTHCHECK_MODEL) ??
+    DEFAULT_HEALTHCHECK_FALLBACK_MODEL
+  );
+}
+
 export async function checkProviderHealth(
   provider: Provider,
   modelSlug: string,
   options?: {
     recoverOnSuccess?: boolean;
     updateRecoveryFailure?: boolean;
+    updateHealthStatus?: boolean;
   }
 ): Promise<ProviderHealthCheckResult> {
   const start = Date.now();
@@ -44,10 +64,13 @@ export async function checkProviderHealth(
     messages: HEALTHCHECK_MESSAGE,
     maxOutputTokens: 1,
   };
+  const shouldUpdateHealth = options?.updateHealthStatus ?? true;
   try {
     await callUpstreamNonStreaming(provider, modelSlug, testParams);
     const latencyMs = Date.now() - start;
-    await updateProviderHealth(provider.id, "healthy");
+    if (shouldUpdateHealth) {
+      await updateProviderHealth(provider.id, "healthy");
+    }
     if (options?.recoverOnSuccess) {
       gatewayCircuitBreaker.reset(provider.id, modelSlug);
       providerRecoveryService.reset(provider.id, modelSlug);
@@ -62,7 +85,10 @@ export async function checkProviderHealth(
     const latencyMs = Date.now() - start;
     const errorType = classifyUpstreamError(error);
     const message = getUpstreamErrorMessage(error);
-    await updateProviderHealth(provider.id, "unhealthy");
+    const isModelNotFound = errorType === "model_not_found";
+    if (shouldUpdateHealth && !isModelNotFound) {
+      await updateProviderHealth(provider.id, "unhealthy");
+    }
     if (
       options?.updateRecoveryFailure &&
       providerRecoveryService.isRecovering(provider.id, modelSlug)
@@ -75,7 +101,7 @@ export async function checkProviderHealth(
     }
     return {
       providerId: provider.id,
-      status: "unhealthy",
+      status: isModelNotFound ? "unknown" : "unhealthy",
       latencyMs,
       model: modelSlug,
       errorType,
@@ -85,7 +111,7 @@ export async function checkProviderHealth(
 }
 
 export async function runProvidersHealthCheck(
-  modelSlug: string,
+  modelSlug: string | null | undefined,
   options?: {
     recoverOnSuccess?: boolean;
   }
@@ -93,7 +119,7 @@ export async function runProvidersHealthCheck(
   const providers = await getAllProviders();
   if (providers.length === 0) return [];
   const checks = providers.map((provider) =>
-    checkProviderHealth(provider, modelSlug, {
+    checkProviderHealth(provider, resolveHealthCheckModel(provider, modelSlug), {
       recoverOnSuccess: options?.recoverOnSuccess,
       updateRecoveryFailure: true,
     })

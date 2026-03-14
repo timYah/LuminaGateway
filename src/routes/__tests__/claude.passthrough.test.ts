@@ -64,6 +64,7 @@ const anthropicProvider = {
   outputPrice: null,
   isActive: true,
   priority: 1,
+  healthCheckModel: null,
   healthStatus: "unknown" as const,
   lastHealthCheckAt: null,
   createdAt: new Date(),

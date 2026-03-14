@@ -15,6 +15,7 @@ export type ProviderRecoveryEntry = {
   lastProbeErrorType: UpstreamErrorType | null;
   lastProbeMessage: string | null;
   intervalMs: number;
+  attempts: number;
 };
 
 export type ProviderRecoveryProbeResult =
@@ -30,25 +31,32 @@ export type ProviderRecoveryProbeHandler = (
 ) => Promise<ProviderRecoveryProbeResult>;
 
 const DEFAULT_RECOVERY_INTERVAL_MS = 300_000;
-const RECOVERY_JITTER_MIN_MS = 1_000;
-const RECOVERY_JITTER_MAX_MS = 10_000;
+const RECOVERY_BACKOFF_SEQUENCE_MS = [
+  10_000,
+  20_000,
+  30_000,
+  60_000,
+  120_000,
+  300_000,
+];
 
-function parseInterval(raw: string | undefined) {
-  if (!raw) return DEFAULT_RECOVERY_INTERVAL_MS;
+function parseFixedInterval(raw: string | undefined) {
+  if (!raw) return null;
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return DEFAULT_RECOVERY_INTERVAL_MS;
-  }
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return Math.floor(parsed);
 }
 
 export function resolveProviderRecoveryIntervalMs() {
-  return parseInterval(process.env.PROVIDER_RECOVERY_CHECK_INTERVAL_MS);
+  return parseFixedInterval(process.env.PROVIDER_RECOVERY_CHECK_INTERVAL_MS);
 }
 
-export function randomRecoveryJitterMs() {
-  const span = RECOVERY_JITTER_MAX_MS - RECOVERY_JITTER_MIN_MS + 1;
-  return Math.floor(Math.random() * span) + RECOVERY_JITTER_MIN_MS;
+function resolveBackoffIntervalMs(attempts: number) {
+  const index = Math.min(
+    Math.max(0, attempts),
+    RECOVERY_BACKOFF_SEQUENCE_MS.length - 1
+  );
+  return RECOVERY_BACKOFF_SEQUENCE_MS[index] ?? DEFAULT_RECOVERY_INTERVAL_MS;
 }
 
 export class ProviderRecoveryService {
@@ -75,12 +83,10 @@ export class ProviderRecoveryService {
     return `${providerId}:${modelSlug}`;
   }
 
-  private resolveInterval(inputInterval?: number, existingInterval?: number) {
-    if (typeof inputInterval === "number" && Number.isFinite(inputInterval) && inputInterval >= 0) {
-      return Math.floor(inputInterval);
-    }
-    if (typeof existingInterval === "number") return existingInterval;
-    return resolveProviderRecoveryIntervalMs();
+  private resolveInterval(attempts: number) {
+    const fixed = resolveProviderRecoveryIntervalMs();
+    if (fixed) return fixed;
+    return resolveBackoffIntervalMs(attempts);
   }
 
   reset(providerId: number, modelSlug?: string) {
@@ -135,17 +141,25 @@ export class ProviderRecoveryService {
     const now = new Date();
     const key = this.buildKey(input.providerId, input.probeModel);
     const existing = this.entries.get(key);
-    const intervalMs = this.resolveInterval(input.intervalMs, existing?.intervalMs);
+    const attempts = existing?.attempts ?? 0;
+    const intervalMs =
+      typeof input.intervalMs === "number" && Number.isFinite(input.intervalMs)
+        ? Math.floor(input.intervalMs)
+        : this.resolveInterval(attempts);
     const entry: ProviderRecoveryEntry = {
       providerId: input.providerId,
       triggerErrorType: input.errorType,
       probeModel: input.probeModel,
       startedAt: existing?.startedAt ?? now,
-      nextProbeAt: this.buildNextProbeAt(now, intervalMs),
+      nextProbeAt:
+        existing?.nextProbeAt && existing.nextProbeAt.getTime() > now.getTime()
+          ? existing.nextProbeAt
+          : this.buildNextProbeAt(now, intervalMs),
       lastProbeAt: existing?.lastProbeAt ?? null,
       lastProbeErrorType: existing?.lastProbeErrorType ?? null,
       lastProbeMessage: existing?.lastProbeMessage ?? null,
       intervalMs,
+      attempts,
     };
     this.entries.set(key, entry);
     this.scheduleNext();
@@ -161,12 +175,16 @@ export class ProviderRecoveryService {
     const entry = this.entries.get(key);
     if (!entry) return null;
     const now = new Date();
+    const nextAttempts = entry.attempts + 1;
+    const intervalMs = this.resolveInterval(nextAttempts);
     const nextEntry: ProviderRecoveryEntry = {
       ...entry,
+      attempts: nextAttempts,
+      intervalMs,
       lastProbeAt: now,
       lastProbeErrorType: result.errorType,
       lastProbeMessage: result.message,
-      nextProbeAt: this.buildNextProbeAt(now, entry.intervalMs),
+      nextProbeAt: this.buildNextProbeAt(now, intervalMs),
     };
     this.entries.set(key, nextEntry);
     this.scheduleNext();
@@ -174,8 +192,7 @@ export class ProviderRecoveryService {
   }
 
   private buildNextProbeAt(from: Date, intervalMs: number) {
-    const nextProbeMs = from.getTime() + intervalMs + randomRecoveryJitterMs();
-    return new Date(nextProbeMs);
+    return new Date(from.getTime() + intervalMs);
   }
 
   private scheduleNext() {

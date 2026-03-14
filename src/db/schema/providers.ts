@@ -25,6 +25,7 @@ export const providers = sqliteTable("providers", {
   outputPrice: real("output_price"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   priority: integer("priority").notNull().default(0),
+  healthCheckModel: text("health_check_model"),
   healthStatus: text("health_status", { enum: PROVIDER_HEALTH_STATUSES })
     .notNull()
     .default("unknown"),

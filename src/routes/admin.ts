@@ -19,7 +19,11 @@ import {
   updateModelPriority,
   upsertModelPriority,
 } from "../services/modelPriorityService";
-import { checkProviderHealth, runProvidersHealthCheck } from "../services/healthService";
+import {
+  checkProviderHealth,
+  resolveHealthCheckModel,
+  runProvidersHealthCheck,
+} from "../services/healthService";
 import { getFailureStats } from "../services/failureStatsService";
 import { getUsageSummary } from "../services/usageSummaryService";
 import { providerRecoveryService } from "../services/providerRecoveryService";
@@ -32,6 +36,7 @@ const providerSchema = z.object({
   apiKey: z.string().min(1),
   apiMode: z.enum(["responses", "chat"]).optional(),
   codexTransform: z.boolean().optional(),
+  healthCheckModel: z.string().min(1).optional(),
   balance: z.number().optional(),
   inputPrice: z.number().nullable().optional(),
   outputPrice: z.number().nullable().optional(),
@@ -40,6 +45,16 @@ const providerSchema = z.object({
 });
 
 const providerUpdateSchema = providerSchema.partial();
+
+const providerTestSchema = z.object({
+  name: z.string().min(1).optional(),
+  protocol: z.enum(["openai", "anthropic", "google", "new-api"]),
+  baseUrl: z.string().min(1),
+  apiKey: z.string().min(1),
+  apiMode: z.enum(["responses", "chat"]).optional(),
+  codexTransform: z.boolean().optional(),
+  healthCheckModel: z.string().min(1).optional(),
+});
 
 const modelPrioritySchema = z.object({
   providerId: z.number().int(),
@@ -333,7 +348,8 @@ adminRoutes.post("/admin/providers/:id/test", async (c) => {
     return c.json({ error: { message: "Provider not found" } }, 404);
   }
 
-  const modelSlug = c.req.query("model")?.trim() || "gpt-4o";
+  const requestedModel = c.req.query("model")?.trim() || undefined;
+  const modelSlug = resolveHealthCheckModel(provider, requestedModel);
   const result = await checkProviderHealth(provider, modelSlug, {
     recoverOnSuccess: true,
     updateRecoveryFailure: true,
@@ -349,9 +365,55 @@ adminRoutes.post("/admin/providers/:id/test", async (c) => {
   });
 });
 
+adminRoutes.post("/admin/providers/test", async (c) => {
+  const body = await c.req.json();
+  const parsed = providerTestSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: { message: "Invalid request" } }, 400);
+  }
+
+  const now = new Date();
+  const provider = {
+    id: 0,
+    name: parsed.data.name ?? "Test provider",
+    protocol: parsed.data.protocol,
+    baseUrl: parsed.data.baseUrl,
+    apiKey: parsed.data.apiKey,
+    apiMode: parsed.data.apiMode ?? "responses",
+    codexTransform: parsed.data.codexTransform ?? false,
+    balance: 0,
+    inputPrice: null,
+    outputPrice: null,
+    isActive: true,
+    priority: 0,
+    healthCheckModel: parsed.data.healthCheckModel ?? null,
+    healthStatus: "unknown" as const,
+    lastHealthCheckAt: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const requestedModel = c.req.query("model")?.trim() || undefined;
+  const modelSlug = resolveHealthCheckModel(provider, requestedModel);
+  const result = await checkProviderHealth(provider, modelSlug, {
+    recoverOnSuccess: false,
+    updateRecoveryFailure: false,
+    updateHealthStatus: false,
+  });
+  if (result.status === "healthy") {
+    return c.json({ ok: true, latencyMs: result.latencyMs, model: modelSlug });
+  }
+  return c.json({
+    ok: false,
+    model: modelSlug,
+    errorType: result.errorType,
+    message: result.message,
+  });
+});
+
 adminRoutes.post("/admin/providers/health", async (c) => {
-  const modelSlug = c.req.query("model")?.trim() || "gpt-4o";
-  const results = await runProvidersHealthCheck(modelSlug, {
+  const requestedModel = c.req.query("model")?.trim() || undefined;
+  const results = await runProvidersHealthCheck(requestedModel, {
     recoverOnSuccess: true,
   });
   return c.json({ results });
@@ -598,6 +660,7 @@ adminRoutes.get("/admin/config/export", async (c) => {
     apiKey: provider.apiKey,
     apiMode: provider.apiMode,
     codexTransform: provider.codexTransform,
+    healthCheckModel: provider.healthCheckModel ?? undefined,
     balance: provider.balance,
     inputPrice: provider.inputPrice,
     outputPrice: provider.outputPrice,

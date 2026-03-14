@@ -718,6 +718,11 @@
 - [x] **T-72.1** 新增 Claude 透传端点：支持 `POST /claude/v1/messages`（以及 `/claude/messages` alias），仅选用 `protocol=anthropic` Provider，并原样透传请求体与响应体（首字节前可 failover），补充自动化测试
 - [x] **T-72.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，确认 `/claude/*` 中间件、透传与 failover 行为正常
 
+## Phase 73 — OpenAI Chat Passthrough
+
+- [x] **T-73.1** 新增 OpenAI 透传端点 `POST /openai/v1/chat/completions`，仅选用 `protocol=openai|new-api` Provider，原样透传请求体与响应体（首字节前可 failover），补充自动化测试
+- [x] **T-73.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
+
 ## 任务统计
 
 | 阶段 | 任务数 | 说明 |
@@ -789,4 +794,5 @@
 | Phase 70 | 2 | Admin Runtime Config |
 | Phase 71 | 2 | Dedicated Claude Endpoint |
 | Phase 72 | 2 | Provider Modal Consistency |
-| **合计** | **289** | |
+| Phase 73 | 2 | OpenAI Chat Passthrough |
+| **合计** | **291** | |

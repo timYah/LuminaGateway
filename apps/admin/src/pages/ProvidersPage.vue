@@ -14,6 +14,7 @@ type Provider = {
   apiKey: string;
   apiMode: "responses" | "chat";
   codexTransform: boolean;
+  healthCheckModel?: string | null;
   balance: number;
   inputPrice: number | null;
   outputPrice: number | null;
@@ -102,8 +103,12 @@ const apiModeOptions = computed(() => [
 const supportsApiMode = (protocol: Provider["protocol"]) =>
   protocol === "openai" || protocol === "new-api";
 
+const canTestCreate = computed(
+  () => createForm.baseUrl.trim().length > 0 && createForm.apiKey.trim().length > 0
+);
+
 const testModelStorageKey = "lumina-admin-test-model";
-const testModel = ref("gpt-4o");
+const testModel = ref("");
 if (typeof window !== "undefined") {
   const stored = globalThis.localStorage?.getItem(testModelStorageKey);
   if (stored && stored.trim().length > 0) {
@@ -126,6 +131,7 @@ const createAdvancedOpen = ref(false);
 const createPricingOpen = ref(false);
 const editPricingOpen = ref(false);
 const createWorking = ref(false);
+const createTestWorking = ref(false);
 const editWorking = ref(false);
 const createError = ref("");
 const editError = ref("");
@@ -145,6 +151,9 @@ const deleteTarget = ref<Provider | null>(null);
 
 const testingId = ref<number | null>(null);
 const healthWorking = ref(false);
+const createTestResult = ref<{ ok: boolean; latencyMs?: number; errorType?: string } | null>(
+  null
+);
 const testResults = reactive<
   Map<number, { ok: boolean; latencyMs?: number; errorType?: string; message?: string }>
 >(new Map());
@@ -156,6 +165,7 @@ const createForm = reactive({
   apiKey: "",
   apiMode: "responses" as Provider["apiMode"],
   codexTransform: false,
+  healthCheckModel: "",
   balance: "",
   inputPrice: "",
   outputPrice: "",
@@ -170,6 +180,7 @@ const editForm = reactive({
   apiKey: "",
   apiMode: "responses" as Provider["apiMode"],
   codexTransform: false,
+  healthCheckModel: "",
   balance: "",
   inputPrice: "",
   outputPrice: "",
@@ -184,11 +195,14 @@ const resetCreate = () => {
   createForm.apiKey = "";
   createForm.apiMode = "responses";
   createForm.codexTransform = false;
+  createForm.healthCheckModel = "";
   createForm.balance = "";
   createForm.inputPrice = "";
   createForm.outputPrice = "";
   createForm.isActive = true;
   createForm.priority = "1";
+  createTestWorking.value = false;
+  createTestResult.value = null;
   createAdvancedOpen.value = false;
   createPricingOpen.value = false;
 };
@@ -201,6 +215,7 @@ const openEdit = (provider: Provider) => {
   editForm.apiKey = provider.apiKey;
   editForm.apiMode = provider.apiMode ?? "responses";
   editForm.codexTransform = provider.codexTransform ?? false;
+  editForm.healthCheckModel = provider.healthCheckModel ?? "";
   editForm.balance = Number.isFinite(provider.balance)
     ? provider.balance.toString()
     : "";
@@ -240,6 +255,11 @@ const normalizeOptionalNumber = (value: string) => {
   if (!value.trim()) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const normalizeOptionalText = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
 };
 
 const normalizeNullableNumber = (value: string) => {
@@ -301,6 +321,7 @@ const submitCreate = async () => {
         apiKey: createForm.apiKey.trim(),
         apiMode,
         codexTransform: createForm.codexTransform,
+        healthCheckModel: normalizeOptionalText(createForm.healthCheckModel),
         balance: normalizeOptionalNumber(createForm.balance),
         inputPrice: normalizeNullableNumber(createForm.inputPrice),
         outputPrice: normalizeNullableNumber(createForm.outputPrice),
@@ -315,6 +336,48 @@ const submitCreate = async () => {
     createError.value = t("providers.error.create");
   } finally {
     createWorking.value = false;
+  }
+};
+
+const testCreateProvider = async () => {
+  if (!canTestCreate.value) return;
+  createTestResult.value = null;
+  createTestWorking.value = true;
+  try {
+    const apiMode = supportsApiMode(createForm.protocol)
+      ? createForm.apiMode
+      : undefined;
+    const res = await gatewayFetch<{
+      ok: boolean;
+      latencyMs?: number;
+      model?: string;
+      errorType?: string;
+      message?: string;
+    }>("/admin/providers/test", {
+      method: "POST",
+      query: { model: testModel.value.trim() || undefined },
+      body: {
+        name: createForm.name.trim() || undefined,
+        protocol: createForm.protocol,
+        baseUrl: createForm.baseUrl.trim(),
+        apiKey: createForm.apiKey.trim(),
+        apiMode,
+        codexTransform: createForm.codexTransform,
+        healthCheckModel: normalizeOptionalText(createForm.healthCheckModel),
+      },
+    });
+    createTestResult.value = {
+      ok: res.ok,
+      latencyMs: res.latencyMs,
+      errorType: res.errorType,
+    };
+  } catch {
+    createTestResult.value = { ok: false, errorType: "unknown" };
+  } finally {
+    createTestWorking.value = false;
+    setTimeout(() => {
+      createTestResult.value = null;
+    }, 8000);
   }
 };
 
@@ -335,6 +398,7 @@ const submitEdit = async () => {
         apiKey: editForm.apiKey.trim(),
         apiMode,
         codexTransform: editForm.codexTransform,
+        healthCheckModel: normalizeOptionalText(editForm.healthCheckModel),
         balance: normalizeOptionalNumber(editForm.balance),
         inputPrice: normalizeNullableNumber(editForm.inputPrice),
         outputPrice: normalizeNullableNumber(editForm.outputPrice),
@@ -974,6 +1038,17 @@ const refreshAll = async () => {
                   class="w-full"
                 />
               </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.healthCheckModel')"
+                :help="$t('providers.form.help.healthCheckModel')"
+                class="md:col-span-2"
+              >
+                <UInput
+                  v-model="createForm.healthCheckModel"
+                  :placeholder="$t('providers.form.placeholder.healthCheckModel')"
+                  class="w-full"
+                />
+              </UFormGroup>
               <div class="rounded-2xl border border-slate-200/70 bg-white/80 p-3 md:col-span-2">
                 <button
                   type="button"
@@ -1030,6 +1105,13 @@ const refreshAll = async () => {
             </div>
           </div>
 
+          <p
+            v-if="createTestResult"
+            class="text-sm"
+            :class="createTestResult.ok ? 'text-emerald-600' : 'text-rose-600'"
+          >
+            {{ testResultLabel(createTestResult) }}
+          </p>
           <p v-if="createError" class="text-sm text-rose-600">
             {{ createError }}
           </p>
@@ -1037,6 +1119,15 @@ const refreshAll = async () => {
           <div class="flex flex-wrap items-center justify-end gap-3">
             <UButton class="action-press" variant="outline" @click="createOpen = false">
               {{ $t("providers.cancel") }}
+            </UButton>
+            <UButton
+              class="action-press"
+              variant="outline"
+              :loading="createTestWorking"
+              :disabled="!canTestCreate || createWorking"
+              @click="testCreateProvider"
+            >
+              {{ $t("providers.action.test") }}
             </UButton>
             <UButton
               class="action-press"
@@ -1119,6 +1210,17 @@ const refreshAll = async () => {
                 v-model="editForm.apiKey"
                 type="password"
                 :placeholder="$t('providers.form.placeholder.apiKey')"
+                class="w-full"
+              />
+            </UFormGroup>
+            <UFormGroup
+              :label="$t('providers.form.healthCheckModel')"
+              :help="$t('providers.form.help.healthCheckModel')"
+              class="md:col-span-2"
+            >
+              <UInput
+                v-model="editForm.healthCheckModel"
+                :placeholder="$t('providers.form.placeholder.healthCheckModel')"
                 class="w-full"
               />
             </UFormGroup>

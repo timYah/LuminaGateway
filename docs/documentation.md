@@ -4,7 +4,7 @@ Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple pro
 
 ## What Lumina Gateway is
 
-The gateway exposes the standard `/v1/*` routes plus raw passthrough endpoints for `POST /claude/v1/messages`, `POST /openai/v1/responses`, and `POST /google/v1beta/models/{model}:generateContent`. It also includes convert endpoints under `/convert/*` that normalize upstream JSON responses to a target format, and a WebSocket proxy for the OpenAI Realtime API at `/openai/v1/realtime` (plus `/convert/openai/v1/realtime` as an alias). The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The passthrough routes keep request and response bodies intact and proxy them straight to the selected upstream endpoint.
+The gateway exposes the standard `/v1/*` routes plus raw passthrough endpoints for `POST /claude/v1/messages`, `POST /openai/v1/responses`, `POST /openai/v1/chat/completions`, and `POST /google/v1beta/models/{model}:generateContent`. It also includes convert endpoints under `/convert/*` that normalize upstream JSON responses to a target format, and a WebSocket proxy for the OpenAI Realtime API at `/openai/v1/realtime` (plus `/convert/openai/v1/realtime` as an alias). The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The passthrough routes keep request and response bodies intact and proxy them straight to the selected upstream endpoint.
 
 ## Status
 
@@ -68,9 +68,10 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 | `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
-| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses` + `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses`, `/openai/v1/chat/completions`, and `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `DEFAULT_HEALTHCHECK_MODEL` | *(optional)* | Default model slug used for provider health checks when no per-provider override or query parameter is supplied. |
 | `CLAUDE_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/claude/v1/messages` upstream requests before failover. |
-| `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` | `300000` | Base interval (ms) for automatic recovery probes after recoverable provider failures; each run adds a random `1-10s` jitter. |
+| `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` | `300000` | Fixed interval (ms) for automatic recovery probes after recoverable provider failures. When unset, the gateway uses a 10/20/30/60/120/300s backoff schedule. |
 | `PORT` | `3000` | Server listen port. |
 | `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
 | `DEFAULT_OUTPUT_PRICE` | *(optional)* | Global output price fallback (USD per 1M tokens). |
@@ -162,7 +163,9 @@ Codex CLI can use either `POST /v1/responses` or the raw passthrough `POST /open
 
 `POST /openai/v1/responses` requires a JSON request body with a string `model`. The gateway forwards the raw request body to the selected upstream `/responses` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Once streaming starts, the gateway never replays the request to a second provider.
 
-### OpenAI passthrough endpoint
+`POST /openai/v1/chat/completions` forwards the raw JSON body to the selected upstream `/chat/completions` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Streaming responses are proxied as-is.
+
+### OpenAI passthrough endpoints
 
 ```http [Request]
 POST /openai/v1/responses
@@ -177,6 +180,8 @@ Content-Type: application/json
 ```
 
 `POST /openai/v1/responses` forwards the raw JSON body to the selected upstream `/responses` endpoint (OpenAI or OpenAI-compatible providers). It preserves the upstream response body and headers, and only fails over to another provider before the first byte reaches the client.
+
+`POST /openai/v1/chat/completions` forwards the raw JSON body to the selected upstream `/chat/completions` endpoint and preserves the upstream response as-is. It only fails over before the first byte reaches the client.
 
 ### Caching
 
@@ -286,6 +291,7 @@ GET    /admin/providers          — list all providers
 POST   /admin/providers          — create a provider
 PATCH  /admin/providers/:id      — update provider fields
 POST   /admin/providers/:id/test — test provider connectivity
+POST   /admin/providers/test     — test provider connectivity without saving
 POST   /admin/providers/:id/reset — reset circuit breaker state (all models)
 DELETE /admin/providers/:id      — delete provider (also removes usage logs)
 GET    /admin/model-priorities   — list model-level provider priorities
@@ -304,15 +310,17 @@ GET    /admin/config/export      — export providers + settings
 POST   /admin/config/import      — import providers + settings
 ```
 
-`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false` and is reserved for future Codex flows; it currently has no runtime effect. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
+`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, optional `healthCheckModel`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false` and is reserved for future Codex flows; it currently has no runtime effect. `healthCheckModel` overrides the model used for provider health checks when no model is provided. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
 
-`POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug. If the provider is recovering, a successful manual test also clears the model-scoped recovery gate and circuit breaker so the provider can re-enter routing immediately for that model.
+`POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug. When omitted, the gateway uses `healthCheckModel`, then `DEFAULT_HEALTHCHECK_MODEL`, and finally falls back to `gpt-4o`. If the provider is recovering, a successful manual test also clears the model-scoped recovery gate and circuit breaker so the provider can re-enter routing immediately for that model.
+
+`POST /admin/providers/test` accepts `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, optional `healthCheckModel`, plus optional `name`. It performs the same connectivity check as the saved-provider test but does not write anything to the database. It accepts the same optional `model` query parameter (for example `?model=gpt-4o`) and uses the same model fallback chain.
 
 `POST /admin/providers/:id/reset` clears all in-memory circuit breaker and recovery entries for the provider so it can re-enter routing immediately for every model. `GET /admin/circuit-breakers` returns model-scoped entries currently cooling down and/or recovering, including `modelSlug`, `state`, `remainingMs`, and recovery probe metadata when available.
 
 `POST /admin/providers/health` accepts an optional `model` query parameter and returns the health results for each provider. A successful probe also restores any recovering provider to routing immediately. `GET /admin/failure-stats` aggregates recent request failures by error type.
 
-When a provider hits a recoverable upstream failure (`quota`, `rate_limit`, `network`, or `server`), Lumina Gateway keeps that provider-model pair out of routing until a recovery probe succeeds. Automatic probes run every `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` (or 60 seconds for model-scoped failures) plus a random `1-10s` delay to avoid fixed-interval patterns. `GET /admin/providers` includes a `recovery` object for providers currently in this state, with the trigger error type, probe model, next probe time, and the latest failed probe details.
+When a provider hits a recoverable upstream failure (`quota`, `rate_limit`, `network`, or `server`), Lumina Gateway keeps that provider-model pair out of routing until a recovery probe succeeds. Automatic probes back off on 10s/20s/30s/60s/120s/300s intervals (fixed interval when `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` is set). `GET /admin/providers` includes a `recovery` object for providers currently in this state, with the trigger error type, probe model, next probe time, and the latest failed probe details.
 
 For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 
@@ -369,7 +377,7 @@ Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at b
 
 For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. When `ROUTING_STRATEGY=priority` and model-level priorities are configured, the router uses the model priority for the requested model and falls back to the provider priority when a model priority is missing. Other strategies ignore model-level priorities. It skips providers that are circuit-broken for the requested model and forwards the requested model slug directly to the upstream provider.
 
-For passthrough routes (`/openai/v1/responses`, `/google/v1beta/models/{model}:generateContent`, and `/claude/v1/messages`), the gateway forwards the raw request body to upstream, preserves the upstream response as-is, and can fail over only before the first byte reaches the client. The same "fail over before first byte" behavior applies to the `/convert/*` HTTP routes. Realtime WebSocket sessions stay pinned to a single provider and are not replayed.
+For passthrough routes (`/openai/v1/responses`, `/openai/v1/chat/completions`, `/google/v1beta/models/{model}:generateContent`, and `/claude/v1/messages`), the gateway forwards the raw request body to upstream, preserves the upstream response as-is, and can fail over only before the first byte reaches the client. The same "fail over before first byte" behavior applies to the `/convert/*` HTTP routes. Realtime WebSocket sessions stay pinned to a single provider and are not replayed.
 
 On upstream failures, the gateway reacts to the classified error type. Quota exhaustion, rate limits, network failures, server errors, and model-not-found errors open a 60-second circuit breaker for that model before retrying the next provider. Authentication errors deactivate the provider immediately, and unknown errors return a `500` without failover. If every retryable upstream attempt fails before the first byte, passthrough routes return the last upstream error response instead of synthesizing a converted payload.
 
@@ -431,7 +439,7 @@ src/
 ├── routes/
 │   ├── openai.ts            # /v1/chat/completions + /v1/responses handlers
 │   ├── claude.ts            # /claude/v1/messages raw passthrough handler
-│   ├── openaiPassthrough.ts # /openai/v1/responses raw passthrough handler
+│   ├── openaiPassthrough.ts # /openai/v1/responses + /openai/v1/chat/completions raw passthrough handler
 │   ├── geminiPassthrough.ts # /google/v1beta/models/* raw passthrough handler
 │   ├── convert.ts           # /convert/* response normalization handlers
 │   ├── anthropic.ts         # /v1/messages handler

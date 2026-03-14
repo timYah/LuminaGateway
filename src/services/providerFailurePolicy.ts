@@ -41,7 +41,6 @@ export async function applyProviderFailurePolicy(input: {
       providerId,
       errorType,
       probeModel: modelSlug,
-      intervalMs: MODEL_FAILURE_COOLDOWN_MS,
     });
     return true;
   }
@@ -55,5 +54,5 @@ export async function applyProviderFailurePolicy(input: {
     return true;
   }
 
-  return false;
+  return true;
 }

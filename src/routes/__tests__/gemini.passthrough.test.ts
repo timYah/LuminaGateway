@@ -66,6 +66,7 @@ const providerA = {
   outputPrice: null,
   isActive: true,
   priority: 1,
+  healthCheckModel: null,
   healthStatus: "unknown" as const,
   lastHealthCheckAt: null,
   createdAt: new Date(),
@@ -480,14 +481,21 @@ describe("gemini passthrough route", () => {
     );
   });
 
-  it("does not fail over on non-retryable provider errors", async () => {
+  it("fails over on non-retryable provider errors", async () => {
     getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
-    fetchMock.mockResolvedValueOnce(
-      new Response('{"error":{"message":"Invalid request"}}', {
-        status: 400,
-        headers: { "content-type": "application/json" },
-      })
-    );
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response('{"error":{"message":"Invalid request"}}', {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response('{"id":"gemini_ok","candidates":[]}', {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      );
 
     const res = await app.request(geminiPath, {
       method: "POST",
@@ -495,9 +503,9 @@ describe("gemini passthrough route", () => {
       body: JSON.stringify({ contents: [] }),
     });
 
-    expect(res.status).toBe(400);
-    expect(await res.text()).toContain("Invalid request");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("gemini_ok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(recordFailureMock).toHaveBeenCalledWith(1, "unknown");
   });
 });

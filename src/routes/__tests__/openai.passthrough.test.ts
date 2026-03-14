@@ -64,6 +64,7 @@ const providerA = {
   outputPrice: null,
   isActive: true,
   priority: 1,
+  healthCheckModel: null,
   healthStatus: "unknown" as const,
   lastHealthCheckAt: null,
   createdAt: new Date(),
@@ -268,6 +269,101 @@ describe("openai passthrough route", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/event-stream");
     expect(await res.text()).toBe(sseBody);
+  });
+
+  it("proxies chat completions requests without billing", async () => {
+    const rawBody = JSON.stringify({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: "hello" }],
+      stream: false,
+    });
+    const upstreamBody = JSON.stringify({ id: "chatcmpl_1", choices: [] });
+    fetchMock.mockResolvedValueOnce(
+      new Response(upstreamBody, {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "x-upstream-request-id": "req-chat",
+        },
+      })
+    );
+
+    const res = await app.request("/openai/v1/chat/completions?trace=1", {
+      method: "POST",
+      headers: authHeaders,
+      body: rawBody,
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe(upstreamBody);
+    expect(res.headers.get("x-upstream-request-id")).toBe("req-chat");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://right.codes/openai/v1/chat/completions?trace=1",
+      expect.objectContaining({ method: "POST", body: rawBody })
+    );
+    const init = fetchMock.mock.calls[0]?.[1];
+    const headers = new Headers(init?.headers as Record<string, string>);
+    expect(headers.get("authorization")).toBe("Bearer sk-primary");
+    expect(headers.get("content-type")).toBe("application/json");
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 1, modelSlug: "gpt-4o", result: "success" })
+    );
+    expect(billUsageMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves raw SSE chat completion responses", async () => {
+    const sseBody =
+      'data: {"id":"chatcmpl_1","choices":[{"delta":{"content":"Hi"}}]}\n\n' +
+      "data: [DONE]\n\n";
+    fetchMock.mockResolvedValueOnce(
+      new Response(sseBody, {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      })
+    );
+
+    const res = await app.request("/openai/v1/chat/completions", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        stream: true,
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+    expect(await res.text()).toBe(sseBody);
+  });
+
+  it("fails over before the first byte on retryable upstream errors for chat completions", async () => {
+    getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response('{"error":{"message":"Rate limit"}}', {
+          status: 429,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response('{"id":"chatcmpl_ok","choices":[]}', {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      );
+
+    const res = await app.request("/openai/v1/chat/completions", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "gpt-4o", messages: [] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(recordFailureMock).toHaveBeenCalledWith(1, "rate_limit");
+    expect(openCircuitSpy).toHaveBeenCalledWith(1, 60_000, "gpt-4o");
   });
 
   it("skips unsupported providers for passthrough", async () => {
@@ -477,14 +573,21 @@ describe("openai passthrough route", () => {
     );
   });
 
-  it("does not fail over on non-retryable provider errors", async () => {
+  it("fails over on non-retryable provider errors", async () => {
     getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
-    fetchMock.mockResolvedValueOnce(
-      new Response('{"error":{"message":"Invalid request"}}', {
-        status: 400,
-        headers: { "content-type": "application/json" },
-      })
-    );
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response('{"error":{"message":"Invalid request"}}', {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response('{"id":"resp_ok","status":"completed"}', {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      );
 
     const res = await app.request("/openai/v1/responses", {
       method: "POST",
@@ -492,9 +595,9 @@ describe("openai passthrough route", () => {
       body: JSON.stringify({ model: "gpt-5.2", input: [] }),
     });
 
-    expect(res.status).toBe(400);
-    expect(await res.text()).toContain("Invalid request");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("resp_ok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(recordFailureMock).toHaveBeenCalledWith(1, "unknown");
   });
 });

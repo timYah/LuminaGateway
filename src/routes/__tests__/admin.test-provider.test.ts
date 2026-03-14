@@ -197,3 +197,61 @@ describe("POST /admin/providers/:id/test", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("POST /admin/providers/test", () => {
+  it("returns success without persisting the provider", async () => {
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request("/admin/providers/test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        protocol: "openai",
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-test",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-4o");
+    const rows = await db.select().from(providers);
+    expect(rows.length).toBe(0);
+  });
+
+  it("honors custom model slug in query", async () => {
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request("/admin/providers/test?model=claude-test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        protocol: "anthropic",
+        baseUrl: "https://api.anthropic.com",
+        apiKey: "sk-test",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("claude-test");
+  });
+
+  it("returns 400 for invalid payload", async () => {
+    const res = await app.request("/admin/providers/test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({ protocol: "openai" }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+});

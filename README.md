@@ -12,6 +12,7 @@ Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI 
 - Model-level provider priorities when using priority routing.
 - Dedicated `/claude/v1/messages` passthrough for raw Anthropic Messages traffic.
 - Dedicated `/openai/v1/responses` passthrough for raw OpenAI Responses traffic.
+- Dedicated `/openai/v1/chat/completions` passthrough for raw OpenAI Chat Completions traffic.
 - Dedicated `/google/v1beta/models/{model}:generateContent` passthrough for Gemini traffic.
 - `/convert/*` routes that normalize upstream JSON responses into target formats.
 - `/openai/v1/realtime` WebSocket proxy for OpenAI Realtime.
@@ -77,7 +78,7 @@ codex exec \
   'Say hello in one word.'
 ```
 
-`POST /openai/v1/responses` forwards the raw JSON body to the selected upstream `/responses` endpoint and returns the upstream response body unchanged. The gateway only fails over before the first byte reaches the client.
+`POST /openai/v1/responses` forwards the raw JSON body to the selected upstream `/responses` endpoint and returns the upstream response body unchanged. `POST /openai/v1/chat/completions` forwards to `/chat/completions` with the same raw passthrough behavior. The gateway only fails over before the first byte reaches the client.
 
 ### New API providers
 
@@ -158,7 +159,8 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 | `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
-| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses` + `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses`, `/openai/v1/chat/completions`, and `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `DEFAULT_HEALTHCHECK_MODEL` | *(optional)* | Default model slug used for provider health checks when no per-provider override or query parameter is supplied. |
 | `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
 | `DEFAULT_OUTPUT_PRICE` | *(optional)* | Global output price fallback (USD per 1M tokens). |
 | `PORT` | `3000` | Server listen port. |
@@ -171,6 +173,7 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 - `POST /v1/messages` — Anthropic-compatible endpoint
 - `POST /claude/v1/messages` — raw Anthropic passthrough
 - `POST /openai/v1/responses` — raw OpenAI passthrough
+- `POST /openai/v1/chat/completions` — raw OpenAI chat passthrough
 - `POST /google/v1beta/models/{model}:generateContent` — raw Gemini passthrough
 - `POST /convert/openai/v1/responses` — convert to OpenAI Responses format
 - `POST /convert/claude/v1/messages` — convert to Anthropic Messages format

@@ -50,7 +50,8 @@ Lumina Gateway runs on Node.js LTS and supports SQLite or PostgreSQL. Use persis
 | `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
-| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses` + `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses`, `/openai/v1/chat/completions`, and `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `DEFAULT_HEALTHCHECK_MODEL` | *(optional)* | Default model slug used for provider health checks when no per-provider override or query parameter is supplied. |
 | `GATEWAY_BASE_URL` | *(optional)* | Gateway base URL used by the admin dev server proxy. |
 | `PORT` | `3000` | Server listen port. |
 | `HOST` | `127.0.0.1` | Dev host binding for gateway/admin startup. Set `0.0.0.0` to expose on LAN or Docker host networking. |

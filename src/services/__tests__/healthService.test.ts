@@ -55,6 +55,7 @@ const provider = {
   outputPrice: null,
   isActive: true,
   priority: 1,
+  healthCheckModel: null,
   healthStatus: "unknown" as const,
   lastHealthCheckAt: null,
   createdAt: new Date(),
@@ -107,6 +108,18 @@ describe("healthService", () => {
     expect(result.errorType).toBe("server");
     expect(result.message).toBe("downstream failed");
     expect(updateProviderHealth).toHaveBeenCalledWith(provider.id, "unhealthy");
+  });
+
+  it("returns unknown and does not update health on model_not_found", async () => {
+    callUpstreamNonStreaming.mockRejectedValue(new Error("boom"));
+    classifyUpstreamError.mockReturnValue("model_not_found");
+    getUpstreamErrorMessage.mockReturnValue("model missing");
+
+    const result = await checkProviderHealth(provider, "bad-model");
+
+    expect(result.status).toBe("unknown");
+    expect(result.errorType).toBe("model_not_found");
+    expect(updateProviderHealth).not.toHaveBeenCalled();
   });
 
   it("updates recovery probe metadata when a recovering provider probe fails", async () => {

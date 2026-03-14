@@ -1,5 +1,5 @@
 import { APICallError } from "ai";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import type { Provider } from "../db/schema/providers";
 import { normalizeOpenAiBaseUrl } from "../services/aiSdkFactory";
 import { isContentBlocked } from "../services/contentSafetyService";
@@ -40,6 +40,14 @@ type StoredFailureResponse = {
   status: number;
   bodyText: string;
   headers: Headers;
+};
+
+type OpenAiPassthroughFormat = "openai" | "openai-responses";
+
+type OpenAiPassthroughOptions = {
+  routePath: string;
+  upstreamPath: string;
+  clientFormat: OpenAiPassthroughFormat;
 };
 
 function buildGatewayError(message: string): GatewayErrorResponse {
@@ -86,8 +94,10 @@ function isOpenAiPassthroughCandidate(provider: Provider) {
   return provider.protocol === "openai" || provider.protocol === "new-api";
 }
 
-function buildUpstreamUrl(provider: Provider, requestUrl: string) {
-  const upstreamUrl = new URL(`${normalizeOpenAiBaseUrl(provider.baseUrl)}/responses`);
+function buildUpstreamUrl(provider: Provider, requestUrl: string, upstreamPath: string) {
+  const upstreamUrl = new URL(
+    `${normalizeOpenAiBaseUrl(provider.baseUrl)}${upstreamPath}`
+  );
   upstreamUrl.search = new URL(requestUrl).search;
   return upstreamUrl.toString();
 }
@@ -153,7 +163,10 @@ function buildApiCallError(
 
 export const openaiPassthroughRoutes = new Hono();
 
-openaiPassthroughRoutes.post("/openai/v1/responses", async (c) => {
+async function handleOpenAiPassthroughRequest(
+  c: Context,
+  options: OpenAiPassthroughOptions
+) {
   const rawBody = await c.req.text();
   const parsedBody = parseJson(rawBody);
   if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
@@ -166,7 +179,10 @@ openaiPassthroughRoutes.post("/openai/v1/responses", async (c) => {
     return buildGatewayErrorResponse("Invalid request", 400);
   }
 
-  const usageEstimate = estimateUsage("openai-responses", parsedBody as Record<string, unknown>);
+  const usageEstimate = estimateUsage(
+    options.clientFormat,
+    parsedBody as Record<string, unknown>
+  );
 
   const jwtConfig = resolveJwtConfig();
   const jwtHeaderValue = jwtConfig.enabled ? c.req.header(jwtConfig.header) : undefined;
@@ -238,7 +254,7 @@ openaiPassthroughRoutes.post("/openai/v1/responses", async (c) => {
   if (authToken) {
     recordUsage({
       apiKey: authToken,
-      route: "/openai/v1/responses",
+      route: options.routePath,
       totalTokens: usageEstimate.totalTokens,
       estimatedCostUsd: usageEstimate.estimatedCostUsd,
     });
@@ -247,7 +263,7 @@ openaiPassthroughRoutes.post("/openai/v1/responses", async (c) => {
   const requestId = resolveRequestId(c);
   activeRequestService.startRequest({
     requestId,
-    path: "/openai/v1/responses",
+    path: options.routePath,
     modelSlug,
   });
 
@@ -273,7 +289,7 @@ openaiPassthroughRoutes.post("/openai/v1/responses", async (c) => {
       providerName: provider.name,
     });
     const start = Date.now();
-    const upstreamUrl = buildUpstreamUrl(provider, c.req.url);
+    const upstreamUrl = buildUpstreamUrl(provider, c.req.url, options.upstreamPath);
     const abortController = timeoutMs ? new AbortController() : null;
     const timeoutId =
       timeoutMs && abortController
@@ -460,4 +476,20 @@ openaiPassthroughRoutes.post("/openai/v1/responses", async (c) => {
 
   activeRequestService.finishRequest(requestId);
   return buildGatewayErrorResponse("No provider available", 503);
-});
+}
+
+openaiPassthroughRoutes.post("/openai/v1/responses", (c) =>
+  handleOpenAiPassthroughRequest(c, {
+    routePath: "/openai/v1/responses",
+    upstreamPath: "/responses",
+    clientFormat: "openai-responses",
+  })
+);
+
+openaiPassthroughRoutes.post("/openai/v1/chat/completions", (c) =>
+  handleOpenAiPassthroughRequest(c, {
+    routePath: "/openai/v1/chat/completions",
+    upstreamPath: "/chat/completions",
+    clientFormat: "openai",
+  })
+);
