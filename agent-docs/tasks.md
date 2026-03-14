@@ -53,3 +53,12 @@
 ## Phase 11 — Documentation + Final Verification
 - [x] T-11.0 Update docs (`docs/documentation.md`, `docs/swagger.yaml`, README if needed)
 - [x] T-11.1 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 12 — Model-Level Provider Priority
+- [x] T-12.0 Update task list and documentation
+- [ ] T-12.1 Add model priority schema + migration
+- [ ] T-12.2 Apply model priority ordering in model/router services
+- [ ] T-12.3 Add admin CRUD + config import/export for model priorities
+- [ ] T-12.4 Update docs for model priorities
+- [ ] T-12.5 Add tests for model priority routing and admin endpoints
+- [ ] T-12.6 ✅ Run `npm run lint && npm run typecheck && npm run test`
