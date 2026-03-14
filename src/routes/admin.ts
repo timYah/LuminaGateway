@@ -80,6 +80,13 @@ const requestErrorTypes = [
 type RequestErrorType = (typeof requestErrorTypes)[number];
 const requestErrorTypeSet = new Set<string>(requestErrorTypes);
 
+function isMissingModelPriorityTable(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message.toLowerCase().includes("no such table: model_priorities")
+  );
+}
+
 export const adminRoutes = new Hono();
 
 function withRecovery(provider: Awaited<ReturnType<typeof getProviderById>>) {
@@ -188,8 +195,15 @@ adminRoutes.get("/admin/model-priorities", async (c) => {
           .from(modelPriorities)
           .leftJoin(providers, eq(modelPriorities.providerId, providers.id));
 
-  const rows = await query.orderBy(desc(modelPriorities.priority), asc(modelPriorities.id));
-  return c.json({ modelPriorities: rows });
+  try {
+    const rows = await query.orderBy(desc(modelPriorities.priority), asc(modelPriorities.id));
+    return c.json({ modelPriorities: rows });
+  } catch (error) {
+    if (isMissingModelPriorityTable(error)) {
+      return c.json({ modelPriorities: [] });
+    }
+    throw error;
+  }
 });
 
 adminRoutes.post("/admin/model-priorities", async (c) => {
@@ -536,7 +550,14 @@ adminRoutes.get("/admin/config/export", async (c) => {
   }));
 
   const db = getSqliteClient();
-  const modelRows = await db.select().from(modelPriorities);
+  let modelRows: Array<(typeof modelPriorities.$inferSelect)> = [];
+  try {
+    modelRows = await db.select().from(modelPriorities);
+  } catch (error) {
+    if (!isMissingModelPriorityTable(error)) {
+      throw error;
+    }
+  }
   const providerNameById = new Map(providers.map((provider) => [provider.id, provider.name]));
   const exportedModels = modelRows.map((row) => ({
     providerId: row.providerId,
@@ -574,38 +595,53 @@ adminRoutes.post("/admin/config/import", async (c) => {
     if (row) created.push(row);
   }
 
-  const importedProviders = await getAllProviders();
-  const providerById = new Map(importedProviders.map((provider) => [provider.id, provider]));
-  const providerByName = new Map(importedProviders.map((provider) => [provider.name, provider]));
-
   const conflictPolicy = parsed.data.modelConflictPolicy ?? "overwrite";
   let importedModels = 0;
   let ignoredModels = 0;
-  for (const model of parsed.data.models ?? []) {
-    const resolvedProvider =
-      model.providerId !== undefined
-        ? providerById.get(model.providerId)
-        : model.providerName
-          ? providerByName.get(model.providerName)
-          : undefined;
-    if (!resolvedProvider) {
-      ignoredModels += 1;
-      continue;
+  const modelEntries = parsed.data.models ?? [];
+  if (modelEntries.length > 0) {
+    const importedProviders = await getAllProviders();
+    const providerById = new Map(
+      importedProviders.map((provider) => [provider.id, provider])
+    );
+    const providerByName = new Map(
+      importedProviders.map((provider) => [provider.name, provider])
+    );
+
+    for (const model of modelEntries) {
+      const resolvedProvider =
+        model.providerId !== undefined
+          ? providerById.get(model.providerId)
+          : model.providerName
+            ? providerByName.get(model.providerName)
+            : undefined;
+      if (!resolvedProvider) {
+        ignoredModels += 1;
+        continue;
+      }
+      try {
+        const existing = await listModelPriorities({
+          providerId: resolvedProvider.id,
+          modelSlug: model.modelSlug,
+        });
+        if (existing.length > 0 && conflictPolicy === "skip") {
+          ignoredModels += 1;
+          continue;
+        }
+        await upsertModelPriority({
+          providerId: resolvedProvider.id,
+          modelSlug: model.modelSlug,
+          priority: model.priority,
+        });
+        importedModels += 1;
+      } catch (error) {
+        if (isMissingModelPriorityTable(error)) {
+          ignoredModels += 1;
+          continue;
+        }
+        throw error;
+      }
     }
-    const existing = await listModelPriorities({
-      providerId: resolvedProvider.id,
-      modelSlug: model.modelSlug,
-    });
-    if (existing.length > 0 && conflictPolicy === "skip") {
-      ignoredModels += 1;
-      continue;
-    }
-    await upsertModelPriority({
-      providerId: resolvedProvider.id,
-      modelSlug: model.modelSlug,
-      priority: model.priority,
-    });
-    importedModels += 1;
   }
 
   return c.json({
