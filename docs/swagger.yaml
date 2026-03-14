@@ -358,32 +358,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GatewayError'
-  /codex/responses:
-    post:
-      summary: Codex passthrough (Responses API)
-      description: Raw passthrough to upstream /responses with failover before first byte.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Upstream response (raw)
-          content:
-            application/json:
-              schema:
-                type: object
-            text/event-stream:
-              schema:
-                type: string
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GatewayError'
   /openai/v1/responses:
     post:
       summary: OpenAI passthrough (Responses API)

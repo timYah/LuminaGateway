@@ -1,10 +1,10 @@
 # Lumina Gateway — Documentation
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, plus dedicated passthrough routes for Codex and Claude traffic. It routes traffic by provider priority and health, and fails over when providers are rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, plus dedicated passthrough routes for Claude, OpenAI, and Gemini traffic. It routes traffic by provider priority and health, and fails over when providers are rate limited or out of quota.
 
 ## What Lumina Gateway is
 
-The gateway exposes the standard `/v1/*` routes plus raw passthrough endpoints for `POST /codex/responses`, `POST /claude/v1/messages`, `POST /openai/v1/responses`, and `POST /google/v1beta/models/{model}:generateContent`. It also includes convert endpoints under `/convert/*` that normalize upstream JSON responses to a target format, and a WebSocket proxy for the OpenAI Realtime API at `/openai/v1/realtime` (plus `/convert/openai/v1/realtime` as an alias). The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The passthrough routes keep request and response bodies intact and proxy them straight to the selected upstream endpoint.
+The gateway exposes the standard `/v1/*` routes plus raw passthrough endpoints for `POST /claude/v1/messages`, `POST /openai/v1/responses`, and `POST /google/v1beta/models/{model}:generateContent`. It also includes convert endpoints under `/convert/*` that normalize upstream JSON responses to a target format, and a WebSocket proxy for the OpenAI Realtime API at `/openai/v1/realtime` (plus `/convert/openai/v1/realtime` as an alias). The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The passthrough routes keep request and response bodies intact and proxy them straight to the selected upstream endpoint.
 
 ## Status
 
@@ -30,7 +30,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes (including realtime WS upgrades). |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes (including realtime WS upgrades). |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
@@ -68,7 +68,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 | `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
-| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses` + `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
 | `CLAUDE_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/claude/v1/messages` upstream requests before failover. |
 | `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` | `300000` | Base interval (ms) for automatic recovery probes after recoverable provider failures; each run adds a random `1-10s` jitter. |
 | `PORT` | `3000` | Server listen port. |
@@ -89,7 +89,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 
 ### Authentication
 
-All `/v1/*`, `/codex/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`. For WebSocket upgrades, the `Authorization` header must be included in the upgrade request.
+All `/v1/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`. For WebSocket upgrades, the `Authorization` header must be included in the upgrade request.
 
 Set `JWT_SECRET` to enable per-user authentication. When it is set, the gateway also requires a JWT in the header defined by `JWT_HEADER` (default `X-User-Token`). The gateway reads the user and group claims from `JWT_USER_CLAIM` and `JWT_GROUP_CLAIM` and enforces any configured user or group quotas.
 
@@ -158,9 +158,9 @@ Content-Type: application/json
 
 Supported fields match the OpenAI Responses subset used by the validators: `model`, `input` (string or an array of `message` / `function_call_output` items), `instructions`, `stream`, `temperature`, `max_output_tokens`, `tools`, and `tool_choice`. `message.role` accepts `system`, `developer`, `user`, and `assistant`; `developer` and `system` inputs are merged into the upstream system prompt for cross-provider compatibility.
 
-Codex CLI can use either `POST /v1/responses` or the dedicated `POST /codex/responses` alias. For a dedicated Codex base URL, set `base_url` to `http://<host>:<port>/codex` and keep `wire_api="responses"`.
+Codex CLI can use either `POST /v1/responses` or the raw passthrough `POST /openai/v1/responses`. For a dedicated base URL, set `base_url` to `http://<host>:<port>/openai` and keep `wire_api="responses"`.
 
-`POST /codex/responses` requires a JSON request body with a string `model`. The gateway forwards the raw request body to the selected upstream `/responses` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Once streaming starts, the gateway never replays the request to a second provider.
+`POST /openai/v1/responses` requires a JSON request body with a string `model`. The gateway forwards the raw request body to the selected upstream `/responses` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Once streaming starts, the gateway never replays the request to a second provider.
 
 ### OpenAI passthrough endpoint
 
@@ -304,7 +304,7 @@ GET    /admin/config/export      — export providers + settings
 POST   /admin/config/import      — import providers + settings
 ```
 
-`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false`. When it stays `false`, the provider remains eligible for raw `/codex/responses` passthrough routing. When it is `true`, the provider is reserved for a future transformed Codex flow and is excluded from `/codex/*` routing for now. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
+`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false` and is reserved for future Codex flows; it currently has no runtime effect. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
 
 `POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug. If the provider is recovering, a successful manual test also clears the model-scoped recovery gate and circuit breaker so the provider can re-enter routing immediately for that model.
 
@@ -333,7 +333,7 @@ The admin dashboard provides a web UI for provider management and usage visibili
 **Capabilities**
 
 - Providers list with create and update flows.
-- Codex transform switch with explicit passthrough status badges in the provider roster.
+- Codex transform toggle (reserved) displayed in the provider roster.
 - Usage log querying with filters and pagination.
 - API key injected from `.env` when available, otherwise stored in the browser and sent as `Authorization: Bearer ...` on every request.
 - Provider connectivity tests can target a custom model slug from the UI.
@@ -369,13 +369,13 @@ Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at b
 
 For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. When `ROUTING_STRATEGY=priority` and model-level priorities are configured, the router uses the model priority for the requested model and falls back to the provider priority when a model priority is missing. Other strategies ignore model-level priorities. It skips providers that are circuit-broken for the requested model and forwards the requested model slug directly to the upstream provider.
 
-For `POST /codex/responses`, the gateway uses only `openai` and `new-api` providers with `codexTransform = false`. It forwards the raw request body to upstream `/responses`, preserves the upstream response as-is, and can fail over only before the first byte reaches the client. The same "fail over before first byte" behavior applies to `/openai/v1/responses`, `/google/v1beta/models/{model}:generateContent`, and the `/convert/*` HTTP routes. Realtime WebSocket sessions stay pinned to a single provider and are not replayed.
+For passthrough routes (`/openai/v1/responses`, `/google/v1beta/models/{model}:generateContent`, and `/claude/v1/messages`), the gateway forwards the raw request body to upstream, preserves the upstream response as-is, and can fail over only before the first byte reaches the client. The same "fail over before first byte" behavior applies to the `/convert/*` HTTP routes. Realtime WebSocket sessions stay pinned to a single provider and are not replayed.
 
-On upstream failures, the gateway reacts to the classified error type. Quota exhaustion, rate limits, network failures, server errors, and model-not-found errors open a 60-second circuit breaker for that model before retrying the next provider. Authentication errors deactivate the provider immediately, and unknown errors return a `500` without failover. Codex passthrough follows the same classification rules, but if every retryable upstream attempt fails before the first byte, it returns the last upstream error response instead of synthesizing a converted payload.
+On upstream failures, the gateway reacts to the classified error type. Quota exhaustion, rate limits, network failures, server errors, and model-not-found errors open a 60-second circuit breaker for that model before retrying the next provider. Authentication errors deactivate the provider immediately, and unknown errors return a `500` without failover. If every retryable upstream attempt fails before the first byte, passthrough routes return the last upstream error response instead of synthesizing a converted payload.
 
 ## Billing and usage
 
-Billing uses usage numbers from the Vercel AI SDK for `/v1/*` routes. Passthrough and convert routes (except `/codex/responses`) use request-based estimates for usage and cost because upstream responses may not include billing metadata. Missing token counts are normalized to `0` before billing.
+Billing uses usage numbers from the Vercel AI SDK for `/v1/*` routes. Passthrough and convert routes use request-based estimates for usage and cost because upstream responses may not include billing metadata. Missing token counts are normalized to `0` before billing.
 
 ```text [Formula]
 inputCost  = (promptTokens / 1,000,000) × inputPrice
@@ -386,8 +386,6 @@ totalCost  = inputCost + outputCost
 Pricing resolves per provider. If `inputPrice` or `outputPrice` is missing, the gateway falls back to `DEFAULT_INPUT_PRICE` and `DEFAULT_OUTPUT_PRICE`. If both are unset, the cost is recorded as `0`.
 
 Streaming requests bill after the stream finishes and usage is resolved. Non-streaming requests bill immediately after the provider response completes. Billing records the computed cost in `usageLogs` without deducting provider balances.
-
-Codex passthrough requests do not write `usageLogs` and do not call the billing layer. They still write request logs and failure statistics so provider failover and health decisions remain observable.
 
 ## Error response format
 
@@ -432,7 +430,6 @@ src/
 │   └── seed.ts              # demo data seeder
 ├── routes/
 │   ├── openai.ts            # /v1/chat/completions + /v1/responses handlers
-│   ├── codex.ts             # /codex/responses raw passthrough handler
 │   ├── claude.ts            # /claude/v1/messages raw passthrough handler
 │   ├── openaiPassthrough.ts # /openai/v1/responses raw passthrough handler
 │   ├── geminiPassthrough.ts # /google/v1beta/models/* raw passthrough handler

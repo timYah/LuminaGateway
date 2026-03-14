@@ -34,11 +34,11 @@ const messages = {
     providers: {
       title: "Priority-based routing control",
       intro:
-        "Review provider health, tune priorities, and track usage cost. Balances are informational only, and Codex stays in passthrough unless transform is enabled.",
+        "Review provider health, tune priorities, and track usage cost. Balances are informational only, and Codex settings are reserved.",
       add: "Add provider",
       roster: "Provider roster",
       rosterHint: "Changes apply immediately to routing decisions.",
-      rosterNote: "Routing uses priority only. Balances are informational. Codex defaults to passthrough.",
+      rosterNote: "Routing uses priority only. Balances are informational. Codex settings are reserved.",
       refresh: "Refresh list",
       advanced: {
         title: "Pricing & priority",
@@ -91,11 +91,11 @@ const messages = {
         paused: "Paused",
       },
       codex: {
-        passthrough: "Codex passthrough",
-        transform: "Codex transform",
+        passthrough: "Codex mode: off",
+        transform: "Codex mode: on (reserved)",
         tooltip: {
-          passthrough: "Codex passthrough: this provider handles raw /codex/responses traffic.",
-          transform: "Codex transform: this provider is reserved for transformed Codex flow.",
+          passthrough: "Codex mode is off. The Codex endpoint is currently disabled.",
+          transform: "Codex mode is on, but the Codex endpoint is currently disabled; this flag is reserved.",
         },
       },
       action: {
@@ -162,8 +162,7 @@ const messages = {
           baseUrl:
             "Root URL for the provider endpoint (OpenAI-compatible providers like new-api use https://host/v1).",
           apiKey: "Stored for upstream authentication.",
-          codexTransform:
-            "Off keeps /codex/responses in raw passthrough mode. Turn it on only for a reserved transformed Codex flow.",
+          codexTransform: "Reserved for future Codex flows. Turning it on currently has no effect.",
           balanceCreate: "Informational only. Routing uses priority.",
           balanceEdit: "Informational only. Routing uses priority.",
           inputPrice: "Optional. Leave empty to use the global default.",
@@ -431,11 +430,11 @@ const messages = {
     providers: {
       title: "优先级路由控制",
       intro:
-        "查看提供商状态、调整优先级并跟踪用量成本。余额仅作参考，Codex 默认保持透传。",
+        "查看提供商状态、调整优先级并跟踪用量成本。余额仅作参考，Codex 标记仅为预留。",
       add: "新增提供商",
       roster: "提供商列表",
       rosterHint: "变更将立即影响路由决策。",
-      rosterNote: "路由仅看优先级，余额仅作参考。Codex 默认透传。",
+      rosterNote: "路由仅看优先级，余额仅作参考。Codex 标记当前不生效。",
       refresh: "刷新列表",
       advanced: {
         title: "定价与优先级",
@@ -488,11 +487,11 @@ const messages = {
         paused: "暂停",
       },
       codex: {
-        passthrough: "Codex 透传",
-        transform: "Codex 转换",
+        passthrough: "Codex 标记：关闭",
+        transform: "Codex 标记：开启（预留）",
         tooltip: {
-          passthrough: "Codex 透传：该提供商直接处理原始 /codex/responses 请求。",
-          transform: "Codex 转换：该提供商预留给转换后的 Codex 流程。",
+          passthrough: "Codex 标记已关闭，当前无效果。",
+          transform: "Codex 标记已开启，但当前无效果，仅作预留。",
         },
       },
       action: {
@@ -559,8 +558,7 @@ const messages = {
           baseUrl:
             "提供商接口根地址（new-api 等 OpenAI 兼容服务请使用 https://host/v1）。",
           apiKey: "用于上游鉴权的密钥。",
-          codexTransform:
-            "关闭时 /codex/responses 会保持原样透传；仅在需要预留的 Codex 转换链路时才开启。",
+          codexTransform: "Codex 标记当前无效果，仅为后续流程预留。",
           balanceCreate: "仅作参考，路由以优先级为准。",
           balanceEdit: "仅作参考，路由以优先级为准。",
           inputPrice: "可选。留空则使用全局默认价格。",

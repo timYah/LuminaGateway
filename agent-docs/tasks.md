@@ -100,6 +100,6 @@
 ## Phase 18 — Remove Codex Endpoint
 - [x] T-18.0 Update task list and documentation
 - [x] T-18.1 Remove /codex routes and middleware
-- [ ] T-18.2 Update docs and admin UI copy for removed /codex
+- [x] T-18.2 Update docs and admin UI copy for removed /codex
 - [ ] T-18.3 Remove /codex tests and update references
 - [ ] T-18.4 ✅ Run `npm run lint && npm run typecheck && npm run test`
