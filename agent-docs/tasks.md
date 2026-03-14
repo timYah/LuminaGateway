@@ -113,3 +113,8 @@
 - [x] T-20.0 Update task list and documentation
 - [x] T-20.1 Fold balance + health check model into pricing sections (create/edit)
 - [x] T-20.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 21 — Provider Pricing Always Visible
+- [x] T-21.0 Update task list and documentation
+- [ ] T-21.1 Keep pricing inputs always visible in provider forms
+- [ ] T-21.2 ✅ Run `npm run lint && npm run typecheck && npm run test`

@@ -349,6 +349,7 @@ The admin dashboard provides a web UI for provider management and usage visibili
 - Usage trends, current in-flight request visibility, and request log visibility.
 - Config export/import for provider portability.
 - Provider create/edit pricing panel now includes balance and health-check model inputs.
+- Provider pricing inputs are always visible within the pricing panel (no nested foldout).
 - Model priorities management page with responsive create/edit forms.
 
 **Setup**
