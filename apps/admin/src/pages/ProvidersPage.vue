@@ -763,79 +763,66 @@ const refreshAll = async () => {
               </tr>
             </thead>
           <tbody class="[&_tr+tr_td]:pt-1 md:[&_tr+tr_td]:pt-1.5">
-              <tr
-                v-for="(provider, index) in providers"
-                :key="provider.id"
-                class="group border-b border-slate-200/50 staggered hover:bg-slate-50/70"
-                :style="{ '--index': index }"
-              >
-                <td class="py-2 pr-4 align-middle">
-                  <div class="flex min-h-[3.25rem] flex-col justify-center">
-                  <div class="font-medium text-slate-900">
-                    {{ provider.name }}
-                  </div>
-                  <div class="mt-0.5 flex max-w-[30rem] items-end gap-2 text-xs text-slate-500">
-                    <span class="min-w-0 break-all">{{ provider.baseUrl }}</span>
-                    <span
-                      :title="codexModeTooltip(provider)"
-                      :aria-label="codexModeTooltip(provider)"
-                      class="inline-flex h-5 w-5 shrink-0 self-end cursor-help items-center justify-center rounded-md border"
-                      :class="codexModeIconTone(provider)"
-                    >
-                      <svg viewBox="0 0 20 20" fill="none" class="h-3.5 w-3.5" aria-hidden="true">
-                        <path
-                          d="M7.25 6.5 4.5 10l2.75 3.5M12.75 6.5 15.5 10l-2.75 3.5M11 4.5 9 15.5"
-                          stroke="currentColor"
-                          stroke-width="1.6"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                  <div class="mt-1 hidden flex-wrap gap-1.5 md:flex">
-                    <span v-if="provider.recovery" class="summary-pill" :class="recoveryTone()">
-                      <span class="summary-pill__label">{{ $t("providers.recovery.badge") }}</span>
-                    </span>
-                  </div>
-                  <div class="mt-1 flex flex-wrap gap-1.5 md:hidden">
-                    <span class="summary-pill">
-                      <span class="summary-pill__label">{{ provider.protocol }}</span>
-                    </span>
-                    <span class="summary-pill">
-                      <span class="summary-pill__label">P{{ provider.priority }}</span>
-                    </span>
-                    <span class="summary-pill" :class="healthTone(provider)">
-                      <span class="summary-pill__label">{{ healthLabel(provider) }}</span>
-                    </span>
-                    <span v-if="provider.recovery" class="summary-pill" :class="recoveryTone()">
-                      <span class="summary-pill__label">{{ $t("providers.recovery.badge") }}</span>
-                    </span>
-                    <span
-                      class="summary-pill"
-                      :class="provider.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
-                    >
-                      <span class="summary-pill__label">
-                        {{ provider.isActive ? $t("providers.status.active") : $t("providers.status.paused") }}
-                      </span>
-                    </span>
-                  </div>
-                  <div
-                    v-if="testResults.has(provider.id)"
-                    class="mt-1 text-xs font-medium"
-                    :class="testResults.get(provider.id)?.ok ? 'text-emerald-600' : 'text-rose-600'"
-                  >
-                    {{ testResultLabel(testResults.get(provider.id)!) }}
-                  </div>
-                  <div v-if="provider.recovery" class="mt-1 space-y-0.5 text-xs text-slate-500">
-                    <div>{{ recoverySummary(provider) }}</div>
-                    <div v-if="provider.recovery.lastProbeAt">{{ recoveryLastResult(provider) }}</div>
-                    <div v-if="provider.recovery.lastProbeMessage" class="break-all text-[11px] text-slate-400">
-                      {{ provider.recovery.lastProbeMessage }}
+              <template v-for="(provider, index) in providers" :key="provider.id">
+                <tr
+                  class="group border-b border-slate-200/50 staggered hover:bg-slate-50/70"
+                  :style="{ '--index': index }"
+                >
+                  <td class="py-2 pr-4 align-middle">
+                    <div class="flex min-h-[3.25rem] flex-col justify-center">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <div class="font-medium text-slate-900">{{ provider.name }}</div>
+                        <span
+                          v-if="testResults.has(provider.id)"
+                          class="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium whitespace-nowrap"
+                          :class="testResults.get(provider.id)?.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                        >
+                          {{ testResultLabel(testResults.get(provider.id)!) }}
+                        </span>
+                      </div>
+                      <div class="mt-0.5 flex max-w-[30rem] items-end gap-2 text-xs text-slate-500">
+                        <span class="min-w-0 break-all">{{ provider.baseUrl }}</span>
+                        <span
+                          :title="codexModeTooltip(provider)"
+                          :aria-label="codexModeTooltip(provider)"
+                          class="inline-flex h-5 w-5 shrink-0 self-end cursor-help items-center justify-center rounded-md border"
+                          :class="codexModeIconTone(provider)"
+                        >
+                          <svg viewBox="0 0 20 20" fill="none" class="h-3.5 w-3.5" aria-hidden="true">
+                            <path
+                              d="M7.25 6.5 4.5 10l2.75 3.5M12.75 6.5 15.5 10l-2.75 3.5M11 4.5 9 15.5"
+                              stroke="currentColor"
+                              stroke-width="1.6"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          </svg>
+                        </span>
+                      </div>
+                      <div class="mt-1 flex flex-wrap gap-1.5 md:hidden">
+                        <span class="summary-pill">
+                          <span class="summary-pill__label">{{ provider.protocol }}</span>
+                        </span>
+                        <span class="summary-pill">
+                          <span class="summary-pill__label">P{{ provider.priority }}</span>
+                        </span>
+                        <span class="summary-pill" :class="healthTone(provider)">
+                          <span class="summary-pill__label">{{ healthLabel(provider) }}</span>
+                        </span>
+                        <span v-if="provider.recovery" class="summary-pill" :class="recoveryTone()">
+                          <span class="summary-pill__label">{{ $t("providers.recovery.badge") }}</span>
+                        </span>
+                        <span
+                          class="summary-pill"
+                          :class="provider.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
+                        >
+                          <span class="summary-pill__label">
+                            {{ provider.isActive ? $t("providers.status.active") : $t("providers.status.paused") }}
+                          </span>
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  </div>
-                </td>
+                  </td>
                 <td class="hidden py-2 pr-4 align-middle text-slate-600 capitalize md:table-cell">
                   {{ provider.protocol }}
                 </td>
@@ -907,7 +894,26 @@ const refreshAll = async () => {
                     </UButton>
                   </div>
                 </td>
-              </tr>
+                </tr>
+                <tr v-if="provider.recovery" class="border-b border-slate-200/50">
+                  <td colspan="7" class="pb-3 pt-0">
+                    <div class="rounded-2xl border border-amber-200/70 bg-amber-50/70 px-3 py-2.5 text-xs text-amber-800">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-700">
+                          {{ $t("providers.recovery.badge") }}
+                        </span>
+                        <span class="text-amber-900">{{ recoverySummary(provider) }}</span>
+                      </div>
+                      <div v-if="provider.recovery.lastProbeAt" class="mt-1 text-amber-700">
+                        {{ recoveryLastResult(provider) }}
+                      </div>
+                      <div v-if="provider.recovery.lastProbeMessage" class="mt-1 break-all text-[11px] text-amber-700/70">
+                        {{ provider.recovery.lastProbeMessage }}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>

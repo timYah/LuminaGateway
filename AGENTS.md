@@ -94,6 +94,7 @@ When the user requests something not already listed in `agent-docs/tasks.md`:
 - **Never commit before verification passes.** Run all relevant verification commands first; only commit after they succeed. If tests fail, fix first, then commit.
 - **One Task, one commit.** After a Task passes verification, commit it immediately. Do not batch multiple Tasks into a single commit.
 - Only stage files related to the current Task. Never use `git add -A` or `git add .`.
+- **Auto-commit by default.** Unless the user explicitly says otherwise, commit changes automatically after verification passes.
 
 ### Commit message format
 
