@@ -1021,18 +1021,6 @@ const refreshAll = async () => {
               class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
             >
               <UFormGroup
-                :label="$t('providers.form.balance')"
-                :help="$t('providers.form.help.balanceCreate')"
-              >
-                <UInput
-                  v-model="createForm.balance"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="w-full"
-                />
-              </UFormGroup>
-              <UFormGroup
                 :label="$t('providers.form.priority')"
                 :help="$t('providers.form.help.priority')"
               >
@@ -1041,17 +1029,6 @@ const refreshAll = async () => {
                   type="number"
                   min="1"
                   step="1"
-                  class="w-full"
-                />
-              </UFormGroup>
-              <UFormGroup
-                :label="$t('providers.form.healthCheckModel')"
-                :help="$t('providers.form.help.healthCheckModel')"
-                class="md:col-span-2"
-              >
-                <UInput
-                  v-model="createForm.healthCheckModel"
-                  :placeholder="$t('providers.form.placeholder.healthCheckModel')"
                   class="w-full"
                 />
               </UFormGroup>
@@ -1083,6 +1060,18 @@ const refreshAll = async () => {
                   class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
                 >
                   <UFormGroup
+                    :label="$t('providers.form.balance')"
+                    :help="$t('providers.form.help.balanceCreate')"
+                  >
+                    <UInput
+                      v-model="createForm.balance"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      class="w-full"
+                    />
+                  </UFormGroup>
+                  <UFormGroup
                     :label="$t('providers.form.inputPrice')"
                     :help="$t('providers.form.help.inputPrice')"
                   >
@@ -1103,6 +1092,17 @@ const refreshAll = async () => {
                       type="number"
                       min="0"
                       step="0.0001"
+                      class="w-full"
+                    />
+                  </UFormGroup>
+                  <UFormGroup
+                    :label="$t('providers.form.healthCheckModel')"
+                    :help="$t('providers.form.help.healthCheckModel')"
+                    class="md:col-span-2"
+                  >
+                    <UInput
+                      v-model="createForm.healthCheckModel"
+                      :placeholder="$t('providers.form.placeholder.healthCheckModel')"
                       class="w-full"
                     />
                   </UFormGroup>
@@ -1220,29 +1220,6 @@ const refreshAll = async () => {
               />
             </UFormGroup>
             <UFormGroup
-              :label="$t('providers.form.healthCheckModel')"
-              :help="$t('providers.form.help.healthCheckModel')"
-              class="md:col-span-2"
-            >
-              <UInput
-                v-model="editForm.healthCheckModel"
-                :placeholder="$t('providers.form.placeholder.healthCheckModel')"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
-              :label="$t('providers.form.balance')"
-              :help="$t('providers.form.help.balanceEdit')"
-            >
-              <UInput
-                v-model="editForm.balance"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
               :label="$t('providers.form.priority')"
               :help="$t('providers.form.help.priority')"
             >
@@ -1290,6 +1267,18 @@ const refreshAll = async () => {
               class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
             >
               <UFormGroup
+                :label="$t('providers.form.balance')"
+                :help="$t('providers.form.help.balanceEdit')"
+              >
+                <UInput
+                  v-model="editForm.balance"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
                 :label="$t('providers.form.inputPrice')"
                 :help="$t('providers.form.help.inputPrice')"
               >
@@ -1310,6 +1299,17 @@ const refreshAll = async () => {
                   type="number"
                   min="0"
                   step="0.0001"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.healthCheckModel')"
+                :help="$t('providers.form.help.healthCheckModel')"
+                class="md:col-span-2"
+              >
+                <UInput
+                  v-model="editForm.healthCheckModel"
+                  :placeholder="$t('providers.form.placeholder.healthCheckModel')"
                   class="w-full"
                 />
               </UFormGroup>

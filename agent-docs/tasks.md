@@ -111,5 +111,5 @@
 
 ## Phase 20 — Provider Pricing Foldout
 - [x] T-20.0 Update task list and documentation
-- [ ] T-20.1 Fold balance + health check model into pricing sections (create/edit)
+- [x] T-20.1 Fold balance + health check model into pricing sections (create/edit)
 - [ ] T-20.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
