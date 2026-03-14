@@ -128,8 +128,6 @@ watch(testModel, (value) => {
 const createOpen = ref(false);
 const editOpen = ref(false);
 const createAdvancedOpen = ref(false);
-const createPricingOpen = ref(false);
-const editPricingOpen = ref(false);
 const createWorking = ref(false);
 const createTestWorking = ref(false);
 const editWorking = ref(false);
@@ -204,7 +202,6 @@ const resetCreate = () => {
   createTestWorking.value = false;
   createTestResult.value = null;
   createAdvancedOpen.value = false;
-  createPricingOpen.value = false;
 };
 
 const openEdit = (provider: Provider) => {
@@ -230,7 +227,6 @@ const openEdit = (provider: Provider) => {
   editForm.isActive = provider.isActive;
   editForm.priority = provider.priority.toString();
   editError.value = "";
-  editPricingOpen.value = false;
   editOpen.value = true;
 };
 
@@ -285,7 +281,6 @@ watch(editOpen, (open) => {
   }
   editWorking.value = false;
   editError.value = "";
-  editPricingOpen.value = false;
   editingId.value = null;
 });
 
@@ -1033,30 +1028,16 @@ const refreshAll = async () => {
                 />
               </UFormGroup>
               <div class="rounded-2xl border border-slate-200/70 bg-white/80 p-3 md:col-span-2">
-                <button
-                  type="button"
-                  class="flex w-full items-center justify-between gap-3 text-left"
-                  @click="createPricingOpen = !createPricingOpen"
-                >
-                  <div>
-                    <div class="text-sm font-medium text-slate-900">
-                      {{ $t("providers.pricing.title") }}
-                    </div>
-                    <p class="mt-1 text-xs text-slate-500">
-                      {{ $t("providers.pricing.hint") }}
-                    </p>
+                <div>
+                  <div class="text-sm font-medium text-slate-900">
+                    {{ $t("providers.pricing.title") }}
                   </div>
-                  <span class="text-xs font-medium text-slate-500">
-                    {{
-                      createPricingOpen
-                        ? $t("providers.pricing.hide")
-                        : $t("providers.pricing.show")
-                    }}
-                  </span>
-                </button>
+                  <p class="mt-1 text-xs text-slate-500">
+                    {{ $t("providers.pricing.hint") }}
+                  </p>
+                </div>
 
                 <div
-                  v-if="createPricingOpen"
                   class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
                 >
                   <UFormGroup
@@ -1240,30 +1221,16 @@ const refreshAll = async () => {
           </div>
 
           <div class="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 md:p-4">
-            <button
-              type="button"
-              class="flex w-full items-center justify-between gap-3 text-left"
-              @click="editPricingOpen = !editPricingOpen"
-            >
-              <div>
-                <div class="text-sm font-medium text-slate-900">
-                  {{ $t("providers.pricing.title") }}
-                </div>
-                <p class="mt-1 text-xs text-slate-500">
-                  {{ $t("providers.pricing.hint") }}
-                </p>
+            <div>
+              <div class="text-sm font-medium text-slate-900">
+                {{ $t("providers.pricing.title") }}
               </div>
-              <span class="text-xs font-medium text-slate-500">
-                {{
-                  editPricingOpen
-                    ? $t("providers.pricing.hide")
-                    : $t("providers.pricing.show")
-                }}
-              </span>
-            </button>
+              <p class="mt-1 text-xs text-slate-500">
+                {{ $t("providers.pricing.hint") }}
+              </p>
+            </div>
 
             <div
-              v-if="editPricingOpen"
               class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
             >
               <UFormGroup
