@@ -64,6 +64,7 @@ const configImportSchema = z.object({
   providers: z.array(providerSchema),
   models: z.array(modelPriorityImportSchema).optional(),
   settings: z.record(z.string(), z.unknown()).optional(),
+  modelConflictPolicy: z.enum(["overwrite", "skip"]).optional(),
   mode: z.enum(["replace", "merge"]).optional(),
 });
 
@@ -577,6 +578,7 @@ adminRoutes.post("/admin/config/import", async (c) => {
   const providerById = new Map(importedProviders.map((provider) => [provider.id, provider]));
   const providerByName = new Map(importedProviders.map((provider) => [provider.name, provider]));
 
+  const conflictPolicy = parsed.data.modelConflictPolicy ?? "overwrite";
   let importedModels = 0;
   let ignoredModels = 0;
   for (const model of parsed.data.models ?? []) {
@@ -587,6 +589,14 @@ adminRoutes.post("/admin/config/import", async (c) => {
           ? providerByName.get(model.providerName)
           : undefined;
     if (!resolvedProvider) {
+      ignoredModels += 1;
+      continue;
+    }
+    const existing = await listModelPriorities({
+      providerId: resolvedProvider.id,
+      modelSlug: model.modelSlug,
+    });
+    if (existing.length > 0 && conflictPolicy === "skip") {
       ignoredModels += 1;
       continue;
     }
