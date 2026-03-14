@@ -127,7 +127,6 @@ watch(testModel, (value) => {
 
 const createOpen = ref(false);
 const editOpen = ref(false);
-const createAdvancedOpen = ref(false);
 const createWorking = ref(false);
 const createTestWorking = ref(false);
 const editWorking = ref(false);
@@ -201,7 +200,6 @@ const resetCreate = () => {
   createForm.priority = "1";
   createTestWorking.value = false;
   createTestResult.value = null;
-  createAdvancedOpen.value = false;
 };
 
 const openEdit = (provider: Provider) => {
@@ -989,30 +987,16 @@ const refreshAll = async () => {
           </div>
 
           <div class="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 md:p-4">
-            <button
-              type="button"
-              class="flex w-full items-center justify-between gap-3 text-left"
-              @click="createAdvancedOpen = !createAdvancedOpen"
-            >
-              <div>
-                <div class="text-sm font-medium text-slate-900">
-                  {{ $t("providers.advanced.title") }}
-                </div>
-                <p class="mt-1 text-xs text-slate-500">
-                  {{ $t("providers.advanced.hint") }}
-                </p>
+            <div>
+              <div class="text-sm font-medium text-slate-900">
+                {{ $t("providers.advanced.title") }}
               </div>
-              <span class="text-xs font-medium text-slate-500">
-                {{
-                  createAdvancedOpen
-                    ? $t("providers.advanced.hide")
-                    : $t("providers.advanced.show")
-                }}
-              </span>
-            </button>
+              <p class="mt-1 text-xs text-slate-500">
+                {{ $t("providers.advanced.hint") }}
+              </p>
+            </div>
 
             <div
-              v-if="createAdvancedOpen"
               class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
             >
               <UFormGroup
@@ -1027,68 +1011,53 @@ const refreshAll = async () => {
                   class="w-full"
                 />
               </UFormGroup>
-              <div class="rounded-2xl border border-slate-200/70 bg-white/80 p-3 md:col-span-2">
-                <div>
-                  <div class="text-sm font-medium text-slate-900">
-                    {{ $t("providers.pricing.title") }}
-                  </div>
-                  <p class="mt-1 text-xs text-slate-500">
-                    {{ $t("providers.pricing.hint") }}
-                  </p>
-                </div>
-
-                <div
-                  class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
-                >
-                  <UFormGroup
-                    :label="$t('providers.form.balance')"
-                    :help="$t('providers.form.help.balanceCreate')"
-                  >
-                    <UInput
-                      v-model="createForm.balance"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      class="w-full"
-                    />
-                  </UFormGroup>
-                  <UFormGroup
-                    :label="$t('providers.form.inputPrice')"
-                    :help="$t('providers.form.help.inputPrice')"
-                  >
-                    <UInput
-                      v-model="createForm.inputPrice"
-                      type="number"
-                      min="0"
-                      step="0.0001"
-                      class="w-full"
-                    />
-                  </UFormGroup>
-                  <UFormGroup
-                    :label="$t('providers.form.outputPrice')"
-                    :help="$t('providers.form.help.outputPrice')"
-                  >
-                    <UInput
-                      v-model="createForm.outputPrice"
-                      type="number"
-                      min="0"
-                      step="0.0001"
-                      class="w-full"
-                    />
-                  </UFormGroup>
-                  <UFormGroup
-                    :label="$t('providers.form.healthCheckModel')"
-                    :help="$t('providers.form.help.healthCheckModel')"
-                    class="md:col-span-2"
-                  >
-                    <UInput
-                      v-model="createForm.healthCheckModel"
-                      :placeholder="$t('providers.form.placeholder.healthCheckModel')"
-                      class="w-full"
-                    />
-                  </UFormGroup>
-                </div>
-              </div>
+              <UFormGroup
+                :label="$t('providers.form.balance')"
+                :help="$t('providers.form.help.balanceCreate')"
+              >
+                <UInput
+                  v-model="createForm.balance"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.inputPrice')"
+                :help="$t('providers.form.help.inputPrice')"
+              >
+                <UInput
+                  v-model="createForm.inputPrice"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.outputPrice')"
+                :help="$t('providers.form.help.outputPrice')"
+              >
+                <UInput
+                  v-model="createForm.outputPrice"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.healthCheckModel')"
+                :help="$t('providers.form.help.healthCheckModel')"
+                class="md:col-span-2"
+              >
+                <UInput
+                  v-model="createForm.healthCheckModel"
+                  :placeholder="$t('providers.form.placeholder.healthCheckModel')"
+                  class="w-full"
+                />
+              </UFormGroup>
             </div>
           </div>
 
@@ -1201,18 +1170,6 @@ const refreshAll = async () => {
               />
             </UFormGroup>
             <UFormGroup
-              :label="$t('providers.form.priority')"
-              :help="$t('providers.form.help.priority')"
-            >
-              <UInput
-                v-model="editForm.priority"
-                type="number"
-                min="1"
-                step="1"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
               :label="$t('providers.form.active')"
               :help="$t('providers.form.help.active')"
             >
@@ -1223,16 +1180,28 @@ const refreshAll = async () => {
           <div class="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 md:p-4">
             <div>
               <div class="text-sm font-medium text-slate-900">
-                {{ $t("providers.pricing.title") }}
+                {{ $t("providers.advanced.title") }}
               </div>
               <p class="mt-1 text-xs text-slate-500">
-                {{ $t("providers.pricing.hint") }}
+                {{ $t("providers.advanced.hint") }}
               </p>
             </div>
 
             <div
               class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
             >
+              <UFormGroup
+                :label="$t('providers.form.priority')"
+                :help="$t('providers.form.help.priority')"
+              >
+                <UInput
+                  v-model="editForm.priority"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full"
+                />
+              </UFormGroup>
               <UFormGroup
                 :label="$t('providers.form.balance')"
                 :help="$t('providers.form.help.balanceEdit')"
