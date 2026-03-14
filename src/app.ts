@@ -10,7 +10,6 @@ import { adminRoutes } from "./routes/admin";
 import { anthropicRoutes } from "./routes/anthropic";
 import { openaiRoutes } from "./routes/openai";
 import { openaiPassthroughRoutes } from "./routes/openaiPassthrough";
-import { codexRoutes } from "./routes/codex";
 import { claudeRoutes } from "./routes/claude";
 import { renderMetrics } from "./services/metricsService";
 import { geminiPassthroughRoutes } from "./routes/geminiPassthrough";
@@ -81,21 +80,18 @@ export function createApp() {
   };
 
   app.use("/v1/*", cors(corsOptions));
-  app.use("/codex/*", cors(corsOptions));
   app.use("/claude/*", cors(corsOptions));
   app.use("/openai/*", cors(corsOptions));
   app.use("/google/*", cors(corsOptions));
   app.use("/convert/*", cors(corsOptions));
   app.use("/admin/*", cors(corsOptions));
   app.use("/v1/*", rateLimitMiddleware());
-  app.use("/codex/*", rateLimitMiddleware());
   app.use("/claude/*", rateLimitMiddleware());
   app.use("/openai/*", rateLimitMiddleware());
   app.use("/google/*", rateLimitMiddleware());
   app.use("/convert/*", rateLimitMiddleware());
   app.use("/admin/*", rateLimitMiddleware());
   app.use("/v1/*", authMiddleware());
-  app.use("/codex/*", authMiddleware());
   app.use("/claude/*", authMiddleware());
   app.use("/openai/*", authMiddleware());
   app.use("/google/*", authMiddleware());
@@ -103,7 +99,6 @@ export function createApp() {
   app.use("/admin/*", authMiddleware());
   app.route("/", openaiRoutes);
   app.route("/", openaiPassthroughRoutes);
-  app.route("/", codexRoutes);
   app.route("/", claudeRoutes);
   app.route("/", geminiPassthroughRoutes);
   app.route("/", convertRoutes);
