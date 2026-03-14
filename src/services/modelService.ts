@@ -2,7 +2,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { getSqliteClient } from "../db";
 import { modelPriorities, providers, type Provider } from "../db/schema";
 
-export type ActiveProvider = Provider & { modelPriority: number | null };
+export type ActiveProvider = Provider & { modelPriority?: number | null };
 
 export async function getActiveProvidersByModel(modelSlug: string): Promise<ActiveProvider[]> {
   const db = getSqliteClient();

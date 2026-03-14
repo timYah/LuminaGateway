@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { and, eq, gte, lte, desc, sql } from "drizzle-orm";
+import { and, eq, gte, lte, desc, asc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getSqliteClient } from "../db";
 import { gatewayCircuitBreaker } from "../services/gatewayService";
-import { providers, requestLogs, usageLogs } from "../db/schema";
+import { modelPriorities, providers, requestLogs, usageLogs } from "../db/schema";
 import {
   createProvider,
   deleteProvider,
@@ -11,6 +11,14 @@ import {
   getProviderById,
   updateProvider,
 } from "../services/providerService";
+import {
+  createModelPriority,
+  deleteModelPriority,
+  getModelPriorityById,
+  listModelPriorities,
+  updateModelPriority,
+  upsertModelPriority,
+} from "../services/modelPriorityService";
 import { checkProviderHealth, runProvidersHealthCheck } from "../services/healthService";
 import { getFailureStats } from "../services/failureStatsService";
 import { getUsageSummary } from "../services/usageSummaryService";
@@ -33,9 +41,28 @@ const providerSchema = z.object({
 
 const providerUpdateSchema = providerSchema.partial();
 
+const modelPrioritySchema = z.object({
+  providerId: z.number().int(),
+  modelSlug: z.string().min(1),
+  priority: z.number().int(),
+});
+
+const modelPriorityUpdateSchema = modelPrioritySchema.partial();
+
+const modelPriorityImportSchema = z
+  .object({
+    providerId: z.number().int().optional(),
+    providerName: z.string().min(1).optional(),
+    modelSlug: z.string().min(1),
+    priority: z.number().int(),
+  })
+  .refine((value) => Boolean(value.providerId || value.providerName), {
+    message: "providerId or providerName required",
+  });
+
 const configImportSchema = z.object({
   providers: z.array(providerSchema),
-  models: z.array(z.unknown()).optional(),
+  models: z.array(modelPriorityImportSchema).optional(),
   settings: z.record(z.string(), z.unknown()).optional(),
   mode: z.enum(["replace", "merge"]).optional(),
 });
@@ -109,6 +136,123 @@ adminRoutes.delete("/admin/providers/:id", async (c) => {
     return c.json({ error: { message: "Provider not found" } }, 404);
   }
   return c.json({ provider });
+});
+
+adminRoutes.get("/admin/model-priorities", async (c) => {
+  const providerIdRaw = c.req.query("providerId");
+  const modelSlug = c.req.query("modelSlug")?.trim();
+  let providerId: number | undefined;
+  if (providerIdRaw !== undefined) {
+    const parsed = Number(providerIdRaw);
+    if (!Number.isFinite(parsed)) {
+      return c.json({ error: { message: "Invalid request" } }, 400);
+    }
+    providerId = parsed;
+  }
+
+  const conditions = [];
+  if (providerId !== undefined) {
+    conditions.push(eq(modelPriorities.providerId, providerId));
+  }
+  if (modelSlug) {
+    conditions.push(eq(modelPriorities.modelSlug, modelSlug));
+  }
+
+  const db = getSqliteClient();
+  const query =
+    conditions.length > 0
+      ? db
+          .select({
+            id: modelPriorities.id,
+            providerId: modelPriorities.providerId,
+            providerName: providers.name,
+            modelSlug: modelPriorities.modelSlug,
+            priority: modelPriorities.priority,
+            createdAt: modelPriorities.createdAt,
+            updatedAt: modelPriorities.updatedAt,
+          })
+          .from(modelPriorities)
+          .leftJoin(providers, eq(modelPriorities.providerId, providers.id))
+          .where(and(...conditions))
+      : db
+          .select({
+            id: modelPriorities.id,
+            providerId: modelPriorities.providerId,
+            providerName: providers.name,
+            modelSlug: modelPriorities.modelSlug,
+            priority: modelPriorities.priority,
+            createdAt: modelPriorities.createdAt,
+            updatedAt: modelPriorities.updatedAt,
+          })
+          .from(modelPriorities)
+          .leftJoin(providers, eq(modelPriorities.providerId, providers.id));
+
+  const rows = await query.orderBy(desc(modelPriorities.priority), asc(modelPriorities.id));
+  return c.json({ modelPriorities: rows });
+});
+
+adminRoutes.post("/admin/model-priorities", async (c) => {
+  const body = await c.req.json();
+  const parsed = modelPrioritySchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: { message: "Invalid request" } }, 400);
+  }
+  const provider = await getProviderById(parsed.data.providerId);
+  if (!provider) {
+    return c.json({ error: { message: "Provider not found" } }, 404);
+  }
+  const existing = await listModelPriorities({
+    providerId: parsed.data.providerId,
+    modelSlug: parsed.data.modelSlug,
+  });
+  if (existing.length > 0) {
+    return c.json({ error: { message: "Model priority already exists" } }, 409);
+  }
+  const modelPriority = await createModelPriority(parsed.data);
+  return c.json({ modelPriority }, 201);
+});
+
+adminRoutes.patch("/admin/model-priorities/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const body = await c.req.json();
+  const parsed = modelPriorityUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: { message: "Invalid request" } }, 400);
+  }
+
+  const existing = await getModelPriorityById(id);
+  if (!existing) {
+    return c.json({ error: { message: "Model priority not found" } }, 404);
+  }
+
+  if (parsed.data.providerId !== undefined) {
+    const provider = await getProviderById(parsed.data.providerId);
+    if (!provider) {
+      return c.json({ error: { message: "Provider not found" } }, 404);
+    }
+  }
+
+  const nextProviderId = parsed.data.providerId ?? existing.providerId;
+  const nextModelSlug = parsed.data.modelSlug ?? existing.modelSlug;
+  const conflicts = await listModelPriorities({
+    providerId: nextProviderId,
+    modelSlug: nextModelSlug,
+  });
+  if (conflicts.some((row) => row.id !== id)) {
+    return c.json({ error: { message: "Model priority already exists" } }, 409);
+  }
+
+  const modelPriority = await updateModelPriority(id, parsed.data);
+  return c.json({ modelPriority });
+});
+
+adminRoutes.delete("/admin/model-priorities/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const modelPriority = await deleteModelPriority(id);
+  if (!modelPriority) {
+    return c.json({ error: { message: "Model priority not found" } }, 404);
+  }
+  return c.json({ modelPriority });
 });
 
 adminRoutes.post("/admin/providers/:id/test", async (c) => {
@@ -390,9 +534,19 @@ adminRoutes.get("/admin/config/export", async (c) => {
     priority: provider.priority,
   }));
 
+  const db = getSqliteClient();
+  const modelRows = await db.select().from(modelPriorities);
+  const providerNameById = new Map(providers.map((provider) => [provider.id, provider.name]));
+  const exportedModels = modelRows.map((row) => ({
+    providerId: row.providerId,
+    providerName: providerNameById.get(row.providerId) ?? null,
+    modelSlug: row.modelSlug,
+    priority: row.priority,
+  }));
+
   return c.json({
     providers: exportedProviders,
-    models: [],
+    models: exportedModels,
     settings: {
       defaultInputPrice: process.env.DEFAULT_INPUT_PRICE ?? null,
       defaultOutputPrice: process.env.DEFAULT_OUTPUT_PRICE ?? null,
@@ -419,10 +573,36 @@ adminRoutes.post("/admin/config/import", async (c) => {
     if (row) created.push(row);
   }
 
+  const importedProviders = await getAllProviders();
+  const providerById = new Map(importedProviders.map((provider) => [provider.id, provider]));
+  const providerByName = new Map(importedProviders.map((provider) => [provider.name, provider]));
+
+  let importedModels = 0;
+  let ignoredModels = 0;
+  for (const model of parsed.data.models ?? []) {
+    const resolvedProvider =
+      model.providerId !== undefined
+        ? providerById.get(model.providerId)
+        : model.providerName
+          ? providerByName.get(model.providerName)
+          : undefined;
+    if (!resolvedProvider) {
+      ignoredModels += 1;
+      continue;
+    }
+    await upsertModelPriority({
+      providerId: resolvedProvider.id,
+      modelSlug: model.modelSlug,
+      priority: model.priority,
+    });
+    importedModels += 1;
+  }
+
   return c.json({
     ok: true,
     imported: created.length,
+    importedModels,
     mode,
-    ignoredModels: parsed.data.models?.length ?? 0,
+    ignoredModels,
   });
 });
