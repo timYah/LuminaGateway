@@ -19,6 +19,7 @@ const messages = {
       providers: "Providers",
       modelPriorities: "Model priorities",
       usage: "Usage",
+      requests: "Requests",
     },
     apiKey: {
       secureAccess: "Secure Access",
@@ -54,8 +55,8 @@ const messages = {
       },
       testModel: {
         label: "Test model",
-        help: "Used for connectivity checks only.",
-        placeholder: "gpt-4o",
+        help: "Optional. Leave empty to use the provider or global default.",
+        placeholder: "Optional (uses default)",
       },
       errorTitle: "Provider list failed to load.",
       errorHint: "Verify the API key and gateway URL, then refresh.",
@@ -156,6 +157,7 @@ const messages = {
         baseUrl: "Base URL",
         apiKey: "API key",
         codexTransform: "Codex transform",
+        healthCheckModel: "Health check model",
         balance: "Balance",
         inputPrice: "Input $/1M",
         outputPrice: "Output $/1M",
@@ -169,6 +171,8 @@ const messages = {
             "Root URL for the provider endpoint (OpenAI-compatible providers like new-api use https://host/v1).",
           apiKey: "Stored for upstream authentication.",
           codexTransform: "Reserved for future Codex flows. Turning it on currently has no effect.",
+          healthCheckModel:
+            "Optional. Overrides the model used for health checks when no model is provided.",
           balanceCreate: "Informational only. Routing uses priority.",
           balanceEdit: "Informational only. Routing uses priority.",
           inputPrice: "Optional. Leave empty to use the global default.",
@@ -180,6 +184,7 @@ const messages = {
           name: "Lumen Arc",
           baseUrl: "https://api.example.com",
           apiKey: "sk-live-...",
+          healthCheckModel: "gpt-4o",
         },
         apiModeResponses: "Responses",
         apiModeChat: "Chat Completions",
@@ -332,6 +337,12 @@ const messages = {
         },
       },
     },
+    requests: {
+      title: "Live request visibility",
+      intro:
+        "Track in-flight requests and inspect request outcomes with the latest provider results.",
+      refresh: "Refresh all",
+    },
     modelPriorities: {
       title: "Model routing overrides",
       intro: "Override provider priority per model slug when using priority routing.",
@@ -421,6 +432,7 @@ const messages = {
       providers: "提供商",
       modelPriorities: "模型优先级",
       usage: "用量",
+      requests: "请求",
     },
     apiKey: {
       secureAccess: "安全访问",
@@ -456,8 +468,8 @@ const messages = {
       },
       testModel: {
         label: "测试模型",
-        help: "仅用于连通性测试。",
-        placeholder: "gpt-4o",
+        help: "可选，留空则使用提供商或全局默认模型。",
+        placeholder: "可选（使用默认）",
       },
       errorTitle: "提供商列表加载失败。",
       errorHint: "请检查 API key 与网关地址后重试。",
@@ -558,6 +570,7 @@ const messages = {
         baseUrl: "基础 URL",
         apiKey: "API key",
         codexTransform: "Codex 转换",
+        healthCheckModel: "健康检查模型",
         balance: "余额",
         inputPrice: "输入 $/1M",
         outputPrice: "输出 $/1M",
@@ -571,6 +584,7 @@ const messages = {
             "提供商接口根地址（new-api 等 OpenAI 兼容服务请使用 https://host/v1）。",
           apiKey: "用于上游鉴权的密钥。",
           codexTransform: "Codex 标记当前无效果，仅为后续流程预留。",
+          healthCheckModel: "可选，未指定检测模型时会优先使用该值。",
           balanceCreate: "仅作参考，路由以优先级为准。",
           balanceEdit: "仅作参考，路由以优先级为准。",
           inputPrice: "可选。留空则使用全局默认价格。",
@@ -582,6 +596,7 @@ const messages = {
           name: "Lumen Arc",
           baseUrl: "https://api.example.com",
           apiKey: "sk-live-...",
+          healthCheckModel: "gpt-4o",
         },
         apiModeResponses: "Responses",
         apiModeChat: "Chat Completions",
@@ -733,6 +748,11 @@ const messages = {
           },
         },
       },
+    },
+    requests: {
+      title: "请求状态与结果",
+      intro: "查看进行中的请求，并追踪每次调用的结果表现。",
+      refresh: "刷新全部",
     },
     modelPriorities: {
       title: "模型路由优先级",
