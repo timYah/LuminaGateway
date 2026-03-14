@@ -62,3 +62,12 @@
 - [x] T-12.4 Update docs for model priorities
 - [x] T-12.5 Add tests for model priority routing and admin endpoints
 - [x] T-12.6 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 13 — Admin UI Model Priorities + Import Override
+- [x] T-13.0 Update task list and documentation
+- [ ] T-13.1 Add model priority import conflict policy (overwrite) on backend
+- [ ] T-13.2 Build Admin UI model priorities management page
+- [ ] T-13.3 Extend config import UI for model priorities override
+- [ ] T-13.4 Update docs/i18n for model priority UI + import policy
+- [ ] T-13.5 Add tests for model priority import overwrite
+- [ ] T-13.6 ✅ Run `npm run lint && npm run typecheck && npm run test`
