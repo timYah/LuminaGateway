@@ -138,6 +138,7 @@ components:
           nullable: true
         modelSlug:
           type: string
+          description: Supports `*` wildcards (for example `gpt-5.4*`).
         priority:
           type: integer
         createdAt:
@@ -151,6 +152,7 @@ components:
           type: integer
         modelSlug:
           type: string
+          description: Supports `*` wildcards (for example `gpt-5.4*`).
         priority:
           type: integer
       required: [providerId, modelSlug, priority]
@@ -161,6 +163,7 @@ components:
           type: integer
         modelSlug:
           type: string
+          description: Supports `*` wildcards (for example `gpt-5.4*`).
         priority:
           type: integer
     AdminCircuitBreaker:

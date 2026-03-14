@@ -324,6 +324,8 @@ For `new-api`, use the OpenAI-compatible base URL (for example `https://your-new
 
 `GET /admin/config/export` returns `{ providers, models, settings }` and includes `codexTransform` in each provider entry. The `models` array contains `{ providerId, providerName, modelSlug, priority }`. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode?, modelConflictPolicy? }`, where each model entry may use `providerId` or `providerName`. `mode` is `replace` or `merge`. `modelConflictPolicy` is `overwrite` (default) or `skip` for existing model priority rows.
 
+`modelSlug` in model priorities supports `*` wildcards (for example `gpt-5.4*` matches `gpt-5.4-xhigh`). Exact matches win over wildcard entries, and when multiple wildcard patterns match, the longest pattern (most specific) is selected.
+
 ### Admin dashboard
 
 The admin dashboard provides a web UI for provider management and usage visibility. It is a standalone Vue + Nuxt UI app powered by Vite that talks to the existing `/admin/*` APIs.

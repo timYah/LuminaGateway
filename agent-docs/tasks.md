@@ -90,3 +90,9 @@
 - [x] T-16.1 Improve model priority error mapping for missing table/duplicates
 - [x] T-16.2 Add tests for duplicate model priority creation
 - [x] T-16.3 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 17 — Model Priority Wildcards
+- [x] T-17.0 Update task list and documentation
+- [ ] T-17.1 Support wildcard matching for model priorities
+- [ ] T-17.2 Add tests for wildcard model priorities
+- [ ] T-17.3 ✅ Run `npm run lint && npm run typecheck && npm run test`
