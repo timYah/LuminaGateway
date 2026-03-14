@@ -21,7 +21,7 @@ describe("wrapNewApiFetch", () => {
       ],
     });
 
-    await wrapped("https://right.codes/codex/v1/responses", { method: "POST", body });
+    await wrapped("https://right.codes/openai/v1/responses", { method: "POST", body });
 
     const calls = baseFetch.mock.calls as unknown as Array<
       [unknown, { body?: string }?]
@@ -46,7 +46,7 @@ describe("wrapNewApiFetch", () => {
       ],
     });
 
-    await wrapped("https://right.codes/codex/v1/responses", { method: "POST", body });
+    await wrapped("https://right.codes/openai/v1/responses", { method: "POST", body });
 
     const calls = baseFetch.mock.calls as unknown as Array<
       [unknown, { body?: string }?]

@@ -73,7 +73,7 @@ describe("activeRequestService", () => {
 
     service.startRequest({
       requestId: "req-2",
-      path: "/codex/responses",
+      path: "/openai/v1/responses",
       modelSlug: "gpt-5.2",
     });
 

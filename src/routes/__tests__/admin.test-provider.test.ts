@@ -172,7 +172,7 @@ describe("POST /admin/providers/:id/test", () => {
       statusCode: 400,
     });
     Object.assign(error, {
-      responseBody: JSON.stringify({ error: "端点/codex未配置模型gpt-4o" }),
+      responseBody: JSON.stringify({ error: "端点/openai未配置模型gpt-4o" }),
     });
     mockedCall.mockRejectedValue(error);
 
@@ -185,7 +185,7 @@ describe("POST /admin/providers/:id/test", () => {
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(body.errorType).toBe("model_not_found");
-    expect(body.message).toBe("端点/codex未配置模型gpt-4o");
+    expect(body.message).toBe("端点/openai未配置模型gpt-4o");
   });
 
   it("returns 404 for missing provider", async () => {

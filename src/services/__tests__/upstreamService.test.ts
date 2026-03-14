@@ -133,7 +133,7 @@ describe("upstreamService", () => {
       statusCode: 400,
     });
     Object.assign(modelMissing, {
-      responseBody: JSON.stringify({ error: "端点/codex未配置模型gpt-4o" }),
+      responseBody: JSON.stringify({ error: "端点/openai未配置模型gpt-4o" }),
     });
     const network = new Error("fetch failed");
     (network as { code?: string }).code = "ECONNREFUSED";
@@ -155,10 +155,10 @@ describe("upstreamService", () => {
       statusCode: 400,
     });
     Object.assign(modelMissing, {
-      responseBody: JSON.stringify({ error: "端点/codex未配置模型gpt-4o" }),
+      responseBody: JSON.stringify({ error: "端点/openai未配置模型gpt-4o" }),
     });
 
-    expect(getUpstreamErrorMessage(modelMissing)).toBe("端点/codex未配置模型gpt-4o");
+    expect(getUpstreamErrorMessage(modelMissing)).toBe("端点/openai未配置模型gpt-4o");
     expect(getUpstreamErrorMessage(new Error("plain message"))).toBe("plain message");
   });
 
