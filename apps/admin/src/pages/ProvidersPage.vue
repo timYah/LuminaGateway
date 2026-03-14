@@ -134,6 +134,7 @@ const importWorking = ref(false);
 const importError = ref("");
 const importPayload = ref("");
 const importReplace = ref(true);
+const importModelOverwrite = ref(true);
 const editingId = ref<number | null>(null);
 const deleteOpen = ref(false);
 const deleteWorking = ref(false);
@@ -272,6 +273,7 @@ watch(importOpen, (open) => {
   importError.value = "";
   importPayload.value = "";
   importReplace.value = true;
+  importModelOverwrite.value = true;
 });
 
 const submitCreate = async () => {
@@ -401,6 +403,7 @@ const submitImport = async () => {
       body: {
         ...(payload as Record<string, unknown>),
         mode: importReplace.value ? "replace" : "merge",
+        modelConflictPolicy: importModelOverwrite.value ? "overwrite" : "skip",
       },
     });
     importOpen.value = false;
@@ -1242,6 +1245,14 @@ const refreshAll = async () => {
               class="h-4 w-4 rounded border-slate-300 text-slate-900"
             />
             <span>{{ $t("providers.config.replace") }}</span>
+          </label>
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              v-model="importModelOverwrite"
+              type="checkbox"
+              class="h-4 w-4 rounded border-slate-300 text-slate-900"
+            />
+            <span>{{ $t("providers.config.modelOverwrite") }}</span>
           </label>
 
           <p v-if="importError" class="text-sm text-rose-600">
