@@ -351,6 +351,7 @@ The admin dashboard provides a web UI for provider management and usage visibili
 - Provider create/edit pricing panel now includes balance and health-check model inputs.
 - Provider pricing inputs are always visible within the pricing panel (no nested foldout).
 - Provider create/edit form layout is audited for accessibility and responsive quality.
+- Provider create/edit forms share a unified pricing + priority section layout.
 - Model priorities management page with responsive create/edit forms.
 
 **Setup**

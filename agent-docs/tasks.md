@@ -123,3 +123,8 @@
 - [x] T-22.0 Update task list and documentation
 - [x] T-22.1 Audit add/edit provider layout (create/edit forms)
 - [x] T-22.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 23 — Provider Forms Layout Normalization
+- [x] T-23.0 Update task list and documentation
+- [ ] T-23.1 Normalize add/edit provider pricing + priority layout
+- [ ] T-23.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
