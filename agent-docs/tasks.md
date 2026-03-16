@@ -146,5 +146,5 @@
 
 ## Phase 27 — Manual Test Restores Health Status
 - [x] T-27.0 Update task list and documentation
-- [ ] T-27.1 Refresh provider health status after manual test success
+- [x] T-27.1 Refresh provider health status after manual test success
 - [ ] T-27.2 ✅ Run `npm run lint && npm run typecheck && npm run test`

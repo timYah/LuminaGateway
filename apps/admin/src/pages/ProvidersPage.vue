@@ -485,6 +485,7 @@ const submitImport = async () => {
 const testProvider = async (provider: Provider) => {
   testingId.value = provider.id;
   testResults.delete(provider.id);
+  let shouldRefresh = false;
   try {
     const res = await gatewayFetch<{
       ok: boolean;
@@ -497,10 +498,14 @@ const testProvider = async (provider: Provider) => {
       query: { model: testModel.value.trim() || undefined },
     });
     testResults.set(provider.id, res);
+    shouldRefresh = res.ok;
   } catch {
     testResults.set(provider.id, { ok: false, errorType: "unknown" });
   } finally {
     testingId.value = null;
+    if (shouldRefresh) {
+      await refresh();
+    }
     setTimeout(() => testResults.delete(provider.id), 8000);
   }
 };
