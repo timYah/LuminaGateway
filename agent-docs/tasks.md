@@ -151,5 +151,5 @@
 
 ## Phase 28 — OpenAI Passthrough Base URL Normalization
 - [x] T-28.0 Update task list and documentation
-- [ ] T-28.1 Normalize OpenAI base URLs that include endpoint suffixes
+- [x] T-28.1 Normalize OpenAI base URLs that include endpoint suffixes
 - [ ] T-28.2 ✅ Run `npm run lint && npm run typecheck && npm run test`

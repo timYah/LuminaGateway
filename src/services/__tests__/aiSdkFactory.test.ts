@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { FetchFunction } from "@ai-sdk/provider-utils";
-import { wrapNewApiFetch } from "../aiSdkFactory";
+import { normalizeOpenAiBaseUrl, wrapNewApiFetch } from "../aiSdkFactory";
 
 const buildFetch = () =>
   vi.fn(async () => {
@@ -69,5 +69,25 @@ describe("wrapNewApiFetch", () => {
     const sentInit = calls[0]?.[1];
     const sentBody = sentInit?.body as string;
     expect(sentBody).toBe(body);
+  });
+});
+
+describe("normalizeOpenAiBaseUrl", () => {
+  it("appends /v1 when missing", () => {
+    expect(normalizeOpenAiBaseUrl("https://api.openai.com")).toBe(
+      "https://api.openai.com/v1"
+    );
+  });
+
+  it("preserves /v1 and strips endpoint suffixes", () => {
+    expect(normalizeOpenAiBaseUrl("https://api.openai.com/v1")).toBe(
+      "https://api.openai.com/v1"
+    );
+    expect(normalizeOpenAiBaseUrl("https://api.openai.com/v1/responses")).toBe(
+      "https://api.openai.com/v1"
+    );
+    expect(normalizeOpenAiBaseUrl("https://api.openai.com/openai/v1/chat/completions")).toBe(
+      "https://api.openai.com/openai/v1"
+    );
   });
 });
