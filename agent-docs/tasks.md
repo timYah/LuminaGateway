@@ -143,3 +143,8 @@
 - [x] T-26.0 Update task list and documentation
 - [x] T-26.1 Ensure provider test uses configured health check model
 - [x] T-26.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 27 — Manual Test Restores Health Status
+- [x] T-27.0 Update task list and documentation
+- [ ] T-27.1 Refresh provider health status after manual test success
+- [ ] T-27.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
