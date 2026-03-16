@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { APICallError } from "ai";
 import { createApp } from "../../app";
@@ -11,6 +11,7 @@ import { configureTestDatabase } from "../../test/testDb";
 
 configureTestDatabase("admin-test-provider");
 process.env.GATEWAY_API_KEY = "test-key";
+const defaultHealthCheckModel = process.env.DEFAULT_HEALTHCHECK_MODEL;
 
 vi.mock("../../services/upstreamService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../services/upstreamService")>();
@@ -42,6 +43,14 @@ beforeEach(() => {
   providerRecoveryService.stop();
 });
 
+afterEach(() => {
+  if (defaultHealthCheckModel === undefined) {
+    delete process.env.DEFAULT_HEALTHCHECK_MODEL;
+  } else {
+    process.env.DEFAULT_HEALTHCHECK_MODEL = defaultHealthCheckModel;
+  }
+});
+
 describe("POST /admin/providers/:id/test", () => {
   it("returns success with latencyMs when upstream responds", async () => {
     const provider = await createProvider({
@@ -69,6 +78,35 @@ describe("POST /admin/providers/:id/test", () => {
     expect(body.ok).toBe(true);
     expect(body.latencyMs).toBeGreaterThanOrEqual(0);
     expect(body.model).toBe("gpt-4o");
+  });
+
+  it("uses the configured health check model when provided", async () => {
+    process.env.DEFAULT_HEALTHCHECK_MODEL = "gpt-5.4";
+    const provider = await createProvider({
+      name: "Configured Model Provider",
+      protocol: "openai",
+      baseUrl: "https://api.example.com",
+      apiKey: "sk-test",
+      balance: 10,
+      isActive: true,
+      priority: 1,
+      healthCheckModel: "gpt-5.2-codex",
+    });
+
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request(`/admin/providers/${provider!.id}/test`, {
+      method: "POST",
+      headers: authHeader,
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-5.2-codex");
   });
 
   it("honors custom model slug in query", async () => {
@@ -221,6 +259,54 @@ describe("POST /admin/providers/test", () => {
     expect(body.model).toBe("gpt-4o");
     const rows = await db.select().from(providers);
     expect(rows.length).toBe(0);
+  });
+
+  it("uses healthCheckModel from the payload", async () => {
+    process.env.DEFAULT_HEALTHCHECK_MODEL = "gpt-5.4";
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request("/admin/providers/test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        protocol: "openai",
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-test",
+        healthCheckModel: "gpt-5.2-codex",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-5.2-codex");
+  });
+
+  it("accepts health_check_model as an alias", async () => {
+    process.env.DEFAULT_HEALTHCHECK_MODEL = "gpt-5.4";
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request("/admin/providers/test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        protocol: "openai",
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-test",
+        health_check_model: "gpt-5.2-codex",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-5.2-codex");
   });
 
   it("honors custom model slug in query", async () => {

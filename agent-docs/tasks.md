@@ -141,5 +141,5 @@
 
 ## Phase 26 — Provider Health Check Model Test Fix
 - [x] T-26.0 Update task list and documentation
-- [ ] T-26.1 Ensure provider test uses configured health check model
+- [x] T-26.1 Ensure provider test uses configured health check model
 - [ ] T-26.2 ✅ Run `npm run lint && npm run typecheck && npm run test`

@@ -95,6 +95,40 @@ const requestErrorTypes = [
 type RequestErrorType = (typeof requestErrorTypes)[number];
 const requestErrorTypeSet = new Set<string>(requestErrorTypes);
 
+type HealthCheckModelPayload = Record<string, unknown>;
+
+function normalizeHealthCheckModelPayload<T extends HealthCheckModelPayload>(payload: T): T {
+  if (payload.healthCheckModel !== undefined) {
+    return payload;
+  }
+  const legacyValue = payload["health_check_model"];
+  if (typeof legacyValue === "string") {
+    return { ...payload, healthCheckModel: legacyValue } as T;
+  }
+  return payload;
+}
+
+function normalizeProviderPayload(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object") {
+    return payload;
+  }
+  return normalizeHealthCheckModelPayload(payload as HealthCheckModelPayload);
+}
+
+function normalizeConfigImportPayload(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object") {
+    return payload;
+  }
+  const record = payload as Record<string, unknown>;
+  if (!Array.isArray(record.providers)) {
+    return record;
+  }
+  return {
+    ...record,
+    providers: record.providers.map((provider) => normalizeProviderPayload(provider)),
+  };
+}
+
 function isMissingModelPriorityTable(error: unknown) {
   if (!(error instanceof Error)) return false;
   const message = error.message.toLowerCase();
@@ -141,7 +175,7 @@ adminRoutes.get("/admin/providers", async (c) => {
 });
 
 adminRoutes.post("/admin/providers", async (c) => {
-  const body = await c.req.json();
+  const body = normalizeProviderPayload(await c.req.json());
   const parsed = providerSchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: { message: "Invalid request" } }, 400);
@@ -152,7 +186,7 @@ adminRoutes.post("/admin/providers", async (c) => {
 
 adminRoutes.patch("/admin/providers/:id", async (c) => {
   const id = Number(c.req.param("id"));
-  const body = await c.req.json();
+  const body = normalizeProviderPayload(await c.req.json());
   const parsed = providerUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: { message: "Invalid request" } }, 400);
@@ -366,7 +400,7 @@ adminRoutes.post("/admin/providers/:id/test", async (c) => {
 });
 
 adminRoutes.post("/admin/providers/test", async (c) => {
-  const body = await c.req.json();
+  const body = normalizeProviderPayload(await c.req.json());
   const parsed = providerTestSchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: { message: "Invalid request" } }, 400);
@@ -696,7 +730,7 @@ adminRoutes.get("/admin/config/export", async (c) => {
 });
 
 adminRoutes.post("/admin/config/import", async (c) => {
-  const body = await c.req.json();
+  const body = normalizeConfigImportPayload(await c.req.json());
   const parsed = configImportSchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: { message: "Invalid request" } }, 400);
