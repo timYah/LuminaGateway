@@ -310,7 +310,7 @@ GET    /admin/config/export      — export providers + settings
 POST   /admin/config/import      — import providers + settings
 ```
 
-`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, optional `healthCheckModel`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false` and is reserved for future Codex flows; it currently has no runtime effect. `healthCheckModel` overrides the model used for provider health checks when no model is provided. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
+`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, optional `healthCheckModel`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false` and is reserved for future Codex flows; it currently has no runtime effect. `healthCheckModel` overrides the model used for provider health checks when no model is provided. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted. Provider payloads also accept `health_check_model` as an alias for `healthCheckModel`.
 
 `POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug. When omitted, the gateway uses `healthCheckModel`, then `DEFAULT_HEALTHCHECK_MODEL`, and finally falls back to `gpt-4o`. If the provider is recovering, a successful manual test also clears the model-scoped recovery gate and circuit breaker so the provider can re-enter routing immediately for that model.
 
@@ -353,6 +353,7 @@ The admin dashboard provides a web UI for provider management and usage visibili
 - Provider create/edit form layout is audited for accessibility and responsive quality.
 - Provider create/edit forms share a unified pricing + priority section layout.
 - Provider pricing + priority panel is collapsed by default in create/edit forms.
+- Requests view refreshes provider metadata to keep provider labels complete.
 - Model priorities management page with responsive create/edit forms.
 
 **Setup**

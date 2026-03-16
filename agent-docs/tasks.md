@@ -138,3 +138,8 @@
 - [x] T-25.0 Update task list and documentation
 - [x] T-25.1 Ensure providers refresh and fallback labels in /requests
 - [x] T-25.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 26 — Provider Health Check Model Test Fix
+- [x] T-26.0 Update task list and documentation
+- [ ] T-26.1 Ensure provider test uses configured health check model
+- [ ] T-26.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
