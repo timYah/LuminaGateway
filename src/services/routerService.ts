@@ -107,13 +107,19 @@ export class RouterService {
     );
     if (candidates.length <= 1) return candidates;
     const strategy = this.resolveStrategy();
-    if (strategy === "round_robin") {
-      return this.applyRoundRobin(modelSlug, candidates);
+    if (strategy === "priority") {
+      return this.applyPriority(candidates);
     }
-    if (strategy === "weighted") {
-      return this.applyWeighted(candidates);
-    }
-    return this.applyPriority(candidates);
+    const topPriority = candidates[0]?.priority ?? 0;
+    let splitIndex = candidates.findIndex((provider) => provider.priority !== topPriority);
+    if (splitIndex === -1) splitIndex = candidates.length;
+    const topTier = candidates.slice(0, splitIndex);
+    const rest = candidates.slice(splitIndex);
+    const orderedTop =
+      strategy === "round_robin"
+        ? this.applyRoundRobin(modelSlug, topTier)
+        : this.applyWeighted(topTier);
+    return orderedTop.concat(rest);
   }
 
   async selectProvider(modelSlug: string) {

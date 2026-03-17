@@ -26,7 +26,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function seed() {
+async function seed(priorities: [number, number, number] = [2, 1, 1]) {
   const inserted = await db
     .insert(providers)
     .values([
@@ -37,7 +37,7 @@ async function seed() {
         apiKey: "sk-a",
         balance: 100,
         isActive: true,
-        priority: 2,
+        priority: priorities[0],
       },
       {
         name: "Provider B",
@@ -46,7 +46,7 @@ async function seed() {
         apiKey: "sk-b",
         balance: 100,
         isActive: true,
-        priority: 1,
+        priority: priorities[1],
       },
       {
         name: "Provider C",
@@ -55,7 +55,7 @@ async function seed() {
         apiKey: "sk-c",
         balance: 50,
         isActive: true,
-        priority: 1,
+        priority: priorities[2],
       },
     ])
     .returning({ id: providers.id, name: providers.name });
@@ -133,7 +133,7 @@ describe("routerService", () => {
 
   it("round robin rotates candidates", async () => {
     process.env.ROUTING_STRATEGY = "round_robin";
-    await seed();
+    await seed([1, 1, 1]);
     const router = new RouterService(new CircuitBreaker());
     const first = await router.getAllCandidates("gpt-4o");
     const second = await router.getAllCandidates("gpt-4o");
@@ -149,7 +149,43 @@ describe("routerService", () => {
     ]);
   });
 
+  it("round robin keeps higher-priority providers first", async () => {
+    process.env.ROUTING_STRATEGY = "round_robin";
+    await seed();
+    const router = new RouterService(new CircuitBreaker());
+    const first = await router.getAllCandidates("gpt-4o");
+    const second = await router.getAllCandidates("gpt-4o");
+    expect(first.map((p) => p.name)).toEqual([
+      "Provider A",
+      "Provider B",
+      "Provider C",
+    ]);
+    expect(second.map((p) => p.name)).toEqual([
+      "Provider A",
+      "Provider B",
+      "Provider C",
+    ]);
+  });
+
   it("weighted strategy promotes higher-weight providers", async () => {
+    process.env.ROUTING_STRATEGY = "weighted";
+    process.env.PROVIDER_WEIGHTS = JSON.stringify({
+      "Provider C": 10,
+      "Provider B": 1,
+      "Provider A": 1,
+    });
+    await seed([1, 1, 1]);
+    const router = new RouterService(new CircuitBreaker());
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const ordered = await router.getAllCandidates("gpt-4o");
+    expect(ordered.map((p) => p.name)).toEqual([
+      "Provider C",
+      "Provider A",
+      "Provider B",
+    ]);
+  });
+
+  it("weighted strategy keeps higher-priority providers first", async () => {
     process.env.ROUTING_STRATEGY = "weighted";
     process.env.PROVIDER_WEIGHTS = JSON.stringify({
       "Provider C": 10,
@@ -161,9 +197,9 @@ describe("routerService", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.5);
     const ordered = await router.getAllCandidates("gpt-4o");
     expect(ordered.map((p) => p.name)).toEqual([
-      "Provider C",
       "Provider A",
       "Provider B",
+      "Provider C",
     ]);
   });
 
