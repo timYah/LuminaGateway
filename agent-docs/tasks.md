@@ -162,4 +162,4 @@
 ## Phase 30 — Provider Priority Restore After Health
 - [x] T-30.0 Update task list and documentation
 - [x] T-30.1 Restore provider routing eligibility after successful health checks
-- [ ] T-30.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+- [x] T-30.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
