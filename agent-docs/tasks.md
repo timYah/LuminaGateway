@@ -156,5 +156,5 @@
 
 ## Phase 29 — Recent Request Details Panel
 - [x] T-29.0 Update task list and documentation
-- [ ] T-29.1 Show last 3 request details instead of active requests
+- [x] T-29.1 Show last 3 request details instead of active requests
 - [ ] T-29.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
