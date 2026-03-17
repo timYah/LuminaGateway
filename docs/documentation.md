@@ -354,6 +354,7 @@ The admin dashboard provides a web UI for provider management and usage visibili
 - Provider create/edit forms share a unified pricing + priority section layout.
 - Provider pricing + priority panel is collapsed by default in create/edit forms.
 - Requests view refreshes provider metadata to keep provider labels complete.
+- Requests view surfaces the latest 3 request logs as a quick detail panel.
 - Model priorities management page with responsive create/edit forms.
 
 **Setup**
