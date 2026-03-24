@@ -175,6 +175,111 @@ describe("openai passthrough route", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("injects the default model for amp responses when model is omitted", async () => {
+    const upstreamBody = JSON.stringify({ id: "resp_amp_1", status: "completed" });
+    fetchMock.mockResolvedValueOnce(
+      new Response(upstreamBody, {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+    );
+
+    const res = await app.request("/amp/v1/responses?trace=1", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ input: [] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe(upstreamBody);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://right.codes/openai/v1/responses?trace=1",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ input: [], model: "gpt-5.4" }),
+      })
+    );
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 1, modelSlug: "gpt-5.4", result: "success" })
+    );
+  });
+
+  it("injects the default model for amp responses when model is blank", async () => {
+    const upstreamBody = JSON.stringify({ id: "resp_amp_blank", status: "completed" });
+    fetchMock.mockResolvedValueOnce(
+      new Response(upstreamBody, {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+    );
+
+    const res = await app.request("/amp/v1/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "   ", input: [] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://right.codes/openai/v1/responses",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ model: "gpt-5.4", input: [] }),
+      })
+    );
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 1, modelSlug: "gpt-5.4", result: "success" })
+    );
+  });
+
+  it("preserves an explicit model for amp responses", async () => {
+    const rawBody = JSON.stringify({
+      model: "gpt-5.2",
+      input: [{ role: "user", content: [{ type: "input_text", text: "hello" }] }],
+    });
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "resp_amp_2", status: "completed" }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+    );
+
+    const res = await app.request("/amp/v1/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: rawBody,
+    });
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://right.codes/openai/v1/responses",
+      expect.objectContaining({
+        method: "POST",
+        body: rawBody,
+      })
+    );
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 1, modelSlug: "gpt-5.2", result: "success" })
+    );
+  });
+
+  it("rejects non-string models for amp responses", async () => {
+    const res = await app.request("/amp/v1/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: { slug: "gpt-5.4" }, input: [] }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("blocks content matching the safety list", async () => {
     process.env.CONTENT_BLOCKLIST = "secret";
     const res = await app.request("/openai/v1/responses", {

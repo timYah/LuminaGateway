@@ -85,6 +85,14 @@ describe("route stubs", () => {
     expect(res.status).toBe(401);
   });
 
+  it("rejects unauthenticated amp passthrough request", async () => {
+    const res = await app.request("/amp/v1/responses", {
+      method: "POST",
+      body: JSON.stringify({ input: [] }),
+    });
+    expect(res.status).toBe(401);
+  });
+
   it("validates OpenAI request body", async () => {
     const res = await app.request("/v1/chat/completions", {
       method: "POST",
