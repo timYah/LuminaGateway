@@ -4,7 +4,7 @@ Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple pro
 
 ## What Lumina Gateway is
 
-The gateway exposes the standard `/v1/*` routes plus raw passthrough endpoints for `POST /claude/v1/messages`, `POST /openai/v1/responses`, `POST /openai/v1/chat/completions`, and `POST /google/v1beta/models/{model}:generateContent`. It also includes convert endpoints under `/convert/*` that normalize upstream JSON responses to a target format, and a WebSocket proxy for the OpenAI Realtime API at `/openai/v1/realtime` (plus `/convert/openai/v1/realtime` as an alias). The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The passthrough routes keep request and response bodies intact and proxy them straight to the selected upstream endpoint.
+The gateway exposes the standard `/v1/*` routes plus raw passthrough endpoints for `POST /claude/v1/messages`, `POST /openai/v1/responses`, `POST /amp/v1/responses`, `POST /openai/v1/chat/completions`, and `POST /google/v1beta/models/{model}:generateContent`. It also includes convert endpoints under `/convert/*` that normalize upstream JSON responses to a target format, and a WebSocket proxy for the OpenAI Realtime API at `/openai/v1/realtime` (plus `/convert/openai/v1/realtime` as an alias). The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The passthrough routes keep request and response bodies intact and proxy them straight to the selected upstream endpoint.
 
 ## Status
 
@@ -30,7 +30,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes (including realtime WS upgrades). |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/claude/*`, `/openai/*`, `/amp/*`, `/google/*`, `/convert/*`, and `/admin/*` routes (including realtime WS upgrades). |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
@@ -68,7 +68,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 | `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
-| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses`, `/openai/v1/chat/completions`, and `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses`, `/amp/v1/responses`, `/openai/v1/chat/completions`, and `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
 | `DEFAULT_HEALTHCHECK_MODEL` | *(optional)* | Default model slug used for provider health checks when no per-provider override or query parameter is supplied. |
 | `CLAUDE_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/claude/v1/messages` upstream requests before failover. |
 | `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` | `300000` | Fixed interval (ms) for automatic recovery probes after recoverable provider failures. When unset, the gateway uses a 10/20/30/60/120/300s backoff schedule. |
@@ -90,7 +90,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 
 ### Authentication
 
-All `/v1/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`. For WebSocket upgrades, the `Authorization` header must be included in the upgrade request.
+All `/v1/*`, `/claude/*`, `/openai/*`, `/amp/*`, `/google/*`, `/convert/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`. For WebSocket upgrades, the `Authorization` header must be included in the upgrade request.
 
 Set `JWT_SECRET` to enable per-user authentication. When it is set, the gateway also requires a JWT in the header defined by `JWT_HEADER` (default `X-User-Token`). The gateway reads the user and group claims from `JWT_USER_CLAIM` and `JWT_GROUP_CLAIM` and enforces any configured user or group quotas.
 
@@ -161,7 +161,11 @@ Supported fields match the OpenAI Responses subset used by the validators: `mode
 
 Codex CLI can use either `POST /v1/responses` or the raw passthrough `POST /openai/v1/responses`. For a dedicated base URL, set `base_url` to `http://<host>:<port>/openai` and keep `wire_api="responses"`.
 
+Amp-style clients can point their Responses base URL at `http://<host>:<port>/amp`. `POST /amp/v1/responses` is a raw passthrough alias for `/responses`, but when the request omits `model` or sends it as a blank string the gateway injects `model: "gpt-5.4"` before provider selection and upstream proxying.
+
 `POST /openai/v1/responses` requires a JSON request body with a string `model`. The gateway forwards the raw request body to the selected upstream `/responses` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Once streaming starts, the gateway never replays the request to a second provider.
+
+`POST /amp/v1/responses` uses the same passthrough behavior as `/openai/v1/responses`, but relaxes the `model` requirement: if `model` is missing or blank, the gateway injects `gpt-5.4`. Non-string `model` values still return `400`.
 
 `POST /openai/v1/chat/completions` forwards the raw JSON body to the selected upstream `/chat/completions` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Streaming responses are proxied as-is.
 
@@ -180,6 +184,18 @@ Content-Type: application/json
 ```
 
 `POST /openai/v1/responses` forwards the raw JSON body to the selected upstream `/responses` endpoint (OpenAI or OpenAI-compatible providers). It preserves the upstream response body and headers, and only fails over to another provider before the first byte reaches the client.
+
+```http [Request]
+POST /amp/v1/responses
+Authorization: Bearer <GATEWAY_API_KEY>
+Content-Type: application/json
+
+{
+  "input": "Hello"
+}
+```
+
+`POST /amp/v1/responses` forwards to the same upstream `/responses` endpoint and preserves the upstream response body and headers. If `model` is missing or blank, the gateway injects `gpt-5.4` before routing. Explicit string `model` values are preserved as-is.
 
 `POST /openai/v1/chat/completions` forwards the raw JSON body to the selected upstream `/chat/completions` endpoint and preserves the upstream response as-is. It only fails over before the first byte reaches the client.
 
@@ -385,7 +401,7 @@ Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at b
 
 For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. When `ROUTING_STRATEGY=priority` and model-level priorities are configured, the router uses the model priority for the requested model and falls back to the provider priority when a model priority is missing. Other strategies ignore model-level priorities and apply `round_robin` or `weighted` selection only within the highest provider-priority tier, then keep lower-priority providers ordered for failover. To distribute across all providers when using `round_robin` or `weighted`, set the same priority value for each provider. It skips providers that are circuit-broken for the requested model and forwards the requested model slug directly to the upstream provider.
 
-For passthrough routes (`/openai/v1/responses`, `/openai/v1/chat/completions`, `/google/v1beta/models/{model}:generateContent`, and `/claude/v1/messages`), the gateway forwards the raw request body to upstream, preserves the upstream response as-is, and can fail over only before the first byte reaches the client. The same "fail over before first byte" behavior applies to the `/convert/*` HTTP routes. Realtime WebSocket sessions stay pinned to a single provider and are not replayed.
+For passthrough routes (`/openai/v1/responses`, `/amp/v1/responses`, `/openai/v1/chat/completions`, `/google/v1beta/models/{model}:generateContent`, and `/claude/v1/messages`), the gateway forwards the raw request body to upstream, preserves the upstream response as-is, and can fail over only before the first byte reaches the client. The same "fail over before first byte" behavior applies to the `/convert/*` HTTP routes. Realtime WebSocket sessions stay pinned to a single provider and are not replayed.
 
 On upstream failures, the gateway reacts to the classified error type. Quota exhaustion, rate limits, network failures, server errors, and model-not-found errors open a 60-second circuit breaker for that model before retrying the next provider. Authentication errors deactivate the provider immediately, and unknown errors return a `500` without failover. If every retryable upstream attempt fails before the first byte, passthrough routes return the last upstream error response instead of synthesizing a converted payload.
 
@@ -447,7 +463,7 @@ src/
 ├── routes/
 │   ├── openai.ts            # /v1/chat/completions + /v1/responses handlers
 │   ├── claude.ts            # /claude/v1/messages raw passthrough handler
-│   ├── openaiPassthrough.ts # /openai/v1/responses + /openai/v1/chat/completions raw passthrough handler
+│   ├── openaiPassthrough.ts # /openai/v1/responses + /amp/v1/responses + /openai/v1/chat/completions raw passthrough handler
 │   ├── geminiPassthrough.ts # /google/v1beta/models/* raw passthrough handler
 │   ├── convert.ts           # /convert/* response normalization handlers
 │   ├── anthropic.ts         # /v1/messages handler

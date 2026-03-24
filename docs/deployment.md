@@ -12,7 +12,7 @@ Lumina Gateway runs on Node.js LTS and supports SQLite or PostgreSQL. Use persis
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/claude/*`, `/openai/*`, `/amp/*`, `/google/*`, `/convert/*`, and `/admin/*` routes. |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
@@ -50,7 +50,7 @@ Lumina Gateway runs on Node.js LTS and supports SQLite or PostgreSQL. Use persis
 | `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
-| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses`, `/openai/v1/chat/completions`, and `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses`, `/amp/v1/responses`, `/openai/v1/chat/completions`, and `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
 | `DEFAULT_HEALTHCHECK_MODEL` | *(optional)* | Default model slug used for provider health checks when no per-provider override or query parameter is supplied. |
 | `GATEWAY_BASE_URL` | *(optional)* | Gateway base URL used by the admin dev server proxy. |
 | `PORT` | `3000` | Server listen port. |
@@ -147,7 +147,7 @@ The admin UI can load credentials from the root `.env` file. Set `GATEWAY_API_KE
 
 ## Usage examples
 
-All `/v1/*`, `/claude/*`, `/openai/*`, `/google/*`, `/convert/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Set `JWT_SECRET` to require a user JWT in the header defined by `JWT_HEADER` (default `X-User-Token`).
+All `/v1/*`, `/claude/*`, `/openai/*`, `/amp/*`, `/google/*`, `/convert/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Set `JWT_SECRET` to require a user JWT in the header defined by `JWT_HEADER` (default `X-User-Token`).
 
 The `/metrics` endpoint exposes Prometheus-compatible counters for request volume and latency.
 
@@ -164,6 +164,15 @@ curl http://localhost:3000/v1/responses \
   -H "Content-Type: application/json" \
   -d '{"model":"gpt-5.2","input":"Hello"}'
 ```
+
+```bash [Terminal]
+curl http://localhost:3000/amp/v1/responses \
+  -H "Authorization: Bearer dev-token" \
+  -H "Content-Type: application/json" \
+  -d '{"input":"Hello"}'
+```
+
+`POST /amp/v1/responses` proxies to the same upstream `/responses` endpoint as `/openai/v1/responses`, but injects `model: "gpt-5.4"` when the request omits `model` or sends a blank string.
 
 ```bash [Terminal]
 codex exec \

@@ -168,5 +168,5 @@
 - [x] T-31.0 Update task list and documentation
 - [x] T-31.1 Add `/amp/v1/responses` passthrough alias with default model fallback
 - [x] T-31.2 Add tests for amp alias and middleware coverage
-- [ ] T-31.3 Update docs and API reference for `/amp/v1/responses`
+- [x] T-31.3 Update docs and API reference for `/amp/v1/responses`
 - [ ] T-31.4 ✅ Run `npm run lint && npm run typecheck && npm run test`

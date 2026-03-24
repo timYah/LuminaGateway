@@ -440,6 +440,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GatewayError'
+  /amp/v1/responses:
+    post:
+      summary: Amp passthrough (Responses API)
+      description: Raw passthrough to upstream /responses with failover before first byte. Injects `model: gpt-5.4` when the request omits `model` or sends it as a blank string.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upstream response (raw)
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewayError'
   /claude/messages:
     post:
       summary: Claude passthrough (messages)
