@@ -48,6 +48,7 @@ type OpenAiPassthroughOptions = {
   routePath: string;
   upstreamPath: string;
   clientFormat: OpenAiPassthroughFormat;
+  defaultModel?: string;
 };
 
 function buildGatewayError(message: string): GatewayErrorResponse {
@@ -161,6 +162,44 @@ function buildApiCallError(
   });
 }
 
+function resolveEffectiveRequest(
+  parsedBody: Record<string, unknown>,
+  rawBody: string,
+  defaultModel?: string
+) {
+  const hasModel = Object.prototype.hasOwnProperty.call(parsedBody, "model");
+  const modelValue = parsedBody.model;
+
+  if (hasModel && modelValue !== undefined && typeof modelValue !== "string") {
+    return null;
+  }
+
+  const explicitModel = typeof modelValue === "string" ? modelValue.trim() : "";
+  if (explicitModel) {
+    return {
+      parsedBody,
+      rawBody,
+      modelSlug: explicitModel,
+    };
+  }
+
+  const fallbackModel = defaultModel?.trim() ?? "";
+  if (!fallbackModel) {
+    return null;
+  }
+
+  const effectiveBody = {
+    ...parsedBody,
+    model: fallbackModel,
+  };
+
+  return {
+    parsedBody: effectiveBody,
+    rawBody: JSON.stringify(effectiveBody),
+    modelSlug: fallbackModel,
+  };
+}
+
 export const openaiPassthroughRoutes = new Hono();
 
 async function handleOpenAiPassthroughRequest(
@@ -173,15 +212,19 @@ async function handleOpenAiPassthroughRequest(
     return buildGatewayErrorResponse("Invalid request", 400);
   }
 
-  const modelValue = (parsedBody as { model?: unknown }).model;
-  const modelSlug = typeof modelValue === "string" ? modelValue.trim() : "";
-  if (!modelSlug) {
+  const effectiveRequest = resolveEffectiveRequest(
+    parsedBody as Record<string, unknown>,
+    rawBody,
+    options.defaultModel
+  );
+  if (!effectiveRequest) {
     return buildGatewayErrorResponse("Invalid request", 400);
   }
+  const { parsedBody: effectiveParsedBody, rawBody: effectiveRawBody, modelSlug } = effectiveRequest;
 
   const usageEstimate = estimateUsage(
     options.clientFormat,
-    parsedBody as Record<string, unknown>
+    effectiveParsedBody
   );
 
   const jwtConfig = resolveJwtConfig();
@@ -302,7 +345,7 @@ async function handleOpenAiPassthroughRequest(
       const upstreamResponse = await fetch(upstreamUrl, {
         method: c.req.method,
         headers: buildUpstreamHeaders(c.req.raw.headers, provider.apiKey),
-        body: rawBody,
+        body: effectiveRawBody,
         signal: abortController?.signal,
       });
       if (timeoutId) clearTimeout(timeoutId);
@@ -378,7 +421,12 @@ async function handleOpenAiPassthroughRequest(
       }
 
       const responseBody = await upstreamResponse.text();
-      const error = buildApiCallError(upstreamResponse, upstreamUrl, parsedBody, responseBody);
+      const error = buildApiCallError(
+        upstreamResponse,
+        upstreamUrl,
+        effectiveParsedBody,
+        responseBody
+      );
       const errorType = classifyUpstreamError(error);
       const message = getUpstreamErrorMessage(error);
 
@@ -483,6 +531,15 @@ openaiPassthroughRoutes.post("/openai/v1/responses", (c) =>
     routePath: "/openai/v1/responses",
     upstreamPath: "/responses",
     clientFormat: "openai-responses",
+  })
+);
+
+openaiPassthroughRoutes.post("/amp/v1/responses", (c) =>
+  handleOpenAiPassthroughRequest(c, {
+    routePath: "/amp/v1/responses",
+    upstreamPath: "/responses",
+    clientFormat: "openai-responses",
+    defaultModel: "gpt-5.4",
   })
 );
 
