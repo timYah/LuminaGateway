@@ -163,3 +163,10 @@
 - [x] T-30.0 Update task list and documentation
 - [x] T-30.1 Restore provider routing eligibility after successful health checks
 - [x] T-30.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 31 — Amp Responses Alias
+- [x] T-31.0 Update task list and documentation
+- [ ] T-31.1 Add `/amp/v1/responses` passthrough alias with default model fallback
+- [ ] T-31.2 Add tests for amp alias and middleware coverage
+- [ ] T-31.3 Update docs and API reference for `/amp/v1/responses`
+- [ ] T-31.4 ✅ Run `npm run lint && npm run typecheck && npm run test`

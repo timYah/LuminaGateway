@@ -95,3 +95,4 @@
 ## Decision log
 
 - **2026-03-13**: Bootstrap plan created from `docs/prd.md`. No implementation decisions made yet.
+- **2026-03-24**: Added Phase 31 for Amp compatibility. Scope is limited to `POST /amp/v1/responses` as an OpenAI Responses passthrough alias. Only this route injects the default model `gpt-5.4` when `model` is missing or blank; existing `/openai/*`, `/v1/*`, and `/convert/*` behavior remains unchanged.
