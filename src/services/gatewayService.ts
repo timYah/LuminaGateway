@@ -212,7 +212,7 @@ export async function handleRequest(
   requestContext: GatewayRequestContext = {}
 ): Promise<GatewayResponse> {
   const modelSlug = normalizeOpenAiCompatibleModelSlug(requestParams.model);
-  const { model: _model, ...params } = requestParams;
+  const params = requestParams as UpstreamRequestParams;
   const candidates = await gatewayRouter.getAllCandidates(modelSlug);
   if (candidates.length === 0) {
     return {
@@ -307,7 +307,7 @@ export async function handleStreamingRequest(
   requestContext: GatewayRequestContext = {}
 ): Promise<GatewayStreamingResponse> {
   const modelSlug = normalizeOpenAiCompatibleModelSlug(requestParams.model);
-  const { model: _model, ...params } = requestParams;
+  const params = requestParams as UpstreamRequestParams;
   const candidates = await gatewayRouter.getAllCandidates(modelSlug);
   if (candidates.length === 0) {
     return {
