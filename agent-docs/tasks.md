@@ -191,3 +191,8 @@
 - [x] T-34.2 Persist estimated usage for passthrough and convert HTTP routes
 - [x] T-34.3 Update admin usage UI and API docs for usage source visibility
 - [x] T-34.4 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 35 — Usage Token Unit Formatting
+- [x] T-35.0 Update task list and documentation
+- [ ] T-35.1 Display usage-page token values with `M` / `B` compact units
+- [ ] T-35.2 ✅ Run `npm run lint && npm run typecheck`
