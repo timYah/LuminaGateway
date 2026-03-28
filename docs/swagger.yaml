@@ -218,6 +218,81 @@ components:
         priority:
           type: integer
       required: [providerId, modelSlug, priority]
+    UsageStatsSummary:
+      type: object
+      properties:
+        requestCount:
+          type: integer
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        totalTokens:
+          type: integer
+        totalCost:
+          type: number
+    UsageStatsTrendPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        requestCount:
+          type: integer
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        totalTokens:
+          type: integer
+        totalCost:
+          type: number
+    UsageStatsProviderPoint:
+      type: object
+      properties:
+        providerId:
+          type: integer
+        requestCount:
+          type: integer
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        totalTokens:
+          type: integer
+        totalCost:
+          type: number
+    UsageStatsModelPoint:
+      type: object
+      properties:
+        modelSlug:
+          type: string
+        requestCount:
+          type: integer
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        totalTokens:
+          type: integer
+        totalCost:
+          type: number
+    UsageStatsResponse:
+      type: object
+      properties:
+        summary:
+          $ref: '#/components/schemas/UsageStatsSummary'
+        trend:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageStatsTrendPoint'
+        byProvider:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageStatsProviderPoint'
+        byModel:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageStatsModelPoint'
     ModelPriorityUpdate:
       type: object
       properties:
@@ -983,9 +1058,30 @@ paths:
   /admin/usage/stats:
     get:
       summary: Usage trend and distribution
+      parameters:
+        - name: providerId
+          in: query
+          schema:
+            type: integer
+        - name: modelSlug
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageStatsResponse'
   /admin/request-logs:
     get:
       summary: Request logs

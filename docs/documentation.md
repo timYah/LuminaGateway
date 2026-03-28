@@ -319,7 +319,7 @@ GET    /admin/failure-stats      — get error type distribution for recent requ
 GET    /admin/circuit-breakers   — list open circuit breakers (per model)
 GET    /admin/usage              — query usage logs
 GET    /admin/usage/summary      — usage + cost summary by API key and route
-GET    /admin/usage/stats        — trend + provider/model distribution
+GET    /admin/usage/stats        — token summary + trend + provider/model distribution
 GET    /admin/request-logs       — query request-level logs
 GET    /admin/active-requests     — inspect current in-flight requests
 GET    /admin/config/export      — export providers + settings
@@ -344,7 +344,7 @@ For `new-api`, use the OpenAI-compatible base URL (for example `https://your-new
 
 `GET /admin/usage/summary` returns aggregated usage and estimated cost grouped by API key and route. The estimate uses `DEFAULT_INPUT_PRICE` and `DEFAULT_OUTPUT_PRICE` when they are set.
 
-`GET /admin/usage/stats` returns `{ trend, byProvider, byModel }` for the selected date range. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first. `GET /admin/active-requests` returns `{ activeRequests }` for the requests currently in flight, including the active provider and failover attempt details for each request. Historical request logs now also include `requestId` so current in-flight requests can be correlated with completed provider-attempt logs.
+`GET /admin/usage/stats` supports `providerId`, `modelSlug`, `startDate`, and `endDate`. It returns `{ summary, trend, byProvider, byModel }`, where every aggregate includes `requestCount`, `inputTokens`, `outputTokens`, `totalTokens`, and `totalCost`. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first. `GET /admin/active-requests` returns `{ activeRequests }` for the requests currently in flight, including the active provider and failover attempt details for each request. Historical request logs now also include `requestId` so current in-flight requests can be correlated with completed provider-attempt logs.
 
 `GET /admin/config/export` returns `{ providers, models, settings }` and includes `codexTransform` in each provider entry. The `models` array contains `{ providerId, providerName, modelSlug, priority }`. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode?, modelConflictPolicy? }`, where each model entry may use `providerId` or `providerName`. `mode` is `replace` or `merge`. `modelConflictPolicy` is `overwrite` (default) or `skip` for existing model priority rows.
 

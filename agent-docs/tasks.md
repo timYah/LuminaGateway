@@ -182,5 +182,5 @@
 - [x] T-33.0 Update task list and documentation
 - [x] T-33.1 Add token aggregates to `/admin/usage/stats` and backend coverage
 - [x] T-33.2 Extend `/usage` dashboard to highlight token usage totals and distributions
-- [ ] T-33.3 Update docs and API reference for token usage statistics
+- [x] T-33.3 Update docs and API reference for token usage statistics
 - [ ] T-33.4 ✅ Run `npm run lint && npm run typecheck && npm run test`
