@@ -336,7 +336,7 @@ POST   /admin/config/import      — import providers + settings
 
 `POST /admin/providers/health` accepts an optional `model` query parameter and returns the health results for each provider. A successful probe also restores any recovering provider to routing immediately. `GET /admin/failure-stats` aggregates recent request failures by error type.
 
-When a provider hits a recoverable upstream failure (`quota`, `rate_limit`, `network`, or `server`), Lumina Gateway keeps that provider-model pair out of routing until a recovery probe succeeds. Automatic probes back off on 10s/20s/30s/60s/120s/300s intervals (fixed interval when `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` is set). `GET /admin/providers` includes a `recovery` object for providers currently in this state, with the trigger error type, probe model, next probe time, and the latest failed probe details.
+When a provider hits a recoverable upstream failure (`quota`, `rate_limit`, `network`, or `server`), Lumina Gateway keeps that provider-model pair out of routing until a recovery probe succeeds. Automatic probes back off on 10s/20s/30s/60s/120s/300s intervals (fixed interval when `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` is set). `GET /admin/providers` includes a `recovery` object for providers currently in this state, with `triggerErrorType`, `probeModel`, `startedAt`, `nextProbeAt`, and the latest failed probe details in `lastProbeAt`, `lastProbeErrorType`, and `lastProbeMessage`.
 
 For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 

@@ -175,5 +175,5 @@
 - [x] T-32.0 Update task list and documentation
 - [x] T-32.1 Add recovery probe failure logging and backend coverage
 - [x] T-32.2 Improve provider recovery UI to foreground raw probe errors
-- [ ] T-32.3 Update docs and API reference for recovery probe metadata
+- [x] T-32.3 Update docs and API reference for recovery probe metadata
 - [ ] T-32.4 ✅ Run `npm run lint && npm run typecheck && npm run test`

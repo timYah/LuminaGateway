@@ -35,6 +35,36 @@ components:
         status:
           type: string
       required: [status]
+    ProviderRecovery:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [recovering]
+        triggerErrorType:
+          type: string
+          nullable: true
+        probeModel:
+          type: string
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        nextProbeAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastProbeAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastProbeErrorType:
+          type: string
+          nullable: true
+        lastProbeMessage:
+          type: string
+          nullable: true
     AdminProvider:
       type: object
       properties:
@@ -69,6 +99,8 @@ components:
           type: integer
         healthStatus:
           type: string
+        recovery:
+          $ref: '#/components/schemas/ProviderRecovery'
       required: [name, protocol, baseUrl, apiKey]
     AdminProviderCreate:
       type: object
@@ -699,7 +731,7 @@ paths:
   /admin/providers:
     get:
       summary: List providers
-      description: Returns all configured providers with optional recovery metadata.
+      description: Returns all configured providers with optional recovery metadata including the last probe error type and raw probe message when the provider is recovering.
       responses:
         '200':
           description: OK
