@@ -24,6 +24,8 @@ export type ProviderRecoveryProbeResult =
       ok: false;
       errorType: UpstreamErrorType;
       message: string | null;
+      providerName?: string | null;
+      providerProtocol?: string | null;
     };
 
 export type ProviderRecoveryProbeHandler = (
@@ -232,14 +234,32 @@ export class ProviderRecoveryService {
         if (result.ok) {
           this.entries.delete(key);
         } else {
-          this.recordProbeFailure(entry.providerId, entry.probeModel, result);
+          const nextEntry = this.recordProbeFailure(entry.providerId, entry.probeModel, result);
+          console.warn("[recovery] scheduled probe failed", {
+            providerId: entry.providerId,
+            providerName: result.providerName ?? null,
+            providerProtocol: result.providerProtocol ?? null,
+            probeModel: entry.probeModel,
+            attempt: nextEntry?.attempts ?? entry.attempts + 1,
+            errorType: result.errorType,
+            message: result.message,
+            nextProbeAt: nextEntry?.nextProbeAt.toISOString() ?? null,
+          });
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Recovery probe failed";
-        this.recordProbeFailure(entry.providerId, entry.probeModel, {
+        const nextEntry = this.recordProbeFailure(entry.providerId, entry.probeModel, {
           ok: false,
           errorType: "unknown",
           message,
+        });
+        console.error("[recovery] scheduled probe threw", {
+          providerId: entry.providerId,
+          probeModel: entry.probeModel,
+          attempt: nextEntry?.attempts ?? entry.attempts + 1,
+          errorType: "unknown",
+          message,
+          nextProbeAt: nextEntry?.nextProbeAt.toISOString() ?? null,
         });
       }
     }

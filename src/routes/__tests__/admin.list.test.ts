@@ -67,6 +67,11 @@ describe("admin providers list", () => {
       errorType: "rate_limit",
       probeModel: "gpt-4o",
     });
+    providerRecoveryService.recordProbeFailure(provider!.id, "gpt-4o", {
+      ok: false,
+      errorType: "unknown",
+      message: "unknown provider for model 1",
+    });
 
     const res = await app.request("/admin/providers", {
       headers: authHeader,
@@ -78,6 +83,8 @@ describe("admin providers list", () => {
       state: "recovering",
       triggerErrorType: "rate_limit",
       probeModel: "gpt-4o",
+      lastProbeErrorType: "unknown",
+      lastProbeMessage: "unknown provider for model 1",
     });
   });
 });

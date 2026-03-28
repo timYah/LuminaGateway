@@ -149,5 +149,7 @@ export async function runRecoveryProbe(
     ok: false,
     errorType: result.errorType ?? "unknown",
     message: result.message ?? null,
+    providerName: provider.name,
+    providerProtocol: provider.protocol,
   };
 }

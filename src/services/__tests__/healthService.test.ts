@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkProviderHealth,
+  runRecoveryProbe,
   runProvidersHealthCheck,
 } from "../healthService";
 
@@ -148,5 +149,33 @@ describe("healthService", () => {
     expect(results).toHaveLength(1);
     expect(results[0].providerId).toBe(provider.id);
     expect(updateProviderHealth).toHaveBeenCalledWith(provider.id, "healthy");
+  });
+
+  it("includes provider context in recovery probe failures", async () => {
+    getProviderById.mockResolvedValue(provider);
+    callUpstreamNonStreaming.mockRejectedValue(new Error("boom"));
+    classifyUpstreamError.mockReturnValue("unknown");
+    getUpstreamErrorMessage.mockReturnValue("unknown provider for model 1");
+
+    const result = await runRecoveryProbe({
+      providerId: provider.id,
+      triggerErrorType: "server",
+      probeModel: "gpt-4o",
+      startedAt: new Date("2026-03-28T09:00:00.000Z"),
+      nextProbeAt: new Date("2026-03-28T09:05:00.000Z"),
+      lastProbeAt: null,
+      lastProbeErrorType: null,
+      lastProbeMessage: null,
+      intervalMs: 10_000,
+      attempts: 0,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      errorType: "unknown",
+      message: "unknown provider for model 1",
+      providerName: "Health Provider",
+      providerProtocol: "openai",
+    });
   });
 });
