@@ -226,7 +226,12 @@ describe("claude passthrough routes", () => {
       stream: false,
       metadata: { source: "claude-sdk" },
     });
-    const upstreamBody = JSON.stringify({ id: "msg_1", type: "message", role: "assistant" });
+    const upstreamBody = JSON.stringify({
+      id: "msg_1",
+      type: "message",
+      role: "assistant",
+      content: [{ type: "text", text: "Hello" }],
+    });
     fetchMock.mockResolvedValueOnce(
       new Response(upstreamBody, {
         status: 200,
@@ -270,7 +275,7 @@ describe("claude passthrough routes", () => {
         provider: anthropicProvider,
         modelSlug: "claude-sonnet-4-20250514",
         inputTokens: 2,
-        outputTokens: 0,
+        outputTokens: 2,
         routePath: "/claude/v1/messages",
         requestId: expect.any(String),
         costUsd: 0,

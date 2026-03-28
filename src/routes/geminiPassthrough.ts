@@ -9,10 +9,16 @@ import { extractJwtIdentity, resolveJwtConfig, verifyJwt } from "../services/jwt
 import { applyProviderFailurePolicy } from "../services/providerFailurePolicy";
 import { createRequestLog } from "../services/requestLogService";
 import { wrapStreamWithFinalizer } from "../services/streamUtils";
-import { estimateUsage } from "../services/requestEstimator";
+import {
+  collectEstimatedOutputTokensFromStream,
+  estimateUsage,
+} from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
-import { persistEstimatedUsageLog } from "../services/usageLogService";
+import {
+  persistEstimatedUsageLog,
+  resolveUsageCost,
+} from "../services/usageLogService";
 import { recordUsage } from "../services/usageSummaryService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
@@ -149,6 +155,28 @@ async function persistEstimatedUsageSafe(
   } catch (error) {
     console.error("[gemini] usage log failed", error);
   }
+}
+
+function buildEstimatedUsageInput(
+  provider: Provider,
+  modelSlug: string,
+  inputTokens: number,
+  outputTokens: number,
+  routePath: string,
+  requestId: string
+): Parameters<typeof persistEstimatedUsageLog>[0] {
+  return {
+    provider,
+    modelSlug,
+    inputTokens,
+    outputTokens,
+    routePath,
+    requestId,
+    costUsd: resolveUsageCost(provider, {
+      inputTokens,
+      outputTokens,
+    }),
+  };
 }
 
 function buildApiCallError(
@@ -321,15 +349,16 @@ geminiPassthroughRoutes.post("/google/v1beta/models/*", async (c) => {
         const responseBody = upstreamResponse.body;
         const headers = filterResponseHeaders(upstreamResponse.headers);
         if (!responseBody) {
-          await persistEstimatedUsageSafe({
-            provider,
-            modelSlug,
-            inputTokens: usageEstimate.inputTokens,
-            outputTokens: usageEstimate.outputTokens,
-            routePath,
-            requestId,
-            costUsd: usageEstimate.estimatedCostUsd,
-          });
+          await persistEstimatedUsageSafe(
+            buildEstimatedUsageInput(
+              provider,
+              modelSlug,
+              usageEstimate.inputTokens,
+              0,
+              routePath,
+              requestId
+            )
+          );
           await recordRequestLogSafe({
             providerId: provider.id,
             requestId,
@@ -344,18 +373,26 @@ geminiPassthroughRoutes.post("/google/v1beta/models/*", async (c) => {
             headers,
           });
         }
+        const [clientBody, captureBody] = responseBody.tee();
+        const outputTokensPromise = collectEstimatedOutputTokensFromStream(
+          "gemini",
+          captureBody,
+          upstreamResponse.headers.get("content-type")
+        );
         return new Response(
-          wrapStreamWithFinalizer(responseBody, {
+          wrapStreamWithFinalizer(clientBody, {
             onComplete: async () => {
-              await persistEstimatedUsageSafe({
-                provider,
-                modelSlug,
-                inputTokens: usageEstimate.inputTokens,
-                outputTokens: usageEstimate.outputTokens,
-                routePath,
-                requestId,
-                costUsd: usageEstimate.estimatedCostUsd,
-              });
+              const outputTokens = await outputTokensPromise;
+              await persistEstimatedUsageSafe(
+                buildEstimatedUsageInput(
+                  provider,
+                  modelSlug,
+                  usageEstimate.inputTokens,
+                  outputTokens,
+                  routePath,
+                  requestId
+                )
+              );
               await recordRequestLogSafe({
                 providerId: provider.id,
                 requestId,

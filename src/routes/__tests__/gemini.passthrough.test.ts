@@ -223,7 +223,15 @@ describe("gemini passthrough route", () => {
       stream: false,
       metadata: { source: "gemini" },
     });
-    const upstreamBody = JSON.stringify({ id: "resp_1", status: "completed" });
+    const upstreamBody = JSON.stringify({
+      candidates: [
+        {
+          content: {
+            parts: [{ text: "Hello" }],
+          },
+        },
+      ],
+    });
     fetchMock.mockResolvedValueOnce(
       new Response(upstreamBody, {
         status: 200,
@@ -266,7 +274,7 @@ describe("gemini passthrough route", () => {
         provider: providerA,
         modelSlug: "gemini-1.5-pro",
         inputTokens: 2,
-        outputTokens: 0,
+        outputTokens: 2,
         routePath: geminiPath,
         requestId: expect.any(String),
         costUsd: 0,

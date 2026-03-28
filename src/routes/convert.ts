@@ -10,12 +10,19 @@ import { gatewayInflightLimiter } from "../services/inflightService";
 import { extractJwtIdentity, resolveJwtConfig, verifyJwt } from "../services/jwtService";
 import { applyProviderFailurePolicy } from "../services/providerFailurePolicy";
 import { createRequestLog } from "../services/requestLogService";
-import { estimateUsage } from "../services/requestEstimator";
+import {
+  collectEstimatedOutputTokensFromStream,
+  estimateOutputTokensFromResponseBody,
+  estimateUsage,
+} from "../services/requestEstimator";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
 import { recordUsage } from "../services/usageSummaryService";
 import { wrapStreamWithFinalizer } from "../services/streamUtils";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
-import { persistEstimatedUsageLog } from "../services/usageLogService";
+import {
+  persistEstimatedUsageLog,
+  resolveUsageCost,
+} from "../services/usageLogService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
 import { resolveRequestId } from "../utils/requestContext";
@@ -234,6 +241,28 @@ async function persistEstimatedUsageSafe(
   }
 }
 
+function buildEstimatedUsageInput(
+  provider: Provider,
+  modelSlug: string,
+  inputTokens: number,
+  outputTokens: number,
+  routePath: string,
+  requestId: string
+): Parameters<typeof persistEstimatedUsageLog>[0] {
+  return {
+    provider,
+    modelSlug,
+    inputTokens,
+    outputTokens,
+    routePath,
+    requestId,
+    costUsd: resolveUsageCost(provider, {
+      inputTokens,
+      outputTokens,
+    }),
+  };
+}
+
 function buildApiCallError(
   response: Response,
   url: string,
@@ -404,15 +433,16 @@ function createConvertHandler(options: ConvertRouteOptions) {
 
           if (!contentType.includes("application/json")) {
             if (!responseBody) {
-              await persistEstimatedUsageSafe({
-                provider,
-                modelSlug,
-                inputTokens: usageEstimate.inputTokens,
-                outputTokens: usageEstimate.outputTokens,
-                routePath,
-                requestId,
-                costUsd: usageEstimate.estimatedCostUsd,
-              });
+              await persistEstimatedUsageSafe(
+                buildEstimatedUsageInput(
+                  provider,
+                  modelSlug,
+                  usageEstimate.inputTokens,
+                  0,
+                  routePath,
+                  requestId
+                )
+              );
               await recordRequestLogSafe({
                 providerId: provider.id,
                 requestId,
@@ -428,18 +458,27 @@ function createConvertHandler(options: ConvertRouteOptions) {
               });
             }
 
+            const [clientBody, captureBody] = responseBody.tee();
+            const outputTokensPromise = collectEstimatedOutputTokensFromStream(
+              options.targetFormat,
+              captureBody,
+              contentType
+            );
+
             return new Response(
-              wrapStreamWithFinalizer(responseBody, {
+              wrapStreamWithFinalizer(clientBody, {
                 onComplete: async () => {
-                  await persistEstimatedUsageSafe({
-                    provider,
-                    modelSlug,
-                    inputTokens: usageEstimate.inputTokens,
-                    outputTokens: usageEstimate.outputTokens,
-                    routePath,
-                    requestId,
-                    costUsd: usageEstimate.estimatedCostUsd,
-                  });
+                  const outputTokens = await outputTokensPromise;
+                  await persistEstimatedUsageSafe(
+                    buildEstimatedUsageInput(
+                      provider,
+                      modelSlug,
+                      usageEstimate.inputTokens,
+                      outputTokens,
+                      routePath,
+                      requestId
+                    )
+                  );
                   await recordRequestLogSafe({
                     providerId: provider.id,
                     requestId,
@@ -512,15 +551,21 @@ function createConvertHandler(options: ConvertRouteOptions) {
             result: "success",
             latencyMs: Date.now() - start,
           });
-          await persistEstimatedUsageSafe({
-            provider,
-            modelSlug,
-            inputTokens: usageEstimate.inputTokens,
-            outputTokens: usageEstimate.outputTokens,
-            routePath,
-            requestId,
-            costUsd: usageEstimate.estimatedCostUsd,
-          });
+          const outputTokens = estimateOutputTokensFromResponseBody(
+            options.targetFormat,
+            JSON.stringify(converted.body),
+            "application/json"
+          );
+          await persistEstimatedUsageSafe(
+            buildEstimatedUsageInput(
+              provider,
+              modelSlug,
+              usageEstimate.inputTokens,
+              outputTokens,
+              routePath,
+              requestId
+            )
+          );
 
           release();
           activeRequestService.finishRequest(requestId);

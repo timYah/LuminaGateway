@@ -13,11 +13,15 @@ import { activeRequestService } from "../services/activeRequestService";
 import { wrapStreamWithFinalizer } from "../services/streamUtils";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
-import { persistEstimatedUsageLog } from "../services/usageLogService";
+import {
+  persistEstimatedUsageLog,
+  resolveUsageCost,
+} from "../services/usageLogService";
 import { recordUsage } from "../services/usageSummaryService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
 import { resolveRequestId } from "../utils/requestContext";
+import { collectEstimatedOutputTokensFromStream } from "../services/requestEstimator";
 
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
@@ -147,6 +151,28 @@ async function persistEstimatedUsageSafe(
   } catch (error) {
     console.error("[claude] usage log failed", error);
   }
+}
+
+function buildEstimatedUsageInput(
+  provider: Provider,
+  modelSlug: string,
+  inputTokens: number,
+  outputTokens: number,
+  routePath: string,
+  requestId: string
+): Parameters<typeof persistEstimatedUsageLog>[0] {
+  return {
+    provider,
+    modelSlug,
+    inputTokens,
+    outputTokens,
+    routePath,
+    requestId,
+    costUsd: resolveUsageCost(provider, {
+      inputTokens,
+      outputTokens,
+    }),
+  };
 }
 
 function buildApiCallError(
@@ -317,15 +343,16 @@ async function handleClaudeMessagesRequest(c: Context) {
         const responseBody = upstreamResponse.body;
         const headers = filterResponseHeaders(upstreamResponse.headers);
         if (!responseBody) {
-          await persistEstimatedUsageSafe({
-            provider,
-            modelSlug,
-            inputTokens: usageEstimate.inputTokens,
-            outputTokens: usageEstimate.outputTokens,
-            routePath,
-            requestId,
-            costUsd: usageEstimate.estimatedCostUsd,
-          });
+          await persistEstimatedUsageSafe(
+            buildEstimatedUsageInput(
+              provider,
+              modelSlug,
+              usageEstimate.inputTokens,
+              0,
+              routePath,
+              requestId
+            )
+          );
           await recordRequestLogSafe({
             providerId: provider.id,
             requestId,
@@ -340,18 +367,26 @@ async function handleClaudeMessagesRequest(c: Context) {
             headers,
           });
         }
+        const [clientBody, captureBody] = responseBody.tee();
+        const outputTokensPromise = collectEstimatedOutputTokensFromStream(
+          "anthropic",
+          captureBody,
+          upstreamResponse.headers.get("content-type")
+        );
         return new Response(
-          wrapStreamWithFinalizer(responseBody, {
+          wrapStreamWithFinalizer(clientBody, {
             onComplete: async () => {
-              await persistEstimatedUsageSafe({
-                provider,
-                modelSlug,
-                inputTokens: usageEstimate.inputTokens,
-                outputTokens: usageEstimate.outputTokens,
-                routePath,
-                requestId,
-                costUsd: usageEstimate.estimatedCostUsd,
-              });
+              const outputTokens = await outputTokensPromise;
+              await persistEstimatedUsageSafe(
+                buildEstimatedUsageInput(
+                  provider,
+                  modelSlug,
+                  usageEstimate.inputTokens,
+                  outputTokens,
+                  routePath,
+                  requestId
+                )
+              );
               await recordRequestLogSafe({
                 providerId: provider.id,
                 requestId,

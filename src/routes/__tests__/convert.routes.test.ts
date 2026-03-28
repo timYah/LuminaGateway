@@ -159,7 +159,7 @@ describe("convert routes", () => {
         provider: openaiProvider,
         modelSlug: "gpt-5.2",
         inputTokens: 0,
-        outputTokens: 0,
+        outputTokens: 2,
         routePath: "/convert/openai/v1/responses",
         requestId: expect.any(String),
         costUsd: 0,

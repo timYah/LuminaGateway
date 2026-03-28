@@ -328,7 +328,11 @@ describe("openai passthrough route", () => {
       stream: false,
       metadata: { source: "openai" },
     });
-    const upstreamBody = JSON.stringify({ id: "resp_1", status: "completed" });
+    const upstreamBody = JSON.stringify({
+      id: "resp_1",
+      status: "completed",
+      output_text: "Hello",
+    });
     fetchMock.mockResolvedValueOnce(
       new Response(upstreamBody, {
         status: 200,
@@ -367,7 +371,7 @@ describe("openai passthrough route", () => {
         provider: providerA,
         modelSlug: "gpt-5.2",
         inputTokens: 2,
-        outputTokens: 0,
+        outputTokens: 2,
         routePath: "/openai/v1/responses",
         requestId: expect.any(String),
         costUsd: 0,
