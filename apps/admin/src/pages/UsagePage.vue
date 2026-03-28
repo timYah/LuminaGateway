@@ -31,22 +31,40 @@ type UsageResponse = {
 type UsageTrendPoint = {
   date: string;
   requestCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
   totalCost: number;
 };
 
 type UsageProviderStat = {
   providerId: number;
   requestCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
   totalCost: number;
 };
 
 type UsageModelStat = {
   modelSlug: string;
   requestCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  totalCost: number;
+};
+
+type UsageStatsSummary = {
+  requestCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
   totalCost: number;
 };
 
 type UsageStatsResponse = {
+  summary: UsageStatsSummary;
   trend: UsageTrendPoint[];
   byProvider: UsageProviderStat[];
   byModel: UsageModelStat[];
@@ -101,6 +119,12 @@ const query = computed(() => {
 
 const statsQuery = computed(() => {
   const payload: Record<string, string> = {};
+  if (filters.providerId !== ALL_PROVIDERS) {
+    payload.providerId = filters.providerId;
+  }
+  if (filters.modelSlug.trim()) {
+    payload.modelSlug = filters.modelSlug.trim();
+  }
   if (filters.startDate) payload.startDate = filters.startDate;
   if (filters.endDate) payload.endDate = filters.endDate;
   return payload;
@@ -128,6 +152,17 @@ const {
 
 const rows = computed(() => data.value?.usage ?? []);
 const empty = computed(() => !pending.value && rows.value.length === 0);
+const summary = computed<UsageStatsSummary>(() => {
+  return (
+    statsData.value?.summary ?? {
+      requestCount: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      totalCost: 0,
+    }
+  );
+});
 const trend = computed(() => statsData.value?.trend ?? []);
 const providerStats = computed(() => statsData.value?.byProvider ?? []);
 const modelStats = computed(() => statsData.value?.byModel ?? []);
@@ -138,13 +173,13 @@ const providerNameMap = computed(() => {
 });
 
 const maxTrend = computed(() =>
-  trend.value.reduce((max, item) => Math.max(max, item.requestCount), 0)
+  trend.value.reduce((max, item) => Math.max(max, item.totalTokens), 0)
 );
 const maxProvider = computed(() =>
-  providerStats.value.reduce((max, item) => Math.max(max, item.requestCount), 0)
+  providerStats.value.reduce((max, item) => Math.max(max, item.totalTokens), 0)
 );
 const maxModel = computed(() =>
-  modelStats.value.reduce((max, item) => Math.max(max, item.requestCount), 0)
+  modelStats.value.reduce((max, item) => Math.max(max, item.totalTokens), 0)
 );
 
 const ratio = (value: number, maxValue: number) => {
@@ -213,6 +248,7 @@ const formatShortDate = (value: string) => {
 };
 
 const formatCost = (value: number) => value.toFixed(4);
+const formatInteger = (value: number) => new Intl.NumberFormat("en-US").format(value);
 
 const refreshAll = async () => {
   await execute();
@@ -286,6 +322,56 @@ watch(
         </div>
 
         <div v-else class="grid gap-3">
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div class="metric-card p-3 space-y-1">
+              <div class="text-xs uppercase tracking-[0.18em] text-slate-500">
+                {{ $t("usage.dashboard.summary.totalTokens") }}
+              </div>
+              <div class="text-2xl font-semibold text-slate-950 mono-numbers">
+                {{ formatInteger(summary.totalTokens) }}
+              </div>
+              <div class="text-[11px] text-slate-500">
+                {{ formatInteger(summary.requestCount) }}
+                {{ $t("usage.dashboard.requests") }}
+              </div>
+            </div>
+            <div class="metric-card p-3 space-y-1">
+              <div class="text-xs uppercase tracking-[0.18em] text-slate-500">
+                {{ $t("usage.dashboard.summary.inputTokens") }}
+              </div>
+              <div class="text-2xl font-semibold text-slate-950 mono-numbers">
+                {{ formatInteger(summary.inputTokens) }}
+              </div>
+            </div>
+            <div class="metric-card p-3 space-y-1">
+              <div class="text-xs uppercase tracking-[0.18em] text-slate-500">
+                {{ $t("usage.dashboard.summary.outputTokens") }}
+              </div>
+              <div class="text-2xl font-semibold text-slate-950 mono-numbers">
+                {{ formatInteger(summary.outputTokens) }}
+              </div>
+            </div>
+            <div class="metric-card p-3 space-y-1">
+              <div class="text-xs uppercase tracking-[0.18em] text-slate-500">
+                {{ $t("usage.dashboard.summary.cost") }}
+              </div>
+              <div class="text-2xl font-semibold text-slate-950 mono-numbers">
+                ${{ formatCost(summary.totalCost) }}
+              </div>
+            </div>
+            <div class="metric-card p-3 space-y-1">
+              <div class="text-xs uppercase tracking-[0.18em] text-slate-500">
+                {{ $t("usage.dashboard.summary.ioRatio") }}
+              </div>
+              <div class="text-sm font-medium text-slate-900 mono-numbers">
+                {{ formatInteger(summary.inputTokens) }} / {{ formatInteger(summary.outputTokens) }}
+              </div>
+              <div class="text-[11px] text-slate-500">
+                {{ $t("usage.dashboard.summary.ioRatioHint") }}
+              </div>
+            </div>
+          </div>
+
           <div class="metric-card p-3 space-y-2">
             <div class="text-sm font-medium text-slate-900">
               {{ $t("usage.dashboard.trend") }}
@@ -302,17 +388,23 @@ watch(
                 <div class="flex items-center justify-between text-xs text-slate-600">
                   <span>{{ formatShortDate(item.date) }}</span>
                   <span class="mono-numbers">
-                    {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                    {{ formatInteger(item.totalTokens) }} {{ $t("usage.dashboard.tokens") }}
                   </span>
                 </div>
                 <div class="metric-card__bar">
                   <div
                     class="metric-card__bar-fill"
-                    :style="{ width: ratio(item.requestCount, maxTrend) }"
+                    :style="{ width: ratio(item.totalTokens, maxTrend) }"
                   ></div>
                 </div>
-                <div class="text-[11px] text-slate-500 mono-numbers">
-                  ${{ formatCost(item.totalCost) }}
+                <div class="flex items-center justify-between gap-3 text-[11px] text-slate-500 mono-numbers">
+                  <span>
+                    {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                  </span>
+                  <span>
+                    {{ formatInteger(item.inputTokens) }} / {{ formatInteger(item.outputTokens) }}
+                  </span>
+                  <span>${{ formatCost(item.totalCost) }}</span>
                 </div>
               </div>
             </div>
@@ -335,17 +427,23 @@ watch(
                   <div class="flex items-center justify-between text-xs text-slate-600">
                     <span>{{ providerNameMap.get(item.providerId) ?? item.providerId }}</span>
                     <span class="mono-numbers">
-                      {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                      {{ formatInteger(item.totalTokens) }} {{ $t("usage.dashboard.tokens") }}
                     </span>
                   </div>
                   <div class="metric-card__bar">
                     <div
                       class="metric-card__bar-fill"
-                      :style="{ width: ratio(item.requestCount, maxProvider) }"
+                      :style="{ width: ratio(item.totalTokens, maxProvider) }"
                     ></div>
                   </div>
-                  <div class="text-[11px] text-slate-500 mono-numbers">
-                    ${{ formatCost(item.totalCost) }}
+                  <div class="flex items-center justify-between gap-3 text-[11px] text-slate-500 mono-numbers">
+                    <span>
+                      {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                    </span>
+                    <span>
+                      {{ formatInteger(item.inputTokens) }} / {{ formatInteger(item.outputTokens) }}
+                    </span>
+                    <span>${{ formatCost(item.totalCost) }}</span>
                   </div>
                 </div>
               </div>
@@ -367,17 +465,23 @@ watch(
                   <div class="flex items-center justify-between text-xs text-slate-600">
                     <span>{{ item.modelSlug }}</span>
                     <span class="mono-numbers">
-                      {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                      {{ formatInteger(item.totalTokens) }} {{ $t("usage.dashboard.tokens") }}
                     </span>
                   </div>
                   <div class="metric-card__bar">
                     <div
                       class="metric-card__bar-fill"
-                      :style="{ width: ratio(item.requestCount, maxModel) }"
+                      :style="{ width: ratio(item.totalTokens, maxModel) }"
                     ></div>
                   </div>
-                  <div class="text-[11px] text-slate-500 mono-numbers">
-                    ${{ formatCost(item.totalCost) }}
+                  <div class="flex items-center justify-between gap-3 text-[11px] text-slate-500 mono-numbers">
+                    <span>
+                      {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
+                    </span>
+                    <span>
+                      {{ formatInteger(item.inputTokens) }} / {{ formatInteger(item.outputTokens) }}
+                    </span>
+                    <span>${{ formatCost(item.totalCost) }}</span>
                   </div>
                 </div>
               </div>
