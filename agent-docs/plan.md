@@ -96,3 +96,5 @@
 
 - **2026-03-13**: Bootstrap plan created from `docs/prd.md`. No implementation decisions made yet.
 - **2026-03-24**: Added Phase 31 for Amp compatibility. Scope is limited to `POST /amp/v1/responses` as an OpenAI Responses passthrough alias. Only this route injects the default model `gpt-5.4` when `model` is missing or blank; existing `/openai/*`, `/v1/*`, and `/convert/*` behavior remains unchanged.
+- **2026-03-28**: Added Phase 32 for recovery probe error visibility. The fix is observability-only: preserve the current recovery data model, add explicit backend logs for scheduled recovery probe failures, and make the admin UI foreground `lastProbeMessage` when available. Root-cause fixes for specific upstream/provider mismatch errors remain out of scope for this phase.
+- **2026-03-24**: Added Phase 31 for Amp compatibility. Scope is limited to `POST /amp/v1/responses` as an OpenAI Responses passthrough alias. Only this route injects the default model `gpt-5.4` when `model` is missing or blank; existing `/openai/*`, `/v1/*`, and `/convert/*` behavior remains unchanged.
