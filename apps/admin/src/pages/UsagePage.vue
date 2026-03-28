@@ -252,6 +252,21 @@ const formatShortDate = (value: string) => {
 
 const formatCost = (value: number) => value.toFixed(4);
 const formatInteger = (value: number) => new Intl.NumberFormat("en-US").format(value);
+const formatTokenCompact = (value: number) => {
+  if (Math.abs(value) < 1_000_000) {
+    return formatInteger(value);
+  }
+
+  const unit = Math.abs(value) >= 1_000_000_000 ? "B" : "M";
+  const divisor = unit === "B" ? 1_000_000_000 : 1_000_000;
+  const scaled = value / divisor;
+  const minimumFractionDigits = Math.abs(scaled) < 10 ? 1 : 0;
+  const formatted = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits,
+    maximumFractionDigits: 1,
+  }).format(scaled);
+  return `${formatted}${unit}`;
+};
 const formatUsageSource = (value: UsageRow["usageSource"]) => t(`usage.source.${value}`);
 const usageSourceBadgeClass = (value: UsageRow["usageSource"]) =>
   value === "actual"
@@ -336,7 +351,7 @@ watch(
                 {{ $t("usage.dashboard.summary.totalTokens") }}
               </div>
               <div class="text-2xl font-semibold text-slate-950 mono-numbers">
-                {{ formatInteger(summary.totalTokens) }}
+                {{ formatTokenCompact(summary.totalTokens) }}
               </div>
               <div class="text-[11px] text-slate-500">
                 {{ formatInteger(summary.requestCount) }}
@@ -348,7 +363,7 @@ watch(
                 {{ $t("usage.dashboard.summary.inputTokens") }}
               </div>
               <div class="text-2xl font-semibold text-slate-950 mono-numbers">
-                {{ formatInteger(summary.inputTokens) }}
+                {{ formatTokenCompact(summary.inputTokens) }}
               </div>
             </div>
             <div class="metric-card p-3 space-y-1">
@@ -356,7 +371,7 @@ watch(
                 {{ $t("usage.dashboard.summary.outputTokens") }}
               </div>
               <div class="text-2xl font-semibold text-slate-950 mono-numbers">
-                {{ formatInteger(summary.outputTokens) }}
+                {{ formatTokenCompact(summary.outputTokens) }}
               </div>
             </div>
             <div class="metric-card p-3 space-y-1">
@@ -372,7 +387,7 @@ watch(
                 {{ $t("usage.dashboard.summary.ioRatio") }}
               </div>
               <div class="text-sm font-medium text-slate-900 mono-numbers">
-                {{ formatInteger(summary.inputTokens) }} / {{ formatInteger(summary.outputTokens) }}
+                {{ formatTokenCompact(summary.inputTokens) }} / {{ formatTokenCompact(summary.outputTokens) }}
               </div>
               <div class="text-[11px] text-slate-500">
                 {{ $t("usage.dashboard.summary.ioRatioHint") }}
@@ -396,7 +411,7 @@ watch(
                 <div class="flex items-center justify-between text-xs text-slate-600">
                   <span>{{ formatShortDate(item.date) }}</span>
                   <span class="mono-numbers">
-                    {{ formatInteger(item.totalTokens) }} {{ $t("usage.dashboard.tokens") }}
+                    {{ formatTokenCompact(item.totalTokens) }} {{ $t("usage.dashboard.tokens") }}
                   </span>
                 </div>
                 <div class="metric-card__bar">
@@ -410,7 +425,7 @@ watch(
                     {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
                   </span>
                   <span>
-                    {{ formatInteger(item.inputTokens) }} / {{ formatInteger(item.outputTokens) }}
+                    {{ formatTokenCompact(item.inputTokens) }} / {{ formatTokenCompact(item.outputTokens) }}
                   </span>
                   <span>${{ formatCost(item.totalCost) }}</span>
                 </div>
@@ -435,7 +450,7 @@ watch(
                   <div class="flex items-center justify-between text-xs text-slate-600">
                     <span>{{ providerNameMap.get(item.providerId) ?? item.providerId }}</span>
                     <span class="mono-numbers">
-                      {{ formatInteger(item.totalTokens) }} {{ $t("usage.dashboard.tokens") }}
+                      {{ formatTokenCompact(item.totalTokens) }} {{ $t("usage.dashboard.tokens") }}
                     </span>
                   </div>
                   <div class="metric-card__bar">
@@ -449,7 +464,7 @@ watch(
                       {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
                     </span>
                     <span>
-                      {{ formatInteger(item.inputTokens) }} / {{ formatInteger(item.outputTokens) }}
+                      {{ formatTokenCompact(item.inputTokens) }} / {{ formatTokenCompact(item.outputTokens) }}
                     </span>
                     <span>${{ formatCost(item.totalCost) }}</span>
                   </div>
@@ -473,7 +488,7 @@ watch(
                   <div class="flex items-center justify-between text-xs text-slate-600">
                     <span>{{ item.modelSlug }}</span>
                     <span class="mono-numbers">
-                      {{ formatInteger(item.totalTokens) }} {{ $t("usage.dashboard.tokens") }}
+                      {{ formatTokenCompact(item.totalTokens) }} {{ $t("usage.dashboard.tokens") }}
                     </span>
                   </div>
                   <div class="metric-card__bar">
@@ -487,7 +502,7 @@ watch(
                       {{ item.requestCount }} {{ $t("usage.dashboard.requests") }}
                     </span>
                     <span>
-                      {{ formatInteger(item.inputTokens) }} / {{ formatInteger(item.outputTokens) }}
+                      {{ formatTokenCompact(item.inputTokens) }} / {{ formatTokenCompact(item.outputTokens) }}
                     </span>
                     <span>${{ formatCost(item.totalCost) }}</span>
                   </div>
@@ -724,10 +739,10 @@ watch(
                   </div>
                 </td>
                 <td class="hidden py-2.5 pr-4 align-top mono-numbers text-slate-900 lg:table-cell">
-                  {{ row.inputTokens }}
+                  {{ formatTokenCompact(row.inputTokens) }}
                 </td>
                 <td class="hidden py-2.5 pr-4 align-top mono-numbers text-slate-900 lg:table-cell">
-                  {{ row.outputTokens }}
+                  {{ formatTokenCompact(row.outputTokens) }}
                 </td>
                 <td class="py-2.5 pr-4 align-top mono-numbers text-slate-900">
                   {{ row.cost.toFixed(4) }}
