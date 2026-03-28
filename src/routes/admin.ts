@@ -576,9 +576,15 @@ adminRoutes.get("/admin/usage", async (c) => {
 
 adminRoutes.get("/admin/usage/stats", async (c) => {
   const db = getSqliteClient();
-  const { startDate, endDate } = c.req.query();
+  const { providerId, modelSlug, startDate, endDate } = c.req.query();
   const conditions = [];
 
+  if (providerId) {
+    conditions.push(eq(usageLogs.providerId, Number(providerId)));
+  }
+  if (modelSlug) {
+    conditions.push(eq(usageLogs.modelSlug, modelSlug));
+  }
   if (startDate) {
     const date = new Date(startDate);
     if (!Number.isNaN(date.valueOf())) {
@@ -594,12 +600,31 @@ adminRoutes.get("/admin/usage/stats", async (c) => {
 
   const dateExpr = sql<string>`date(${usageLogs.createdAt}, 'unixepoch')`;
   const totalCost = sql<number>`coalesce(sum(${usageLogs.cost}), 0)`;
+  const inputTokens = sql<number>`coalesce(sum(${usageLogs.inputTokens}), 0)`;
+  const outputTokens = sql<number>`coalesce(sum(${usageLogs.outputTokens}), 0)`;
+  const totalTokens = sql<number>`coalesce(sum(${usageLogs.inputTokens} + ${usageLogs.outputTokens}), 0)`;
   const requestCount = sql<number>`count(*)`;
+
+  const summaryBase = db
+    .select({
+      requestCount: requestCount.as("requestCount"),
+      inputTokens: inputTokens.as("inputTokens"),
+      outputTokens: outputTokens.as("outputTokens"),
+      totalTokens: totalTokens.as("totalTokens"),
+      totalCost: totalCost.as("totalCost"),
+    })
+    .from(usageLogs);
+  const [summary] = await (conditions.length > 0
+    ? summaryBase.where(and(...conditions))
+    : summaryBase);
 
   const trendBase = db
     .select({
       date: dateExpr.as("date"),
       requestCount: requestCount.as("requestCount"),
+      inputTokens: inputTokens.as("inputTokens"),
+      outputTokens: outputTokens.as("outputTokens"),
+      totalTokens: totalTokens.as("totalTokens"),
       totalCost: totalCost.as("totalCost"),
     })
     .from(usageLogs);
@@ -613,6 +638,9 @@ adminRoutes.get("/admin/usage/stats", async (c) => {
     .select({
       providerId: usageLogs.providerId,
       requestCount: requestCount.as("requestCount"),
+      inputTokens: inputTokens.as("inputTokens"),
+      outputTokens: outputTokens.as("outputTokens"),
+      totalTokens: totalTokens.as("totalTokens"),
       totalCost: totalCost.as("totalCost"),
     })
     .from(usageLogs);
@@ -626,6 +654,9 @@ adminRoutes.get("/admin/usage/stats", async (c) => {
     .select({
       modelSlug: usageLogs.modelSlug,
       requestCount: requestCount.as("requestCount"),
+      inputTokens: inputTokens.as("inputTokens"),
+      outputTokens: outputTokens.as("outputTokens"),
+      totalTokens: totalTokens.as("totalTokens"),
       totalCost: totalCost.as("totalCost"),
     })
     .from(usageLogs);
@@ -635,7 +666,18 @@ adminRoutes.get("/admin/usage/stats", async (c) => {
     .groupBy(usageLogs.modelSlug)
     .orderBy(desc(totalCost));
 
-  return c.json({ trend, byProvider, byModel });
+  return c.json({
+    summary: summary ?? {
+      requestCount: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      totalCost: 0,
+    },
+    trend,
+    byProvider,
+    byModel,
+  });
 });
 
 adminRoutes.get("/admin/request-logs", async (c) => {
