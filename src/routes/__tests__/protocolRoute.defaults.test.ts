@@ -86,4 +86,32 @@ describe("protocol route default params", () => {
       expect.objectContaining({ requestId: expect.any(String) })
     );
   });
+
+  it("normalizes prefixed openai models for non-streaming requests", async () => {
+    const app = createApp();
+    await app.request("/v1/test", {
+      method: "POST",
+      body: JSON.stringify({ model: "openai/gpt-5.4" }),
+    });
+
+    expect(handleRequest).toHaveBeenCalledWith(
+      { model: "gpt-5.4", temperature: undefined },
+      "openai",
+      expect.objectContaining({ requestId: expect.any(String) })
+    );
+  });
+
+  it("normalizes prefixed openai models for streaming requests", async () => {
+    const app = createApp();
+    await app.request("/v1/test", {
+      method: "POST",
+      body: JSON.stringify({ model: "openai/gpt-5.4", stream: true }),
+    });
+
+    expect(handleStreamingRequest).toHaveBeenCalledWith(
+      { model: "gpt-5.4", temperature: undefined },
+      "openai",
+      expect.objectContaining({ requestId: expect.any(String) })
+    );
+  });
 });

@@ -283,6 +283,35 @@ describe("openai passthrough route", () => {
     );
   });
 
+  it("normalizes prefixed models before passthrough proxying", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "resp_prefixed", status: "completed" }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+    );
+
+    const res = await app.request("/openai/v1/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "openai/gpt-5.4", input: [] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://right.codes/openai/v1/responses",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ model: "gpt-5.4", input: [] }),
+      })
+    );
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 1, modelSlug: "gpt-5.4", result: "success" })
+    );
+  });
+
   it("rejects non-string models for amp responses", async () => {
     const res = await app.request("/amp/v1/responses", {
       method: "POST",

@@ -13,9 +13,11 @@ process.env.GATEWAY_API_KEY = "test-key";
 
 describe("realtime proxy", () => {
   const getAllCandidatesSpy = vi.spyOn(gatewayRouter, "getAllCandidates");
+  let lastUpstreamPath = "";
 
   beforeEach(() => {
     getAllCandidatesSpy.mockReset();
+    lastUpstreamPath = "";
   });
 
   afterEach(() => {
@@ -24,7 +26,8 @@ describe("realtime proxy", () => {
 
   it("proxies websocket messages to upstream", async () => {
     const upstreamServer = new WebSocketServer({ port: 0 });
-    upstreamServer.on("connection", (ws) => {
+    upstreamServer.on("connection", (ws, req) => {
+      lastUpstreamPath = req.url ?? "";
       ws.on("message", (data) => {
         ws.send(data);
       });
@@ -65,7 +68,7 @@ describe("realtime proxy", () => {
     const port = (server.address() as { port: number }).port;
 
     const client = new WebSocket(
-      `ws://127.0.0.1:${port}/openai/v1/realtime?model=gpt-4o-realtime-preview`,
+      `ws://127.0.0.1:${port}/openai/v1/realtime?model=openai/gpt-4o-realtime-preview`,
       {
         headers: {
           Authorization: "Bearer test-key",
@@ -85,6 +88,9 @@ describe("realtime proxy", () => {
     client.send("ping");
 
     await expect(messagePromise).resolves.toBe("ping");
+    expect(getAllCandidatesSpy).toHaveBeenCalledWith("gpt-4o-realtime-preview");
+    expect(lastUpstreamPath).toContain("model=gpt-4o-realtime-preview");
+    expect(lastUpstreamPath).not.toContain("model=openai%2Fgpt-4o-realtime-preview");
 
     client.close();
     upstreamServer.close();
