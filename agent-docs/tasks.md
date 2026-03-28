@@ -201,3 +201,9 @@
 - [x] T-36.0 Update task list and documentation
 - [x] T-36.1 Estimate passthrough and convert HTTP output tokens from successful responses
 - [x] T-36.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 37 — OpenAI Model Prefix Canonicalization
+- [x] T-37.0 Update task list and documentation
+- [ ] T-37.1 Canonicalize OpenAI-compatible model slugs across request, health, and recovery flows
+- [ ] T-37.2 Add regression tests for prefixed model inputs
+- [ ] T-37.3 ✅ Run `npm run lint && npm run typecheck && npm run test`
