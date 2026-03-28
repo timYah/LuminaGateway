@@ -196,3 +196,8 @@
 - [x] T-35.0 Update task list and documentation
 - [x] T-35.1 Display usage-page token values with `M` / `B` compact units
 - [x] T-35.2 ✅ Run `npm run lint && npm run typecheck`
+
+## Phase 36 — Estimated Output Token Fix
+- [x] T-36.0 Update task list and documentation
+- [ ] T-36.1 Estimate passthrough and convert HTTP output tokens from successful responses
+- [ ] T-36.2 ✅ Run `npm run lint && npm run typecheck && npm run test`
