@@ -177,3 +177,10 @@
 - [x] T-32.2 Improve provider recovery UI to foreground raw probe errors
 - [x] T-32.3 Update docs and API reference for recovery probe metadata
 - [x] T-32.4 ✅ Run `npm run lint && npm run typecheck && npm run test`
+
+## Phase 33 — Token Usage Statistics
+- [x] T-33.0 Update task list and documentation
+- [ ] T-33.1 Add token aggregates to `/admin/usage/stats` and backend coverage
+- [ ] T-33.2 Extend `/usage` dashboard to highlight token usage totals and distributions
+- [ ] T-33.3 Update docs and API reference for token usage statistics
+- [ ] T-33.4 ✅ Run `npm run lint && npm run typecheck && npm run test`
