@@ -17,6 +17,16 @@ export type PersistUsageLogInput = {
   costUsd?: number | null;
 };
 
+export type PersistEstimatedUsageLogInput = {
+  provider: Provider;
+  modelSlug: string;
+  inputTokens: number;
+  outputTokens: number;
+  routePath?: string | null;
+  requestId?: string | null;
+  costUsd?: number | null;
+};
+
 export function calculateCost(
   inputTokens: number,
   outputTokens: number,
@@ -81,4 +91,19 @@ export async function persistUsageLog(input: PersistUsageLogInput) {
     })
     .returning();
   return rows[0] ?? null;
+}
+
+export async function persistEstimatedUsageLog(input: PersistEstimatedUsageLogInput) {
+  return persistUsageLog({
+    provider: input.provider,
+    modelSlug: input.modelSlug,
+    usage: {
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
+    },
+    usageSource: "estimated",
+    routePath: input.routePath ?? null,
+    requestId: input.requestId ?? null,
+    costUsd: input.costUsd ?? null,
+  });
 }

@@ -13,6 +13,7 @@ import { wrapStreamWithFinalizer } from "../services/streamUtils";
 import { estimateUsage } from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
+import { persistEstimatedUsageLog } from "../services/usageLogService";
 import { recordUsage } from "../services/usageSummaryService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
@@ -137,6 +138,16 @@ async function recordRequestLogSafe(input: Parameters<typeof createRequestLog>[0
     await createRequestLog(input);
   } catch (error) {
     console.error("[openai] request log failed", error);
+  }
+}
+
+async function persistEstimatedUsageSafe(
+  input: Parameters<typeof persistEstimatedUsageLog>[0]
+) {
+  try {
+    await persistEstimatedUsageLog(input);
+  } catch (error) {
+    console.error("[openai] usage log failed", error);
   }
 }
 
@@ -294,10 +305,12 @@ async function handleOpenAiPassthroughRequest(
     }
   }
 
+  const routePath = c.req.path;
+
   if (authToken) {
     recordUsage({
       apiKey: authToken,
-      route: options.routePath,
+      route: routePath,
       totalTokens: usageEstimate.totalTokens,
       estimatedCostUsd: usageEstimate.estimatedCostUsd,
     });
@@ -306,7 +319,7 @@ async function handleOpenAiPassthroughRequest(
   const requestId = resolveRequestId(c);
   activeRequestService.startRequest({
     requestId,
-    path: options.routePath,
+    path: routePath,
     modelSlug,
   });
 
@@ -354,6 +367,15 @@ async function handleOpenAiPassthroughRequest(
         const responseBody = upstreamResponse.body;
         const headers = filterResponseHeaders(upstreamResponse.headers);
         if (!responseBody) {
+          await persistEstimatedUsageSafe({
+            provider,
+            modelSlug,
+            inputTokens: usageEstimate.inputTokens,
+            outputTokens: usageEstimate.outputTokens,
+            routePath,
+            requestId,
+            costUsd: usageEstimate.estimatedCostUsd,
+          });
           await recordRequestLogSafe({
             providerId: provider.id,
             requestId,
@@ -370,14 +392,24 @@ async function handleOpenAiPassthroughRequest(
         }
         return new Response(
           wrapStreamWithFinalizer(responseBody, {
-            onComplete: () =>
-              recordRequestLogSafe({
+            onComplete: async () => {
+              await persistEstimatedUsageSafe({
+                provider,
+                modelSlug,
+                inputTokens: usageEstimate.inputTokens,
+                outputTokens: usageEstimate.outputTokens,
+                routePath,
+                requestId,
+                costUsd: usageEstimate.estimatedCostUsd,
+              });
+              await recordRequestLogSafe({
                 providerId: provider.id,
                 requestId,
                 modelSlug,
                 result: "success",
                 latencyMs: Date.now() - start,
-              }),
+              });
+            },
             onError: async (streamError) => {
               const errorType = classifyUpstreamError(streamError);
               const message = getUpstreamErrorMessage(streamError);

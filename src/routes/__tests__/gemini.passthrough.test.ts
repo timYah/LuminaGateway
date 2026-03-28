@@ -34,6 +34,16 @@ vi.mock("../../services/billingService", async () => {
   };
 });
 
+vi.mock("../../services/usageLogService", async () => {
+  const actual = await vi.importActual<typeof import("../../services/usageLogService")>(
+    "../../services/usageLogService"
+  );
+  return {
+    ...actual,
+    persistEstimatedUsageLog: vi.fn(async () => null),
+  };
+});
+
 import { createApp } from "../../app";
 import * as billingService from "../../services/billingService";
 import * as failureStatsService from "../../services/failureStatsService";
@@ -42,6 +52,7 @@ import * as providerService from "../../services/providerService";
 import { providerRecoveryService } from "../../services/providerRecoveryService";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../../services/quotaService";
 import * as requestLogService from "../../services/requestLogService";
+import * as usageLogService from "../../services/usageLogService";
 
 process.env.GATEWAY_API_KEY = "test-key";
 
@@ -97,6 +108,7 @@ const createRequestLogMock = vi.mocked(requestLogService.createRequestLog);
 const recordFailureMock = vi.mocked(failureStatsService.recordFailure);
 const deactivateProviderMock = vi.mocked(providerService.deactivateProvider);
 const billUsageMock = vi.mocked(billingService.billUsage);
+const persistEstimatedUsageLogMock = vi.mocked(usageLogService.persistEstimatedUsageLog);
 
 beforeAll(() => {
   vi.stubGlobal("fetch", fetchMock);
@@ -111,6 +123,7 @@ describe("gemini passthrough route", () => {
     recordFailureMock.mockClear();
     deactivateProviderMock.mockClear();
     billUsageMock.mockClear();
+    persistEstimatedUsageLogMock.mockClear();
     getAllCandidatesSpy.mockResolvedValue([providerA]);
     gatewayCircuitBreaker.reset(providerA.id);
     gatewayCircuitBreaker.reset(providerB.id);
@@ -164,6 +177,7 @@ describe("gemini passthrough route", () => {
       },
     });
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(persistEstimatedUsageLogMock).not.toHaveBeenCalled();
   });
 
   it("requires a model slug", async () => {
@@ -247,6 +261,17 @@ describe("gemini passthrough route", () => {
       })
     );
     expect(billUsageMock).not.toHaveBeenCalled();
+    expect(persistEstimatedUsageLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: providerA,
+        modelSlug: "gemini-1.5-pro",
+        inputTokens: 2,
+        outputTokens: 0,
+        routePath: geminiPath,
+        requestId: expect.any(String),
+        costUsd: 0,
+      })
+    );
   });
 
   it("preserves raw SSE responses", async () => {

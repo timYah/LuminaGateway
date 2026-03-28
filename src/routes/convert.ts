@@ -15,6 +15,7 @@ import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../service
 import { recordUsage } from "../services/usageSummaryService";
 import { wrapStreamWithFinalizer } from "../services/streamUtils";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
+import { persistEstimatedUsageLog } from "../services/usageLogService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
 import { resolveRequestId } from "../utils/requestContext";
@@ -223,6 +224,16 @@ async function recordRequestLogSafe(input: Parameters<typeof createRequestLog>[0
   }
 }
 
+async function persistEstimatedUsageSafe(
+  input: Parameters<typeof persistEstimatedUsageLog>[0]
+) {
+  try {
+    await persistEstimatedUsageLog(input);
+  } catch (error) {
+    console.error("[convert] usage log failed", error);
+  }
+}
+
 function buildApiCallError(
   response: Response,
   url: string,
@@ -327,10 +338,12 @@ function createConvertHandler(options: ConvertRouteOptions) {
       }
     }
 
+    const routePath = c.req.path;
+
     if (authToken) {
       recordUsage({
         apiKey: authToken,
-        route: c.req.path,
+        route: routePath,
         totalTokens: usageEstimate.totalTokens,
         estimatedCostUsd: usageEstimate.estimatedCostUsd,
       });
@@ -339,7 +352,7 @@ function createConvertHandler(options: ConvertRouteOptions) {
     const requestId = resolveRequestId(c);
     activeRequestService.startRequest({
       requestId,
-      path: c.req.path,
+      path: routePath,
       modelSlug,
     });
 
@@ -391,6 +404,15 @@ function createConvertHandler(options: ConvertRouteOptions) {
 
           if (!contentType.includes("application/json")) {
             if (!responseBody) {
+              await persistEstimatedUsageSafe({
+                provider,
+                modelSlug,
+                inputTokens: usageEstimate.inputTokens,
+                outputTokens: usageEstimate.outputTokens,
+                routePath,
+                requestId,
+                costUsd: usageEstimate.estimatedCostUsd,
+              });
               await recordRequestLogSafe({
                 providerId: provider.id,
                 requestId,
@@ -408,14 +430,24 @@ function createConvertHandler(options: ConvertRouteOptions) {
 
             return new Response(
               wrapStreamWithFinalizer(responseBody, {
-                onComplete: () =>
-                  recordRequestLogSafe({
+                onComplete: async () => {
+                  await persistEstimatedUsageSafe({
+                    provider,
+                    modelSlug,
+                    inputTokens: usageEstimate.inputTokens,
+                    outputTokens: usageEstimate.outputTokens,
+                    routePath,
+                    requestId,
+                    costUsd: usageEstimate.estimatedCostUsd,
+                  });
+                  await recordRequestLogSafe({
                     providerId: provider.id,
                     requestId,
                     modelSlug,
                     result: "success",
                     latencyMs: Date.now() - start,
-                  }),
+                  });
+                },
                 onError: async (streamError) => {
                   const errorType = classifyUpstreamError(streamError);
                   const message = getUpstreamErrorMessage(streamError);
@@ -479,6 +511,15 @@ function createConvertHandler(options: ConvertRouteOptions) {
             modelSlug,
             result: "success",
             latencyMs: Date.now() - start,
+          });
+          await persistEstimatedUsageSafe({
+            provider,
+            modelSlug,
+            inputTokens: usageEstimate.inputTokens,
+            outputTokens: usageEstimate.outputTokens,
+            routePath,
+            requestId,
+            costUsd: usageEstimate.estimatedCostUsd,
           });
 
           release();

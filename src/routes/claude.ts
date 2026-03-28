@@ -13,6 +13,7 @@ import { activeRequestService } from "../services/activeRequestService";
 import { wrapStreamWithFinalizer } from "../services/streamUtils";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
+import { persistEstimatedUsageLog } from "../services/usageLogService";
 import { recordUsage } from "../services/usageSummaryService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
@@ -135,6 +136,16 @@ async function recordRequestLogSafe(input: Parameters<typeof createRequestLog>[0
     await createRequestLog(input);
   } catch (error) {
     console.error("[claude] request log failed", error);
+  }
+}
+
+async function persistEstimatedUsageSafe(
+  input: Parameters<typeof persistEstimatedUsageLog>[0]
+) {
+  try {
+    await persistEstimatedUsageLog(input);
+  } catch (error) {
+    console.error("[claude] usage log failed", error);
   }
 }
 
@@ -306,6 +317,15 @@ async function handleClaudeMessagesRequest(c: Context) {
         const responseBody = upstreamResponse.body;
         const headers = filterResponseHeaders(upstreamResponse.headers);
         if (!responseBody) {
+          await persistEstimatedUsageSafe({
+            provider,
+            modelSlug,
+            inputTokens: usageEstimate.inputTokens,
+            outputTokens: usageEstimate.outputTokens,
+            routePath,
+            requestId,
+            costUsd: usageEstimate.estimatedCostUsd,
+          });
           await recordRequestLogSafe({
             providerId: provider.id,
             requestId,
@@ -322,14 +342,24 @@ async function handleClaudeMessagesRequest(c: Context) {
         }
         return new Response(
           wrapStreamWithFinalizer(responseBody, {
-            onComplete: () =>
-              recordRequestLogSafe({
+            onComplete: async () => {
+              await persistEstimatedUsageSafe({
+                provider,
+                modelSlug,
+                inputTokens: usageEstimate.inputTokens,
+                outputTokens: usageEstimate.outputTokens,
+                routePath,
+                requestId,
+                costUsd: usageEstimate.estimatedCostUsd,
+              });
+              await recordRequestLogSafe({
                 providerId: provider.id,
                 requestId,
                 modelSlug,
                 result: "success",
                 latencyMs: Date.now() - start,
-              }),
+              });
+            },
             onError: async (streamError) => {
               const errorType = classifyUpstreamError(streamError);
               const message = getUpstreamErrorMessage(streamError);

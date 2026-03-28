@@ -34,6 +34,16 @@ vi.mock("../../services/billingService", async () => {
   };
 });
 
+vi.mock("../../services/usageLogService", async () => {
+  const actual = await vi.importActual<typeof import("../../services/usageLogService")>(
+    "../../services/usageLogService"
+  );
+  return {
+    ...actual,
+    persistEstimatedUsageLog: vi.fn(async () => null),
+  };
+});
+
 import { createApp } from "../../app";
 import * as billingService from "../../services/billingService";
 import * as failureStatsService from "../../services/failureStatsService";
@@ -42,6 +52,7 @@ import * as providerService from "../../services/providerService";
 import { providerRecoveryService } from "../../services/providerRecoveryService";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../../services/quotaService";
 import * as requestLogService from "../../services/requestLogService";
+import * as usageLogService from "../../services/usageLogService";
 
 process.env.GATEWAY_API_KEY = "test-key";
 
@@ -95,6 +106,7 @@ const createRequestLogMock = vi.mocked(requestLogService.createRequestLog);
 const recordFailureMock = vi.mocked(failureStatsService.recordFailure);
 const deactivateProviderMock = vi.mocked(providerService.deactivateProvider);
 const billUsageMock = vi.mocked(billingService.billUsage);
+const persistEstimatedUsageLogMock = vi.mocked(usageLogService.persistEstimatedUsageLog);
 
 beforeAll(() => {
   vi.stubGlobal("fetch", fetchMock);
@@ -109,6 +121,7 @@ describe("openai passthrough route", () => {
     recordFailureMock.mockClear();
     deactivateProviderMock.mockClear();
     billUsageMock.mockClear();
+    persistEstimatedUsageLogMock.mockClear();
     getAllCandidatesSpy.mockResolvedValue([providerA]);
     gatewayCircuitBreaker.reset(providerA.id);
     gatewayCircuitBreaker.reset(providerB.id);
@@ -162,6 +175,7 @@ describe("openai passthrough route", () => {
       },
     });
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(persistEstimatedUsageLogMock).not.toHaveBeenCalled();
   });
 
   it("requires a model slug", async () => {
@@ -348,6 +362,17 @@ describe("openai passthrough route", () => {
       expect.objectContaining({ providerId: 1, modelSlug: "gpt-5.2", result: "success" })
     );
     expect(billUsageMock).not.toHaveBeenCalled();
+    expect(persistEstimatedUsageLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: providerA,
+        modelSlug: "gpt-5.2",
+        inputTokens: 2,
+        outputTokens: 0,
+        routePath: "/openai/v1/responses",
+        requestId: expect.any(String),
+        costUsd: 0,
+      })
+    );
   });
 
   it("preserves raw SSE responses", async () => {

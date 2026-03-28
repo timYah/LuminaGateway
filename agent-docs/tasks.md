@@ -188,6 +188,6 @@
 ## Phase 34 — HTTP Token Usage Persistence Fix
 - [x] T-34.0 Update task list and documentation
 - [x] T-34.1 Extend `usage_logs` for unified HTTP usage persistence
-- [ ] T-34.2 Persist estimated usage for passthrough and convert HTTP routes
+- [x] T-34.2 Persist estimated usage for passthrough and convert HTTP routes
 - [ ] T-34.3 Update admin usage UI and API docs for usage source visibility
 - [ ] T-34.4 ✅ Run `npm run lint && npm run typecheck && npm run test`

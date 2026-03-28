@@ -14,10 +14,21 @@ vi.mock("../../services/failureStatsService", async () => {
   };
 });
 
+vi.mock("../../services/usageLogService", async () => {
+  const actual = await vi.importActual<typeof import("../../services/usageLogService")>(
+    "../../services/usageLogService"
+  );
+  return {
+    ...actual,
+    persistEstimatedUsageLog: vi.fn(async () => null),
+  };
+});
+
 import { createApp } from "../../app";
 import { gatewayCircuitBreaker, gatewayRouter } from "../../services/gatewayService";
 import { providerRecoveryService } from "../../services/providerRecoveryService";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../../services/quotaService";
+import * as usageLogService from "../../services/usageLogService";
 
 process.env.GATEWAY_API_KEY = "test-key";
 
@@ -68,6 +79,7 @@ const geminiProvider = {
 const fetchMock = vi.fn<typeof fetch>();
 const getAllCandidatesSpy = vi.spyOn(gatewayRouter, "getAllCandidates");
 const openCircuitSpy = vi.spyOn(gatewayCircuitBreaker, "open");
+const persistEstimatedUsageLogMock = vi.mocked(usageLogService.persistEstimatedUsageLog);
 
 beforeAll(() => {
   vi.stubGlobal("fetch", fetchMock);
@@ -78,6 +90,7 @@ describe("convert routes", () => {
     fetchMock.mockReset();
     getAllCandidatesSpy.mockReset();
     openCircuitSpy.mockClear();
+    persistEstimatedUsageLogMock.mockClear();
     providerRecoveryService.resetAll();
     providerRecoveryService.stop();
   });
@@ -141,6 +154,17 @@ describe("convert routes", () => {
     const data = await res.json();
     expect(data.object).toBe("response");
     expect(data.output_text).toBe("Hello");
+    expect(persistEstimatedUsageLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: openaiProvider,
+        modelSlug: "gpt-5.2",
+        inputTokens: 0,
+        outputTokens: 0,
+        routePath: "/convert/openai/v1/responses",
+        requestId: expect.any(String),
+        costUsd: 0,
+      })
+    );
   });
 
   it("converts openai responses to anthropic", async () => {
@@ -249,5 +273,6 @@ describe("convert routes", () => {
     expect(res.status).toBe(422);
     const data = await res.json();
     expect(data.error?.message).toBe("Unrecognized response format");
+    expect(persistEstimatedUsageLogMock).not.toHaveBeenCalled();
   });
 });
