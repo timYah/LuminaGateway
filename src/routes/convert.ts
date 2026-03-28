@@ -27,6 +27,7 @@ import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upst
 import { normalizeAuthToken } from "../utils/auth";
 import { resolveRequestId } from "../utils/requestContext";
 import { activeRequestService } from "../services/activeRequestService";
+import { normalizeOpenAiCompatibleModelPayload } from "../services/modelSlug";
 
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
@@ -292,13 +293,19 @@ function createConvertHandler(options: ConvertRouteOptions) {
     if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
       return buildGatewayErrorResponse("Invalid request", 400);
     }
+    const effectiveParsedBody =
+      options.clientFormat === "openai-responses"
+        ? normalizeOpenAiCompatibleModelPayload(parsedBody as Record<string, unknown>)
+        : (parsedBody as Record<string, unknown>);
+    const effectiveRawBody =
+      effectiveParsedBody === parsedBody ? rawBody : JSON.stringify(effectiveParsedBody);
 
-    const modelSlug = options.resolveModelSlug(c, parsedBody as Record<string, unknown>);
+    const modelSlug = options.resolveModelSlug(c, effectiveParsedBody);
     if (!modelSlug) {
       return buildGatewayErrorResponse("Invalid request", 400);
     }
 
-    const usageEstimate = estimateUsage(options.clientFormat, parsedBody as Record<string, unknown>);
+    const usageEstimate = estimateUsage(options.clientFormat, effectiveParsedBody);
 
     const jwtConfig = resolveJwtConfig();
     const jwtHeaderValue = jwtConfig.enabled ? c.req.header(jwtConfig.header) : undefined;
@@ -421,7 +428,7 @@ function createConvertHandler(options: ConvertRouteOptions) {
         const upstreamResponse = await fetch(upstreamUrl, {
           method: c.req.method,
           headers: options.buildUpstreamHeaders(c.req.raw.headers, provider.apiKey),
-          body: rawBody,
+          body: effectiveRawBody,
           signal: abortController?.signal,
         });
         if (timeoutId) clearTimeout(timeoutId);
@@ -576,7 +583,12 @@ function createConvertHandler(options: ConvertRouteOptions) {
         }
 
         const responseBodyText = await upstreamResponse.text();
-        const error = buildApiCallError(upstreamResponse, upstreamUrl, parsedBody, responseBodyText);
+        const error = buildApiCallError(
+          upstreamResponse,
+          upstreamUrl,
+          effectiveParsedBody,
+          responseBodyText
+        );
         const errorType = classifyUpstreamError(error);
         const message = getUpstreamErrorMessage(error);
 

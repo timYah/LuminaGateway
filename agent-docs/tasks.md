@@ -204,6 +204,6 @@
 
 ## Phase 37 — OpenAI Model Prefix Canonicalization
 - [x] T-37.0 Update task list and documentation
-- [ ] T-37.1 Canonicalize OpenAI-compatible model slugs across request, health, and recovery flows
+- [x] T-37.1 Canonicalize OpenAI-compatible model slugs across request, health, and recovery flows
 - [ ] T-37.2 Add regression tests for prefixed model inputs
 - [ ] T-37.3 ✅ Run `npm run lint && npm run typecheck && npm run test`

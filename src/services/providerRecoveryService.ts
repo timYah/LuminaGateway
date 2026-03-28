@@ -1,4 +1,5 @@
 import type { UpstreamErrorType } from "./upstreamService";
+import { normalizeOpenAiCompatibleModelSlug } from "./modelSlug";
 
 export type RecoveryErrorType = Extract<
   UpstreamErrorType,
@@ -82,7 +83,7 @@ export class ProviderRecoveryService {
   }
 
   private buildKey(providerId: number, modelSlug: string) {
-    return `${providerId}:${modelSlug}`;
+    return `${providerId}:${normalizeOpenAiCompatibleModelSlug(modelSlug)}`;
   }
 
   private resolveInterval(attempts: number) {
@@ -141,7 +142,8 @@ export class ProviderRecoveryService {
     intervalMs?: number;
   }) {
     const now = new Date();
-    const key = this.buildKey(input.providerId, input.probeModel);
+    const probeModel = normalizeOpenAiCompatibleModelSlug(input.probeModel);
+    const key = this.buildKey(input.providerId, probeModel);
     const existing = this.entries.get(key);
     const attempts = existing?.attempts ?? 0;
     const intervalMs =
@@ -151,7 +153,7 @@ export class ProviderRecoveryService {
     const entry: ProviderRecoveryEntry = {
       providerId: input.providerId,
       triggerErrorType: input.errorType,
-      probeModel: input.probeModel,
+      probeModel,
       startedAt: existing?.startedAt ?? now,
       nextProbeAt:
         existing?.nextProbeAt && existing.nextProbeAt.getTime() > now.getTime()
@@ -173,7 +175,8 @@ export class ProviderRecoveryService {
     modelSlug: string,
     result: Exclude<ProviderRecoveryProbeResult, { ok: true }>
   ) {
-    const key = this.buildKey(providerId, modelSlug);
+    const probeModel = normalizeOpenAiCompatibleModelSlug(modelSlug);
+    const key = this.buildKey(providerId, probeModel);
     const entry = this.entries.get(key);
     if (!entry) return null;
     const now = new Date();
@@ -181,6 +184,7 @@ export class ProviderRecoveryService {
     const intervalMs = this.resolveInterval(nextAttempts);
     const nextEntry: ProviderRecoveryEntry = {
       ...entry,
+      probeModel,
       attempts: nextAttempts,
       intervalMs,
       lastProbeAt: now,

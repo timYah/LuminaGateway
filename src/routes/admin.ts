@@ -28,6 +28,10 @@ import { getFailureStats } from "../services/failureStatsService";
 import { getUsageSummary } from "../services/usageSummaryService";
 import { providerRecoveryService } from "../services/providerRecoveryService";
 import { activeRequestService } from "../services/activeRequestService";
+import {
+  normalizeOpenAiCompatibleModelSlug,
+  normalizeOptionalOpenAiCompatibleModelSlug,
+} from "../services/modelSlug";
 
 const providerSchema = z.object({
   name: z.string().min(1),
@@ -98,12 +102,21 @@ const requestErrorTypeSet = new Set<string>(requestErrorTypes);
 type HealthCheckModelPayload = Record<string, unknown>;
 
 function normalizeHealthCheckModelPayload<T extends HealthCheckModelPayload>(payload: T): T {
+  if (typeof payload.healthCheckModel === "string") {
+    return {
+      ...payload,
+      healthCheckModel: normalizeOpenAiCompatibleModelSlug(payload.healthCheckModel),
+    } as T;
+  }
   if (payload.healthCheckModel !== undefined) {
     return payload;
   }
   const legacyValue = payload["health_check_model"];
   if (typeof legacyValue === "string") {
-    return { ...payload, healthCheckModel: legacyValue } as T;
+    return {
+      ...payload,
+      healthCheckModel: normalizeOpenAiCompatibleModelSlug(legacyValue),
+    } as T;
   }
   return payload;
 }
@@ -382,7 +395,7 @@ adminRoutes.post("/admin/providers/:id/test", async (c) => {
     return c.json({ error: { message: "Provider not found" } }, 404);
   }
 
-  const requestedModel = c.req.query("model")?.trim() || undefined;
+  const requestedModel = normalizeOpenAiCompatibleModelSlug(c.req.query("model")) || undefined;
   const modelSlug = resolveHealthCheckModel(provider, requestedModel);
   const result = await checkProviderHealth(provider, modelSlug, {
     recoverOnSuccess: true,
@@ -420,14 +433,16 @@ adminRoutes.post("/admin/providers/test", async (c) => {
     outputPrice: null,
     isActive: true,
     priority: 0,
-    healthCheckModel: parsed.data.healthCheckModel ?? null,
+    healthCheckModel: normalizeOptionalOpenAiCompatibleModelSlug(
+      parsed.data.healthCheckModel
+    ),
     healthStatus: "unknown" as const,
     lastHealthCheckAt: null,
     createdAt: now,
     updatedAt: now,
   };
 
-  const requestedModel = c.req.query("model")?.trim() || undefined;
+  const requestedModel = normalizeOpenAiCompatibleModelSlug(c.req.query("model")) || undefined;
   const modelSlug = resolveHealthCheckModel(provider, requestedModel);
   const result = await checkProviderHealth(provider, modelSlug, {
     recoverOnSuccess: false,
@@ -446,7 +461,7 @@ adminRoutes.post("/admin/providers/test", async (c) => {
 });
 
 adminRoutes.post("/admin/providers/health", async (c) => {
-  const requestedModel = c.req.query("model")?.trim() || undefined;
+  const requestedModel = normalizeOpenAiCompatibleModelSlug(c.req.query("model")) || undefined;
   const results = await runProvidersHealthCheck(requestedModel, {
     recoverOnSuccess: true,
   });

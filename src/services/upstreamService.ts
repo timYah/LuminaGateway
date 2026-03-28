@@ -2,6 +2,7 @@ import { APICallError, generateText, streamText } from "ai";
 import type { OpenAIProvider } from "@ai-sdk/openai";
 import type { Provider } from "../db/schema/providers";
 import { createAIProvider } from "./aiSdkFactory";
+import { normalizeOpenAiCompatibleModelSlug } from "./modelSlug";
 
 export type UpstreamRequestParams = Omit<
   Parameters<typeof generateText>[0],
@@ -51,17 +52,18 @@ const MODEL_NOT_FOUND_PATTERNS = [
 ];
 
 function resolveLanguageModel(provider: Provider, modelSlug: string): ResolvedModel {
+  const resolvedModelSlug = normalizeOpenAiCompatibleModelSlug(modelSlug);
   const aiProvider = createAIProvider(provider);
   if (provider.protocol === "openai" || provider.protocol === "new-api") {
     const openAIProvider = aiProvider as OpenAIProvider;
     const mode = provider.apiMode ?? "responses";
     const languageModel =
       mode === "chat"
-        ? openAIProvider.chat(modelSlug)
-        : openAIProvider.responses(modelSlug);
+        ? openAIProvider.chat(resolvedModelSlug)
+        : openAIProvider.responses(resolvedModelSlug);
     return { languageModel };
   }
-  return { languageModel: aiProvider.languageModel(modelSlug) };
+  return { languageModel: aiProvider.languageModel(resolvedModelSlug) };
 }
 
 function normalizeUsage(usage: GenerateTextResult["usage"]): UpstreamUsage {

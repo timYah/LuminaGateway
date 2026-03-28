@@ -17,6 +17,7 @@ import {
   type ProviderRecoveryEntry,
   type ProviderRecoveryProbeResult,
 } from "./providerRecoveryService";
+import { normalizeOpenAiCompatibleModelSlug } from "./modelSlug";
 
 export type ProviderHealthCheckResult = {
   providerId: number;
@@ -34,8 +35,8 @@ const HEALTHCHECK_MESSAGE: NonNullable<UpstreamRequestParams["messages"]> = [
 const DEFAULT_HEALTHCHECK_FALLBACK_MODEL = "gpt-4o";
 
 function normalizeModelName(value: string | null | undefined) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
+  const normalized = normalizeOpenAiCompatibleModelSlug(value);
+  return normalized || null;
 }
 
 export function resolveHealthCheckModel(
@@ -59,6 +60,7 @@ export async function checkProviderHealth(
     updateHealthStatus?: boolean;
   }
 ): Promise<ProviderHealthCheckResult> {
+  const resolvedModelSlug = normalizeOpenAiCompatibleModelSlug(modelSlug);
   const start = Date.now();
   const testParams: UpstreamRequestParams = {
     messages: HEALTHCHECK_MESSAGE,
@@ -66,20 +68,20 @@ export async function checkProviderHealth(
   };
   const shouldUpdateHealth = options?.updateHealthStatus ?? true;
   try {
-    await callUpstreamNonStreaming(provider, modelSlug, testParams);
+    await callUpstreamNonStreaming(provider, resolvedModelSlug, testParams);
     const latencyMs = Date.now() - start;
     if (shouldUpdateHealth) {
       await updateProviderHealth(provider.id, "healthy");
     }
     if (options?.recoverOnSuccess) {
-      gatewayCircuitBreaker.reset(provider.id, modelSlug);
-      providerRecoveryService.reset(provider.id, modelSlug);
+      gatewayCircuitBreaker.reset(provider.id, resolvedModelSlug);
+      providerRecoveryService.reset(provider.id, resolvedModelSlug);
     }
     return {
       providerId: provider.id,
       status: "healthy",
       latencyMs,
-      model: modelSlug,
+      model: resolvedModelSlug,
     };
   } catch (error) {
     const latencyMs = Date.now() - start;
@@ -91,9 +93,9 @@ export async function checkProviderHealth(
     }
     if (
       options?.updateRecoveryFailure &&
-      providerRecoveryService.isRecovering(provider.id, modelSlug)
+      providerRecoveryService.isRecovering(provider.id, resolvedModelSlug)
     ) {
-      providerRecoveryService.recordProbeFailure(provider.id, modelSlug, {
+      providerRecoveryService.recordProbeFailure(provider.id, resolvedModelSlug, {
         ok: false,
         errorType,
         message,
@@ -103,7 +105,7 @@ export async function checkProviderHealth(
       providerId: provider.id,
       status: isModelNotFound ? "unknown" : "unhealthy",
       latencyMs,
-      model: modelSlug,
+      model: resolvedModelSlug,
       errorType,
       message,
     };

@@ -13,6 +13,7 @@ import { estimateUsage } from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
 import { recordUsage } from "../services/usageSummaryService";
+import { normalizeOpenAiCompatibleModelPayload } from "../services/modelSlug";
 import { normalizeAuthToken } from "../utils/auth";
 import { resolveRequestId } from "../utils/requestContext";
 import { activeRequestService } from "../services/activeRequestService";
@@ -99,14 +100,23 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
     const merged = defaults
       ? ({ ...defaults, ...payload } as z.infer<T>)
       : parsed.data;
+    const normalizedMerged =
+      options.clientFormat === "openai" || options.clientFormat === "openai-responses"
+        ? (normalizeOpenAiCompatibleModelPayload(
+            merged as Record<string, unknown>
+          ) as z.infer<T>)
+        : merged;
 
-    const modelValue = (merged as { model?: unknown }).model;
+    const modelValue = (normalizedMerged as { model?: unknown }).model;
     const modelSlug = typeof modelValue === "string" ? modelValue.trim() : "";
     if (modelSlug && !isModelAllowed(modelSlug)) {
       return c.json({ error: { message: "Model not allowed" } }, 403);
     }
 
-    const usageEstimate = estimateUsage(options.clientFormat, merged as Record<string, unknown>);
+    const usageEstimate = estimateUsage(
+      options.clientFormat,
+      normalizedMerged as Record<string, unknown>
+    );
 
     const jwtConfig = resolveJwtConfig();
     const jwtHeaderValue = jwtConfig.enabled ? c.req.header(jwtConfig.header) : undefined;
@@ -186,7 +196,7 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
 
     const requestId = resolveRequestId(c);
 
-    if ((merged as { stream?: boolean }).stream) {
+    if ((normalizedMerged as { stream?: boolean }).stream) {
       activeRequestService.startRequest({
         requestId,
         path: options.path,
@@ -194,7 +204,7 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
       });
       try {
         const response = await handleStreamingRequest(
-          options.converter(merged),
+          options.converter(normalizedMerged),
           options.clientFormat,
           { requestId, routePath: options.path }
         );
@@ -218,7 +228,7 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
 
     const cacheTtlMs = resolveCacheTtlMs(c.req.header("x-cache-ttl-ms"));
     const cacheKey = cacheTtlMs
-      ? `${options.clientFormat}:${options.path}:${stableStringify(merged)}`
+      ? `${options.clientFormat}:${options.path}:${stableStringify(normalizedMerged)}`
       : null;
     if (cacheTtlMs && cacheKey) {
       const cached = responseCache.get(cacheKey);
@@ -234,7 +244,7 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
     });
     try {
       const response = await handleRequest(
-        options.converter(merged),
+        options.converter(normalizedMerged),
         options.clientFormat,
         { requestId, routePath: options.path }
       );

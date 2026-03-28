@@ -1,3 +1,5 @@
+import { normalizeOpenAiCompatibleModelSlug } from "./modelSlug";
+
 type CircuitBreakerEntry = {
   providerId: number;
   modelSlug: string | null;
@@ -8,14 +10,18 @@ export class CircuitBreaker {
   private readonly openUntil = new Map<string, CircuitBreakerEntry>();
 
   private buildKey(providerId: number, modelSlug: string | null) {
-    return `${providerId}:${modelSlug ?? "*"}`;
+    const normalizedModelSlug =
+      modelSlug === null ? null : normalizeOpenAiCompatibleModelSlug(modelSlug) || null;
+    return `${providerId}:${normalizedModelSlug ?? "*"}`;
   }
 
   open(providerId: number, cooldownMs: number, modelSlug?: string) {
-    const key = this.buildKey(providerId, modelSlug ?? null);
+    const normalizedModelSlug =
+      modelSlug === undefined ? null : normalizeOpenAiCompatibleModelSlug(modelSlug) || null;
+    const key = this.buildKey(providerId, normalizedModelSlug);
     this.openUntil.set(key, {
       providerId,
-      modelSlug: modelSlug ?? null,
+      modelSlug: normalizedModelSlug,
       openUntil: Date.now() + cooldownMs,
     });
   }

@@ -25,6 +25,7 @@ import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upst
 import { normalizeAuthToken } from "../utils/auth";
 import { resolveRequestId } from "../utils/requestContext";
 import { activeRequestService } from "../services/activeRequestService";
+import { normalizeOpenAiCompatibleModelSlug } from "../services/modelSlug";
 
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
@@ -213,16 +214,19 @@ function resolveEffectiveRequest(
     return null;
   }
 
-  const explicitModel = typeof modelValue === "string" ? modelValue.trim() : "";
+  const explicitModel =
+    typeof modelValue === "string" ? normalizeOpenAiCompatibleModelSlug(modelValue) : "";
   if (explicitModel) {
+    const effectiveBody =
+      modelValue === explicitModel ? parsedBody : { ...parsedBody, model: explicitModel };
     return {
-      parsedBody,
-      rawBody,
+      parsedBody: effectiveBody,
+      rawBody: effectiveBody === parsedBody ? rawBody : JSON.stringify(effectiveBody),
       modelSlug: explicitModel,
     };
   }
 
-  const fallbackModel = defaultModel?.trim() ?? "";
+  const fallbackModel = normalizeOpenAiCompatibleModelSlug(defaultModel);
   if (!fallbackModel) {
     return null;
   }

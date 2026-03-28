@@ -18,6 +18,7 @@ import { resolveJwtConfig, verifyJwt, extractJwtIdentity } from "./jwtService";
 import { activeRequestService } from "./activeRequestService";
 import { createRequestLog } from "./requestLogService";
 import { normalizeOpenAiBaseUrl } from "./aiSdkFactory";
+import { normalizeOpenAiCompatibleModelSlug } from "./modelSlug";
 
 const REALTIME_PATHS = new Set([
   "/openai/v1/realtime",
@@ -244,11 +245,14 @@ async function handleUpgrade(
     return;
   }
 
-  const modelSlug = requestUrl.searchParams.get("model") ?? "";
+  const modelSlug = normalizeOpenAiCompatibleModelSlug(
+    requestUrl.searchParams.get("model")
+  );
   if (!modelSlug) {
     writeHttpError(socket, 400, "Missing model");
     return;
   }
+  requestUrl.searchParams.set("model", modelSlug);
 
   const authToken = resolveGatewayToken(req.headers.authorization);
   if (!authToken) {

@@ -32,6 +32,7 @@ import {
   convertUniversalToOpenAIResponse,
   convertUniversalToOpenAIResponsesResponse,
 } from "./protocolConverter";
+import { normalizeOpenAiCompatibleModelSlug } from "./modelSlug";
 
 export type ClientFormat = "openai" | "openai-responses" | "anthropic" | "gemini";
 
@@ -210,7 +211,8 @@ export async function handleRequest(
   clientFormat: ClientFormat,
   requestContext: GatewayRequestContext = {}
 ): Promise<GatewayResponse> {
-  const { model: modelSlug, ...params } = requestParams;
+  const modelSlug = normalizeOpenAiCompatibleModelSlug(requestParams.model);
+  const { model: _model, ...params } = requestParams;
   const candidates = await gatewayRouter.getAllCandidates(modelSlug);
   if (candidates.length === 0) {
     return {
@@ -304,7 +306,8 @@ export async function handleStreamingRequest(
   clientFormat: ClientFormat,
   requestContext: GatewayRequestContext = {}
 ): Promise<GatewayStreamingResponse> {
-  const { model: modelSlug, ...params } = requestParams;
+  const modelSlug = normalizeOpenAiCompatibleModelSlug(requestParams.model);
+  const { model: _model, ...params } = requestParams;
   const candidates = await gatewayRouter.getAllCandidates(modelSlug);
   if (candidates.length === 0) {
     return {
