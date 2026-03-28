@@ -137,7 +137,8 @@ describe("gatewayService", () => {
     expect(billUsageMock).toHaveBeenCalledWith(
       providerA,
       "gpt-4o",
-      { promptTokens: 2, completionTokens: 3 }
+      { promptTokens: 2, completionTokens: 3 },
+      { requestId: undefined, routePath: undefined }
     );
   });
 
@@ -340,7 +341,8 @@ describe("gatewayService", () => {
     expect(billUsageMock).toHaveBeenCalledWith(
       providerA,
       "gpt-4o",
-      { promptTokens: 1, completionTokens: 2 }
+      { promptTokens: 1, completionTokens: 2 },
+      { requestId: undefined, routePath: undefined }
     );
   });
 
