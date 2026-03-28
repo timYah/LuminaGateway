@@ -571,9 +571,24 @@ const recoverySummary = (provider: Provider) => {
 const recoveryLastResult = (provider: Provider) => {
   const recovery = provider.recovery;
   if (!recovery?.lastProbeAt) return "";
+  const message = recovery.lastProbeMessage?.trim();
+  if (message) {
+    return t("providers.recovery.lastResultWithMessage", {
+      message,
+      time: formatTimestamp(recovery.lastProbeAt),
+    });
+  }
   return t("providers.recovery.lastResult", {
     reason: recoveryReasonLabel(recovery.lastProbeErrorType),
     time: formatTimestamp(recovery.lastProbeAt),
+  });
+};
+
+const recoveryLastReason = (provider: Provider) => {
+  const recovery = provider.recovery;
+  if (!recovery?.lastProbeAt || !recovery.lastProbeMessage?.trim()) return "";
+  return t("providers.recovery.lastReason", {
+    reason: recoveryReasonLabel(recovery.lastProbeErrorType),
   });
 };
 
@@ -910,8 +925,11 @@ const refreshAll = async () => {
                       <div v-if="provider.recovery.lastProbeAt" class="mt-1 text-amber-700">
                         {{ recoveryLastResult(provider) }}
                       </div>
-                      <div v-if="provider.recovery.lastProbeMessage" class="mt-1 break-all text-[11px] text-amber-700/70">
-                        {{ provider.recovery.lastProbeMessage }}
+                      <div
+                        v-if="recoveryLastReason(provider)"
+                        class="mt-1 text-[11px] text-amber-700/70"
+                      >
+                        {{ recoveryLastReason(provider) }}
                       </div>
                     </div>
                   </td>

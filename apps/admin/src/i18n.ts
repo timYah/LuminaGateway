@@ -82,6 +82,8 @@ const messages = {
         hint: "Manual test or health check success immediately restores a recovering provider to routing.",
         summary: "Recovering from {reason}. Probe model: {model}. Next auto-check: {time}.",
         lastResult: "Last probe failed with {reason} at {time}.",
+        lastResultWithMessage: "Last probe failed at {time}: {message}.",
+        lastReason: "Failure class: {reason}.",
       },
       failures: {
         title: "Failure mix",
@@ -495,6 +497,8 @@ const messages = {
         hint: "手动测试或批量健康检查成功后，会立即将恢复中的提供商重新加入路由。",
         summary: "因 {reason} 进入恢复中。探测模型：{model}。下次自动检测：{time}。",
         lastResult: "最近一次探测在 {time} 因 {reason} 失败。",
+        lastResultWithMessage: "最近一次探测在 {time} 失败：{message}。",
+        lastReason: "错误分类：{reason}。",
       },
       failures: {
         title: "失败分类",
