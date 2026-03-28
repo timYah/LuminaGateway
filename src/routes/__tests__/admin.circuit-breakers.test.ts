@@ -38,7 +38,7 @@ describe("admin circuit breakers", () => {
       isActive: true,
       priority: 1,
     });
-    gatewayCircuitBreaker.open(provider!.id, 60_000);
+    gatewayCircuitBreaker.open(provider!.id, 60_000, "gpt-4o");
 
     const res = await app.request("/admin/circuit-breakers", {
       headers: authHeader,
@@ -51,6 +51,7 @@ describe("admin circuit breakers", () => {
       providerId: provider!.id,
       name: "Breaker Provider",
       protocol: "openai",
+      modelSlug: "gpt-4o",
     });
     expect(body.breakers[0].remainingMs).toBeGreaterThan(0);
   });
@@ -93,6 +94,7 @@ describe("admin circuit breakers", () => {
       state: "recovering",
       triggerErrorType: "server",
       probeModel: "gpt-4o",
+      modelSlug: "gpt-4o",
     });
     expect(body.breakers[0].remainingMs).toBeGreaterThan(0);
   });
@@ -107,7 +109,7 @@ describe("admin circuit breakers", () => {
       isActive: true,
       priority: 1,
     });
-    gatewayCircuitBreaker.open(provider!.id, 60_000);
+    gatewayCircuitBreaker.open(provider!.id, 60_000, "gpt-4o");
     expect(gatewayCircuitBreaker.isOpen(provider!.id)).toBe(true);
 
     const res = await app.request(`/admin/providers/${provider!.id}/reset`, {

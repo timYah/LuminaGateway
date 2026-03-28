@@ -1,6 +1,6 @@
 # Lumina Gateway
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, and a dedicated Codex passthrough entrypoint. It routes requests by provider priority and health, then fails over when a provider is rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, plus dedicated Claude, OpenAI, and Gemini passthrough entrypoints along with convert routes and an OpenAI Realtime WebSocket proxy. It routes requests by provider priority and health, then fails over when a provider is rate limited or out of quota.
 
 ## Features
 
@@ -9,13 +9,20 @@ Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple AI 
 - Anthropic-compatible messages endpoint.
 - Streaming SSE relay for all supported client formats.
 - Priority-based routing with automatic failover.
-- Dedicated `/codex/responses` passthrough for Codex-style Responses traffic.
+- Model-level provider priorities when using priority routing.
+- Dedicated `/claude/v1/messages` passthrough for raw Anthropic Messages traffic.
+- Dedicated `/openai/v1/responses` passthrough for raw OpenAI Responses traffic.
+- Dedicated `/amp/v1/responses` passthrough alias for Amp-style Responses traffic with default `gpt-5.4`.
+- Dedicated `/openai/v1/chat/completions` passthrough for raw OpenAI Chat Completions traffic.
+- Dedicated `/google/v1beta/models/{model}:generateContent` passthrough for Gemini traffic.
+- `/convert/*` routes that normalize upstream JSON responses into target formats.
+- `/openai/v1/realtime` WebSocket proxy for OpenAI Realtime.
 - Admin routes for provider management and usage queries.
 - Vue + Nuxt UI admin dashboard for providers and usage.
 
 ## Quick start
 
-Set `GATEWAY_API_KEY` before you start the server because `/v1/*`, `/codex/*`, and `/admin/*` require Bearer auth. The gateway auto-loads `.env` at startup.
+Set `GATEWAY_API_KEY` before you start the server because `/v1/*`, `/claude/*`, `/openai/*`, `/amp/*`, `/google/*`, `/convert/*`, and `/admin/*` require Bearer auth. The gateway auto-loads `.env` at startup.
 
 ```bash
 npm install
@@ -62,17 +69,19 @@ curl http://localhost:3000/v1/responses \
   -d '{"model":"gpt-5.2","input":"Hello"}'
 ```
 
-For Codex CLI, point the provider base URL at `/codex`:
+For Codex CLI, point the provider base URL at `/openai`:
 
 ```bash
 codex exec \
   -c model_provider='gateway' \
   -c model='gpt-5.3-codex' \
-  -c 'model_providers.gateway={name="gateway",base_url="http://localhost:3000/codex",wire_api="responses",requires_openai_auth=true}' \
+  -c 'model_providers.gateway={name="gateway",base_url="http://localhost:3000/openai",wire_api="responses",requires_openai_auth=true}' \
   'Say hello in one word.'
 ```
 
-`POST /codex/responses` forwards the raw JSON body to the selected upstream `/responses` endpoint and returns the upstream response body unchanged. The gateway only fails over before the first byte reaches the client. In the admin UI, leave `Codex transform` off to keep a provider eligible for this passthrough path.
+`POST /openai/v1/responses` forwards the raw JSON body to the selected upstream `/responses` endpoint and returns the upstream response body unchanged. `POST /openai/v1/chat/completions` forwards to `/chat/completions` with the same raw passthrough behavior. The gateway only fails over before the first byte reaches the client.
+
+For Amp-style clients, point the base URL at `/amp`. `POST /amp/v1/responses` uses the same raw passthrough behavior as `/openai/v1/responses`, but injects `model: "gpt-5.4"` when the request omits `model` or sends it as a blank string.
 
 ### New API providers
 
@@ -115,7 +124,7 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, and `/admin/*` routes. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/claude/*`, `/openai/*`, `/amp/*`, `/google/*`, `/convert/*`, and `/admin/*` routes. |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
@@ -153,7 +162,8 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 | `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
-| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses`, `/amp/v1/responses`, `/openai/v1/chat/completions`, and `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `DEFAULT_HEALTHCHECK_MODEL` | *(optional)* | Default model slug used for provider health checks when no per-provider override or query parameter is supplied. |
 | `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
 | `DEFAULT_OUTPUT_PRICE` | *(optional)* | Global output price fallback (USD per 1M tokens). |
 | `PORT` | `3000` | Server listen port. |
@@ -164,7 +174,15 @@ The Docker build now defaults to the Nanjing University Debian mirror for `apt`,
 - `POST /v1/chat/completions` — OpenAI-compatible chat completions endpoint
 - `POST /v1/responses` — OpenAI-compatible responses endpoint
 - `POST /v1/messages` — Anthropic-compatible endpoint
-- `POST /codex/responses` — raw Codex passthrough to upstream `/responses`
+- `POST /claude/v1/messages` — raw Anthropic passthrough
+- `POST /openai/v1/responses` — raw OpenAI passthrough
+- `POST /amp/v1/responses` — Amp Responses passthrough alias with default `gpt-5.4`
+- `POST /openai/v1/chat/completions` — raw OpenAI chat passthrough
+- `POST /google/v1beta/models/{model}:generateContent` — raw Gemini passthrough
+- `POST /convert/openai/v1/responses` — convert to OpenAI Responses format
+- `POST /convert/claude/v1/messages` — convert to Anthropic Messages format
+- `POST /convert/google/v1beta/models/{model}:generateContent` — convert to Gemini generateContent format
+- `GET /openai/v1/realtime` — OpenAI Realtime WebSocket proxy
 - `GET /admin/providers` — list providers
 - `POST /admin/providers` — create provider (`codexTransform` defaults to `false`)
 - `PATCH /admin/providers/:id` — update provider, including the Codex transform flag

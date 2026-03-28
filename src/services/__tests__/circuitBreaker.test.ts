@@ -8,23 +8,25 @@ afterEach(() => {
 describe("CircuitBreaker", () => {
   it("opens and reports open state", () => {
     const breaker = new CircuitBreaker();
-    breaker.open(1, 1000);
+    breaker.open(1, 1000, "gpt-4o");
     expect(breaker.isOpen(1)).toBe(true);
+    expect(breaker.isOpen(1, "gpt-4o")).toBe(true);
+    expect(breaker.isOpen(1, "gpt-4.1")).toBe(false);
   });
 
   it("resets open state", () => {
     const breaker = new CircuitBreaker();
-    breaker.open(1, 1000);
-    breaker.reset(1);
+    breaker.open(1, 1000, "gpt-4o");
+    breaker.reset(1, "gpt-4o");
     expect(breaker.isOpen(1)).toBe(false);
   });
 
   it("auto-expires after cooldown", () => {
     vi.useFakeTimers();
     const breaker = new CircuitBreaker();
-    breaker.open(1, 1000);
-    expect(breaker.isOpen(1)).toBe(true);
+    breaker.open(1, 1000, "gpt-4o");
+    expect(breaker.isOpen(1, "gpt-4o")).toBe(true);
     vi.advanceTimersByTime(1001);
-    expect(breaker.isOpen(1)).toBe(false);
+    expect(breaker.isOpen(1, "gpt-4o")).toBe(false);
   });
 });

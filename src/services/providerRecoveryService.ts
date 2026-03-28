@@ -1,4 +1,5 @@
 import type { UpstreamErrorType } from "./upstreamService";
+import { normalizeOpenAiCompatibleModelSlug } from "./modelSlug";
 
 export type RecoveryErrorType = Extract<
   UpstreamErrorType,
@@ -14,6 +15,8 @@ export type ProviderRecoveryEntry = {
   lastProbeAt: Date | null;
   lastProbeErrorType: UpstreamErrorType | null;
   lastProbeMessage: string | null;
+  intervalMs: number;
+  attempts: number;
 };
 
 export type ProviderRecoveryProbeResult =
@@ -22,6 +25,8 @@ export type ProviderRecoveryProbeResult =
       ok: false;
       errorType: UpstreamErrorType;
       message: string | null;
+      providerName?: string | null;
+      providerProtocol?: string | null;
     };
 
 export type ProviderRecoveryProbeHandler = (
@@ -29,29 +34,36 @@ export type ProviderRecoveryProbeHandler = (
 ) => Promise<ProviderRecoveryProbeResult>;
 
 const DEFAULT_RECOVERY_INTERVAL_MS = 300_000;
-const RECOVERY_JITTER_MIN_MS = 1_000;
-const RECOVERY_JITTER_MAX_MS = 10_000;
+const RECOVERY_BACKOFF_SEQUENCE_MS = [
+  10_000,
+  20_000,
+  30_000,
+  60_000,
+  120_000,
+  300_000,
+];
 
-function parseInterval(raw: string | undefined) {
-  if (!raw) return DEFAULT_RECOVERY_INTERVAL_MS;
+function parseFixedInterval(raw: string | undefined) {
+  if (!raw) return null;
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return DEFAULT_RECOVERY_INTERVAL_MS;
-  }
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return Math.floor(parsed);
 }
 
 export function resolveProviderRecoveryIntervalMs() {
-  return parseInterval(process.env.PROVIDER_RECOVERY_CHECK_INTERVAL_MS);
+  return parseFixedInterval(process.env.PROVIDER_RECOVERY_CHECK_INTERVAL_MS);
 }
 
-export function randomRecoveryJitterMs() {
-  const span = RECOVERY_JITTER_MAX_MS - RECOVERY_JITTER_MIN_MS + 1;
-  return Math.floor(Math.random() * span) + RECOVERY_JITTER_MIN_MS;
+function resolveBackoffIntervalMs(attempts: number) {
+  const index = Math.min(
+    Math.max(0, attempts),
+    RECOVERY_BACKOFF_SEQUENCE_MS.length - 1
+  );
+  return RECOVERY_BACKOFF_SEQUENCE_MS[index] ?? DEFAULT_RECOVERY_INTERVAL_MS;
 }
 
 export class ProviderRecoveryService {
-  private readonly entries = new Map<number, ProviderRecoveryEntry>();
+  private readonly entries = new Map<string, ProviderRecoveryEntry>();
 
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -70,8 +82,27 @@ export class ProviderRecoveryService {
     }
   }
 
-  reset(providerId: number) {
-    this.entries.delete(providerId);
+  private buildKey(providerId: number, modelSlug: string) {
+    return `${providerId}:${normalizeOpenAiCompatibleModelSlug(modelSlug)}`;
+  }
+
+  private resolveInterval(attempts: number) {
+    const fixed = resolveProviderRecoveryIntervalMs();
+    if (fixed) return fixed;
+    return resolveBackoffIntervalMs(attempts);
+  }
+
+  reset(providerId: number, modelSlug?: string) {
+    if (modelSlug) {
+      this.entries.delete(this.buildKey(providerId, modelSlug));
+      this.scheduleNext();
+      return;
+    }
+    for (const [key, entry] of this.entries.entries()) {
+      if (entry.providerId === providerId) {
+        this.entries.delete(key);
+      }
+    }
     this.scheduleNext();
   }
 
@@ -80,12 +111,22 @@ export class ProviderRecoveryService {
     this.scheduleNext();
   }
 
-  isRecovering(providerId: number) {
-    return this.entries.has(providerId);
+  isRecovering(providerId: number, modelSlug?: string) {
+    if (modelSlug) {
+      return this.entries.has(this.buildKey(providerId, modelSlug));
+    }
+    for (const entry of this.entries.values()) {
+      if (entry.providerId === providerId) return true;
+    }
+    return false;
   }
 
-  getEntry(providerId: number) {
-    return this.entries.get(providerId) ?? null;
+  getEntry(providerId: number, modelSlug?: string) {
+    if (modelSlug) {
+      return this.entries.get(this.buildKey(providerId, modelSlug)) ?? null;
+    }
+    const entries = this.getEntries().filter((entry) => entry.providerId === providerId);
+    return entries[0] ?? null;
   }
 
   getEntries() {
@@ -98,44 +139,66 @@ export class ProviderRecoveryService {
     providerId: number;
     errorType: RecoveryErrorType;
     probeModel: string;
+    intervalMs?: number;
   }) {
     const now = new Date();
-    const existing = this.entries.get(input.providerId);
+    const probeModel = normalizeOpenAiCompatibleModelSlug(input.probeModel);
+    const key = this.buildKey(input.providerId, probeModel);
+    const existing = this.entries.get(key);
+    const attempts = existing?.attempts ?? 0;
+    const intervalMs =
+      typeof input.intervalMs === "number" && Number.isFinite(input.intervalMs)
+        ? Math.floor(input.intervalMs)
+        : this.resolveInterval(attempts);
     const entry: ProviderRecoveryEntry = {
       providerId: input.providerId,
       triggerErrorType: input.errorType,
-      probeModel: input.probeModel,
+      probeModel,
       startedAt: existing?.startedAt ?? now,
-      nextProbeAt: this.buildNextProbeAt(now),
+      nextProbeAt:
+        existing?.nextProbeAt && existing.nextProbeAt.getTime() > now.getTime()
+          ? existing.nextProbeAt
+          : this.buildNextProbeAt(now, intervalMs),
       lastProbeAt: existing?.lastProbeAt ?? null,
       lastProbeErrorType: existing?.lastProbeErrorType ?? null,
       lastProbeMessage: existing?.lastProbeMessage ?? null,
+      intervalMs,
+      attempts,
     };
-    this.entries.set(input.providerId, entry);
+    this.entries.set(key, entry);
     this.scheduleNext();
     return entry;
   }
 
-  recordProbeFailure(providerId: number, result: Exclude<ProviderRecoveryProbeResult, { ok: true }>) {
-    const entry = this.entries.get(providerId);
+  recordProbeFailure(
+    providerId: number,
+    modelSlug: string,
+    result: Exclude<ProviderRecoveryProbeResult, { ok: true }>
+  ) {
+    const probeModel = normalizeOpenAiCompatibleModelSlug(modelSlug);
+    const key = this.buildKey(providerId, probeModel);
+    const entry = this.entries.get(key);
     if (!entry) return null;
     const now = new Date();
+    const nextAttempts = entry.attempts + 1;
+    const intervalMs = this.resolveInterval(nextAttempts);
     const nextEntry: ProviderRecoveryEntry = {
       ...entry,
+      probeModel,
+      attempts: nextAttempts,
+      intervalMs,
       lastProbeAt: now,
       lastProbeErrorType: result.errorType,
       lastProbeMessage: result.message,
-      nextProbeAt: this.buildNextProbeAt(now),
+      nextProbeAt: this.buildNextProbeAt(now, intervalMs),
     };
-    this.entries.set(providerId, nextEntry);
+    this.entries.set(key, nextEntry);
     this.scheduleNext();
     return nextEntry;
   }
 
-  private buildNextProbeAt(from: Date) {
-    const nextProbeMs =
-      from.getTime() + resolveProviderRecoveryIntervalMs() + randomRecoveryJitterMs();
-    return new Date(nextProbeMs);
+  private buildNextProbeAt(from: Date, intervalMs: number) {
+    return new Date(from.getTime() + intervalMs);
   }
 
   private scheduleNext() {
@@ -168,20 +231,39 @@ export class ProviderRecoveryService {
     );
 
     for (const entry of dueEntries) {
-      if (!this.entries.has(entry.providerId)) continue;
+      const key = this.buildKey(entry.providerId, entry.probeModel);
+      if (!this.entries.has(key)) continue;
       try {
         const result = await handler(entry);
         if (result.ok) {
-          this.entries.delete(entry.providerId);
+          this.entries.delete(key);
         } else {
-          this.recordProbeFailure(entry.providerId, result);
+          const nextEntry = this.recordProbeFailure(entry.providerId, entry.probeModel, result);
+          console.warn("[recovery] scheduled probe failed", {
+            providerId: entry.providerId,
+            providerName: result.providerName ?? null,
+            providerProtocol: result.providerProtocol ?? null,
+            probeModel: entry.probeModel,
+            attempt: nextEntry?.attempts ?? entry.attempts + 1,
+            errorType: result.errorType,
+            message: result.message,
+            nextProbeAt: nextEntry?.nextProbeAt.toISOString() ?? null,
+          });
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Recovery probe failed";
-        this.recordProbeFailure(entry.providerId, {
+        const nextEntry = this.recordProbeFailure(entry.providerId, entry.probeModel, {
           ok: false,
           errorType: "unknown",
           message,
+        });
+        console.error("[recovery] scheduled probe threw", {
+          providerId: entry.providerId,
+          probeModel: entry.probeModel,
+          attempt: nextEntry?.attempts ?? entry.attempts + 1,
+          errorType: "unknown",
+          message,
+          nextProbeAt: nextEntry?.nextProbeAt.toISOString() ?? null,
         });
       }
     }

@@ -34,6 +34,16 @@ vi.mock("../../services/billingService", async () => {
   };
 });
 
+vi.mock("../../services/usageLogService", async () => {
+  const actual = await vi.importActual<typeof import("../../services/usageLogService")>(
+    "../../services/usageLogService"
+  );
+  return {
+    ...actual,
+    persistEstimatedUsageLog: vi.fn(async () => null),
+  };
+});
+
 import { createApp } from "../../app";
 import * as billingService from "../../services/billingService";
 import * as failureStatsService from "../../services/failureStatsService";
@@ -42,6 +52,7 @@ import * as providerService from "../../services/providerService";
 import { providerRecoveryService } from "../../services/providerRecoveryService";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../../services/quotaService";
 import * as requestLogService from "../../services/requestLogService";
+import * as usageLogService from "../../services/usageLogService";
 
 process.env.GATEWAY_API_KEY = "test-key";
 
@@ -55,7 +66,7 @@ const providerA = {
   id: 1,
   name: "Right Codes",
   protocol: "openai" as const,
-  baseUrl: "https://right.codes/codex",
+  baseUrl: "https://right.codes/openai",
   apiKey: "sk-primary",
   apiMode: "responses" as const,
   codexTransform: false,
@@ -64,6 +75,7 @@ const providerA = {
   outputPrice: null,
   isActive: true,
   priority: 1,
+  healthCheckModel: null,
   healthStatus: "unknown" as const,
   lastHealthCheckAt: null,
   createdAt: new Date(),
@@ -79,16 +91,9 @@ const providerB = {
   priority: 2,
 };
 
-const transformedProvider = {
-  ...providerA,
-  id: 3,
-  name: "Transform",
-  codexTransform: true,
-};
-
 const anthropicProvider = {
   ...providerA,
-  id: 4,
+  id: 3,
   name: "Anthropic",
   protocol: "anthropic" as const,
   baseUrl: "https://api.anthropic.com",
@@ -101,12 +106,13 @@ const createRequestLogMock = vi.mocked(requestLogService.createRequestLog);
 const recordFailureMock = vi.mocked(failureStatsService.recordFailure);
 const deactivateProviderMock = vi.mocked(providerService.deactivateProvider);
 const billUsageMock = vi.mocked(billingService.billUsage);
+const persistEstimatedUsageLogMock = vi.mocked(usageLogService.persistEstimatedUsageLog);
 
 beforeAll(() => {
   vi.stubGlobal("fetch", fetchMock);
 });
 
-describe("codex passthrough route", () => {
+describe("openai passthrough route", () => {
   beforeEach(() => {
     fetchMock.mockReset();
     getAllCandidatesSpy.mockReset();
@@ -115,6 +121,7 @@ describe("codex passthrough route", () => {
     recordFailureMock.mockClear();
     deactivateProviderMock.mockClear();
     billUsageMock.mockClear();
+    persistEstimatedUsageLogMock.mockClear();
     getAllCandidatesSpy.mockResolvedValue([providerA]);
     gatewayCircuitBreaker.reset(providerA.id);
     gatewayCircuitBreaker.reset(providerB.id);
@@ -153,7 +160,7 @@ describe("codex passthrough route", () => {
   });
 
   it("rejects invalid JSON bodies", async () => {
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: "not-json",
@@ -168,10 +175,11 @@ describe("codex passthrough route", () => {
       },
     });
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(persistEstimatedUsageLogMock).not.toHaveBeenCalled();
   });
 
   it("requires a model slug", async () => {
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ input: [] }),
@@ -181,9 +189,143 @@ describe("codex passthrough route", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("injects the default model for amp responses when model is omitted", async () => {
+    const upstreamBody = JSON.stringify({ id: "resp_amp_1", status: "completed" });
+    fetchMock.mockResolvedValueOnce(
+      new Response(upstreamBody, {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+    );
+
+    const res = await app.request("/amp/v1/responses?trace=1", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ input: [] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe(upstreamBody);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://right.codes/openai/v1/responses?trace=1",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ input: [], model: "gpt-5.4" }),
+      })
+    );
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 1, modelSlug: "gpt-5.4", result: "success" })
+    );
+  });
+
+  it("injects the default model for amp responses when model is blank", async () => {
+    const upstreamBody = JSON.stringify({ id: "resp_amp_blank", status: "completed" });
+    fetchMock.mockResolvedValueOnce(
+      new Response(upstreamBody, {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+    );
+
+    const res = await app.request("/amp/v1/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "   ", input: [] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://right.codes/openai/v1/responses",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ model: "gpt-5.4", input: [] }),
+      })
+    );
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 1, modelSlug: "gpt-5.4", result: "success" })
+    );
+  });
+
+  it("preserves an explicit model for amp responses", async () => {
+    const rawBody = JSON.stringify({
+      model: "gpt-5.2",
+      input: [{ role: "user", content: [{ type: "input_text", text: "hello" }] }],
+    });
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "resp_amp_2", status: "completed" }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+    );
+
+    const res = await app.request("/amp/v1/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: rawBody,
+    });
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://right.codes/openai/v1/responses",
+      expect.objectContaining({
+        method: "POST",
+        body: rawBody,
+      })
+    );
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 1, modelSlug: "gpt-5.2", result: "success" })
+    );
+  });
+
+  it("normalizes prefixed models before passthrough proxying", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "resp_prefixed", status: "completed" }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+    );
+
+    const res = await app.request("/openai/v1/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "openai/gpt-5.4", input: [] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://right.codes/openai/v1/responses",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ model: "gpt-5.4", input: [] }),
+      })
+    );
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 1, modelSlug: "gpt-5.4", result: "success" })
+    );
+  });
+
+  it("rejects non-string models for amp responses", async () => {
+    const res = await app.request("/amp/v1/responses", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: { slug: "gpt-5.4" }, input: [] }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("blocks content matching the safety list", async () => {
     process.env.CONTENT_BLOCKLIST = "secret";
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({
@@ -198,7 +340,7 @@ describe("codex passthrough route", () => {
 
   it("requires JWT when enabled", async () => {
     process.env.JWT_SECRET = "test-secret";
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [] }),
@@ -213,9 +355,13 @@ describe("codex passthrough route", () => {
       model: "gpt-5.2",
       input: [{ role: "user", content: [{ type: "input_text", text: "hello" }] }],
       stream: false,
-      metadata: { source: "codex-cli" },
+      metadata: { source: "openai" },
     });
-    const upstreamBody = JSON.stringify({ id: "resp_1", status: "completed" });
+    const upstreamBody = JSON.stringify({
+      id: "resp_1",
+      status: "completed",
+      output_text: "Hello",
+    });
     fetchMock.mockResolvedValueOnce(
       new Response(upstreamBody, {
         status: 200,
@@ -226,7 +372,7 @@ describe("codex passthrough route", () => {
       })
     );
 
-    const res = await app.request("/codex/responses?trace=1", {
+    const res = await app.request("/openai/v1/responses?trace=1", {
       method: "POST",
       headers: authHeaders,
       body: rawBody,
@@ -237,7 +383,7 @@ describe("codex passthrough route", () => {
     expect(res.headers.get("x-upstream-request-id")).toBe("req-provider-a");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://right.codes/codex/v1/responses?trace=1",
+      "https://right.codes/openai/v1/responses?trace=1",
       expect.objectContaining({ method: "POST", body: rawBody })
     );
 
@@ -249,6 +395,17 @@ describe("codex passthrough route", () => {
       expect.objectContaining({ providerId: 1, modelSlug: "gpt-5.2", result: "success" })
     );
     expect(billUsageMock).not.toHaveBeenCalled();
+    expect(persistEstimatedUsageLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: providerA,
+        modelSlug: "gpt-5.2",
+        inputTokens: 2,
+        outputTokens: 2,
+        routePath: "/openai/v1/responses",
+        requestId: expect.any(String),
+        costUsd: 0,
+      })
+    );
   });
 
   it("preserves raw SSE responses", async () => {
@@ -262,7 +419,7 @@ describe("codex passthrough route", () => {
       })
     );
 
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({
@@ -277,12 +434,103 @@ describe("codex passthrough route", () => {
     expect(await res.text()).toBe(sseBody);
   });
 
-  it("skips transformed and unsupported providers for passthrough", async () => {
-    getAllCandidatesSpy.mockResolvedValue([
-      anthropicProvider,
-      transformedProvider,
-      providerB,
-    ]);
+  it("proxies chat completions requests without billing", async () => {
+    const rawBody = JSON.stringify({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: "hello" }],
+      stream: false,
+    });
+    const upstreamBody = JSON.stringify({ id: "chatcmpl_1", choices: [] });
+    fetchMock.mockResolvedValueOnce(
+      new Response(upstreamBody, {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "x-upstream-request-id": "req-chat",
+        },
+      })
+    );
+
+    const res = await app.request("/openai/v1/chat/completions?trace=1", {
+      method: "POST",
+      headers: authHeaders,
+      body: rawBody,
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe(upstreamBody);
+    expect(res.headers.get("x-upstream-request-id")).toBe("req-chat");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://right.codes/openai/v1/chat/completions?trace=1",
+      expect.objectContaining({ method: "POST", body: rawBody })
+    );
+    const init = fetchMock.mock.calls[0]?.[1];
+    const headers = new Headers(init?.headers as Record<string, string>);
+    expect(headers.get("authorization")).toBe("Bearer sk-primary");
+    expect(headers.get("content-type")).toBe("application/json");
+    expect(createRequestLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 1, modelSlug: "gpt-4o", result: "success" })
+    );
+    expect(billUsageMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves raw SSE chat completion responses", async () => {
+    const sseBody =
+      'data: {"id":"chatcmpl_1","choices":[{"delta":{"content":"Hi"}}]}\n\n' +
+      "data: [DONE]\n\n";
+    fetchMock.mockResolvedValueOnce(
+      new Response(sseBody, {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      })
+    );
+
+    const res = await app.request("/openai/v1/chat/completions", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({
+        model: "gpt-4o",
+        stream: true,
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+    expect(await res.text()).toBe(sseBody);
+  });
+
+  it("fails over before the first byte on retryable upstream errors for chat completions", async () => {
+    getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response('{"error":{"message":"Rate limit"}}', {
+          status: 429,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response('{"id":"chatcmpl_ok","choices":[]}', {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      );
+
+    const res = await app.request("/openai/v1/chat/completions", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ model: "gpt-4o", messages: [] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(recordFailureMock).toHaveBeenCalledWith(1, "rate_limit");
+    expect(openCircuitSpy).toHaveBeenCalledWith(1, 60_000, "gpt-4o");
+  });
+
+  it("skips unsupported providers for passthrough", async () => {
+    getAllCandidatesSpy.mockResolvedValue([anthropicProvider, providerB]);
     fetchMock.mockResolvedValueOnce(
       new Response('{"id":"resp_2","status":"completed"}', {
         status: 200,
@@ -290,7 +538,7 @@ describe("codex passthrough route", () => {
       })
     );
 
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [] }),
@@ -319,7 +567,7 @@ describe("codex passthrough route", () => {
         })
       );
 
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [] }),
@@ -328,7 +576,7 @@ describe("codex passthrough route", () => {
     expect(res.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(recordFailureMock).toHaveBeenCalledWith(1, "rate_limit");
-    expect(openCircuitSpy).toHaveBeenCalledWith(1, 60_000);
+    expect(openCircuitSpy).toHaveBeenCalledWith(1, 60_000, "gpt-5.2");
   });
 
   it("fails over when the upstream request times out", async () => {
@@ -356,14 +604,14 @@ describe("codex passthrough route", () => {
         })
       );
 
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [] }),
     });
 
     expect(res.status).toBe(200);
-    expect(openCircuitSpy).toHaveBeenCalledWith(1, 30_000);
+    expect(openCircuitSpy).toHaveBeenCalledWith(1, 60_000, "gpt-5.2");
   });
 
   it("enforces token rate limits", async () => {
@@ -376,12 +624,12 @@ describe("codex passthrough route", () => {
       })
     );
 
-    const first = await app.request("/codex/responses", {
+    const first = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [] }),
     });
-    const second = await app.request("/codex/responses", {
+    const second = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [] }),
@@ -401,12 +649,12 @@ describe("codex passthrough route", () => {
         })
     );
 
-    const first = await app.request("/codex/responses", {
+    const first = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [], max_output_tokens: 1 }),
     });
-    const second = await app.request("/codex/responses", {
+    const second = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [], max_output_tokens: 1 }),
@@ -433,7 +681,7 @@ describe("codex passthrough route", () => {
         })
       );
 
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [] }),
@@ -443,7 +691,7 @@ describe("codex passthrough route", () => {
     expect(await res.text()).toContain("Quota exceeded");
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(recordFailureMock).toHaveBeenNthCalledWith(2, 2, "quota");
-    expect(openCircuitSpy).toHaveBeenNthCalledWith(2, 2, 300_000);
+    expect(openCircuitSpy).toHaveBeenNthCalledWith(2, 2, 60_000, "gpt-5.2");
   });
 
   it("marks provider recovering when the upstream stream fails after the first byte", async () => {
@@ -462,7 +710,7 @@ describe("codex passthrough route", () => {
       )
     );
 
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [], stream: true }),
@@ -474,9 +722,11 @@ describe("codex passthrough route", () => {
     await Promise.resolve();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(providerRecoveryService.isRecovering(providerA.id)).toBe(true);
-    expect(providerRecoveryService.getEntry(providerA.id)?.probeModel).toBe("gpt-5.2");
-    expect(openCircuitSpy).toHaveBeenCalledWith(providerA.id, 30_000);
+    expect(providerRecoveryService.isRecovering(providerA.id, "gpt-5.2")).toBe(true);
+    expect(providerRecoveryService.getEntry(providerA.id, "gpt-5.2")?.probeModel).toBe(
+      "gpt-5.2"
+    );
+    expect(openCircuitSpy).toHaveBeenCalledWith(providerA.id, 60_000, "gpt-5.2");
     expect(createRequestLogMock).toHaveBeenCalledWith(
       expect.objectContaining({
         providerId: providerA.id,
@@ -486,24 +736,31 @@ describe("codex passthrough route", () => {
     );
   });
 
-  it("does not fail over on non-retryable provider errors", async () => {
+  it("fails over on non-retryable provider errors", async () => {
     getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
-    fetchMock.mockResolvedValueOnce(
-      new Response('{"error":{"message":"Invalid request"}}', {
-        status: 400,
-        headers: { "content-type": "application/json" },
-      })
-    );
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response('{"error":{"message":"Invalid request"}}', {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response('{"id":"resp_ok","status":"completed"}', {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      );
 
-    const res = await app.request("/codex/responses", {
+    const res = await app.request("/openai/v1/responses", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ model: "gpt-5.2", input: [] }),
     });
 
-    expect(res.status).toBe(400);
-    expect(await res.text()).toContain("Invalid request");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("resp_ok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(recordFailureMock).toHaveBeenCalledWith(1, "unknown");
   });
 });

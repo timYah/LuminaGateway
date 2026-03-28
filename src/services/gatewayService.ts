@@ -32,8 +32,9 @@ import {
   convertUniversalToOpenAIResponse,
   convertUniversalToOpenAIResponsesResponse,
 } from "./protocolConverter";
+import { normalizeOpenAiCompatibleModelSlug } from "./modelSlug";
 
-export type ClientFormat = "openai" | "openai-responses" | "anthropic";
+export type ClientFormat = "openai" | "openai-responses" | "anthropic" | "gemini";
 
 export type GatewayRequestParams = UpstreamRequestParams & {
   model: string;
@@ -41,6 +42,7 @@ export type GatewayRequestParams = UpstreamRequestParams & {
 
 type GatewayRequestContext = {
   requestId?: string | null;
+  routePath?: string | null;
 };
 
 type OpenAIErrorResponse = {
@@ -209,7 +211,8 @@ export async function handleRequest(
   clientFormat: ClientFormat,
   requestContext: GatewayRequestContext = {}
 ): Promise<GatewayResponse> {
-  const { model: modelSlug, ...params } = requestParams;
+  const modelSlug = normalizeOpenAiCompatibleModelSlug(requestParams.model);
+  const params = requestParams as UpstreamRequestParams;
   const candidates = await gatewayRouter.getAllCandidates(modelSlug);
   if (candidates.length === 0) {
     return {
@@ -238,7 +241,10 @@ export async function handleRequest(
         retryConfig.attempts,
         retryConfig.baseMs
       );
-      await billUsage(provider, modelSlug, usage);
+      await billUsage(provider, modelSlug, usage, {
+        requestId: requestContext.requestId,
+        routePath: requestContext.routePath,
+      });
       await recordRequestLogSafe({
         providerId: provider.id,
         requestId: requestContext.requestId,
@@ -300,7 +306,8 @@ export async function handleStreamingRequest(
   clientFormat: ClientFormat,
   requestContext: GatewayRequestContext = {}
 ): Promise<GatewayStreamingResponse> {
-  const { model: modelSlug, ...params } = requestParams;
+  const modelSlug = normalizeOpenAiCompatibleModelSlug(requestParams.model);
+  const params = requestParams as UpstreamRequestParams;
   const candidates = await gatewayRouter.getAllCandidates(modelSlug);
   if (candidates.length === 0) {
     return {
@@ -340,7 +347,10 @@ export async function handleStreamingRequest(
             latencyMs: Date.now() - start,
           });
           try {
-            await billUsage(provider, modelSlug, usage);
+            await billUsage(provider, modelSlug, usage, {
+              requestId: requestContext.requestId,
+              routePath: requestContext.routePath,
+            });
           } catch (err: unknown) {
             console.error("Billing failed", err);
           }

@@ -1,10 +1,10 @@
 # Lumina Gateway — Documentation
 
-Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, and a dedicated Codex passthrough route. It routes traffic by provider priority and health, and fails over when providers are rate limited or out of quota.
+Lumina Gateway is a TypeScript LLM aggregation gateway that unifies multiple provider accounts behind a single API. It accepts OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, plus dedicated passthrough routes for Claude, OpenAI, and Gemini traffic. It routes traffic by provider priority and health, and fails over when providers are rate limited or out of quota.
 
 ## What Lumina Gateway is
 
-The gateway exposes four client-facing routes: an OpenAI-compatible chat completions endpoint, an OpenAI-compatible responses endpoint, an Anthropic-compatible messages endpoint, and `POST /codex/responses` for Codex passthrough. The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The dedicated Codex route keeps the request and response bodies intact and proxies them straight to the selected upstream `/responses` endpoint.
+The gateway exposes the standard `/v1/*` routes plus raw passthrough endpoints for `POST /claude/v1/messages`, `POST /openai/v1/responses`, `POST /amp/v1/responses`, `POST /openai/v1/chat/completions`, and `POST /google/v1beta/models/{model}:generateContent`. It also includes convert endpoints under `/convert/*` that normalize upstream JSON responses to a target format, and a WebSocket proxy for the OpenAI Realtime API at `/openai/v1/realtime` (plus `/convert/openai/v1/realtime` as an alias). The standard `/v1/*` routes are validated, converted to a universal AI SDK request format, and executed through the shared gateway orchestration layer. The passthrough routes keep request and response bodies intact and proxy them straight to the selected upstream endpoint.
 
 ## Status
 
@@ -30,7 +30,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, and `/admin/*` routes. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/claude/*`, `/openai/*`, `/amp/*`, `/google/*`, `/convert/*`, and `/admin/*` routes (including realtime WS upgrades). |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. When set, only these models are accepted. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
@@ -68,8 +68,10 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 | `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
-| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
-| `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` | `300000` | Base interval (ms) for automatic recovery probes after recoverable provider failures; each run adds a random `1-10s` jitter. |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses`, `/amp/v1/responses`, `/openai/v1/chat/completions`, and `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `DEFAULT_HEALTHCHECK_MODEL` | *(optional)* | Default model slug used for provider health checks when no per-provider override or query parameter is supplied. |
+| `CLAUDE_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/claude/v1/messages` upstream requests before failover. |
+| `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` | `300000` | Fixed interval (ms) for automatic recovery probes after recoverable provider failures. When unset, the gateway uses a 10/20/30/60/120/300s backoff schedule. |
 | `PORT` | `3000` | Server listen port. |
 | `DEFAULT_INPUT_PRICE` | *(optional)* | Global input price fallback (USD per 1M tokens). |
 | `DEFAULT_OUTPUT_PRICE` | *(optional)* | Global output price fallback (USD per 1M tokens). |
@@ -88,7 +90,7 @@ See `docs/deployment.md` for production deployment steps, admin dashboard setup,
 
 ### Authentication
 
-All `/v1/*`, `/codex/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`.
+All `/v1/*`, `/claude/*`, `/openai/*`, `/amp/*`, `/google/*`, `/convert/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Missing or invalid tokens return `401` with `{ "error": { "message": "Unauthorized" } }`. For WebSocket upgrades, the `Authorization` header must be included in the upgrade request.
 
 Set `JWT_SECRET` to enable per-user authentication. When it is set, the gateway also requires a JWT in the header defined by `JWT_HEADER` (default `X-User-Token`). The gateway reads the user and group claims from `JWT_USER_CLAIM` and `JWT_GROUP_CLAIM` and enforces any configured user or group quotas.
 
@@ -157,9 +159,45 @@ Content-Type: application/json
 
 Supported fields match the OpenAI Responses subset used by the validators: `model`, `input` (string or an array of `message` / `function_call_output` items), `instructions`, `stream`, `temperature`, `max_output_tokens`, `tools`, and `tool_choice`. `message.role` accepts `system`, `developer`, `user`, and `assistant`; `developer` and `system` inputs are merged into the upstream system prompt for cross-provider compatibility.
 
-Codex CLI can use either `POST /v1/responses` or the dedicated `POST /codex/responses` alias. For a dedicated Codex base URL, set `base_url` to `http://<host>:<port>/codex` and keep `wire_api="responses"`.
+Codex CLI can use either `POST /v1/responses` or the raw passthrough `POST /openai/v1/responses`. For a dedicated base URL, set `base_url` to `http://<host>:<port>/openai` and keep `wire_api="responses"`.
 
-`POST /codex/responses` requires a JSON request body with a string `model`. The gateway forwards the raw request body to the selected upstream `/responses` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Once streaming starts, the gateway never replays the request to a second provider.
+Amp-style clients can point their Responses base URL at `http://<host>:<port>/amp`. `POST /amp/v1/responses` is a raw passthrough alias for `/responses`, but when the request omits `model` or sends it as a blank string the gateway injects `model: "gpt-5.4"` before provider selection and upstream proxying.
+
+`POST /openai/v1/responses` requires a JSON request body with a string `model`. The gateway forwards the raw request body to the selected upstream `/responses` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Once streaming starts, the gateway never replays the request to a second provider.
+
+`POST /amp/v1/responses` uses the same passthrough behavior as `/openai/v1/responses`, but relaxes the `model` requirement: if `model` is missing or blank, the gateway injects `gpt-5.4`. Non-string `model` values still return `400`.
+
+`POST /openai/v1/chat/completions` forwards the raw JSON body to the selected upstream `/chat/completions` endpoint, preserves the upstream response body and headers, and only retries another provider before the first byte is returned to the client. Streaming responses are proxied as-is.
+
+### OpenAI passthrough endpoints
+
+```http [Request]
+POST /openai/v1/responses
+Authorization: Bearer <GATEWAY_API_KEY>
+Content-Type: application/json
+
+{
+  "model": "gpt-5.2",
+  "input": "Hello",
+  "stream": false
+}
+```
+
+`POST /openai/v1/responses` forwards the raw JSON body to the selected upstream `/responses` endpoint (OpenAI or OpenAI-compatible providers). It preserves the upstream response body and headers, and only fails over to another provider before the first byte reaches the client.
+
+```http [Request]
+POST /amp/v1/responses
+Authorization: Bearer <GATEWAY_API_KEY>
+Content-Type: application/json
+
+{
+  "input": "Hello"
+}
+```
+
+`POST /amp/v1/responses` forwards to the same upstream `/responses` endpoint and preserves the upstream response body and headers. If `model` is missing or blank, the gateway injects `gpt-5.4` before routing. Explicit string `model` values are preserved as-is.
+
+`POST /openai/v1/chat/completions` forwards the raw JSON body to the selected upstream `/chat/completions` endpoint and preserves the upstream response as-is. It only fails over before the first byte reaches the client.
 
 ### Caching
 
@@ -184,6 +222,49 @@ Content-Type: application/json
 ```
 
 Supported fields match the Anthropic subset used by the validators: `model`, `messages`, `system`, `stream`, `temperature`, `max_tokens`, and `tools`.
+
+### Claude passthrough endpoint
+
+```http [Request]
+POST /claude/v1/messages
+Authorization: Bearer <GATEWAY_API_KEY>
+Content-Type: application/json
+Anthropic-Version: 2023-06-01
+
+{
+  "model": "claude-sonnet-4-20250514",
+  "messages": [{"role": "user", "content": "Hello"}],
+  "system": "You are a helpful assistant.",
+  "stream": true,
+  "max_tokens": 1000
+}
+```
+
+`POST /claude/v1/messages` forwards the raw JSON body to the selected upstream `/v1/messages` endpoint and returns the upstream response body unchanged. The gateway only selects providers with `protocol=anthropic`, and it only fails over to another provider before the first byte reaches the client. Once streaming starts, the gateway never replays the request to a second provider.
+
+If your client builds the path as `POST /messages` relative to its configured base URL, you can use the alias `POST /claude/messages`.
+
+### Gemini passthrough endpoint
+
+```http [Request]
+POST /google/v1beta/models/gemini-2.5-pro:generateContent
+Authorization: Bearer <GATEWAY_API_KEY>
+Content-Type: application/json
+
+{
+  "contents": [{"role": "user", "parts": [{"text": "Hello"}]}]
+}
+```
+
+`POST /google/v1beta/models/{model}:generateContent` forwards the raw JSON body to the selected Google provider and preserves the upstream response body and headers. It only fails over before the first byte is returned to the client.
+
+### Convert endpoints
+
+The convert routes proxy the request to the selected provider and normalize JSON responses into the target format. Requests use the same payloads as the corresponding provider APIs, while non-JSON responses and streaming responses are passed through unchanged.
+
+- `POST /convert/openai/v1/responses`
+- `POST /convert/claude/v1/messages`
+- `POST /convert/google/v1beta/models/{model}:generateContent`
 
 ### Streaming responses
 
@@ -213,6 +294,12 @@ event: message_stop
 data: {"type":"message_stop"}
 ```
 
+Convert endpoints only transform non-streaming JSON responses. If an upstream response is streaming or not JSON, the gateway streams it back to the client without conversion.
+
+### Realtime WebSocket proxy
+
+Connect to `/openai/v1/realtime` (or `/convert/openai/v1/realtime`) with a standard WebSocket client and include `Authorization: Bearer <GATEWAY_API_KEY>` in the upgrade request. The gateway proxies frames to a selected OpenAI-compatible provider and does not rewrite the payload.
+
 ### Admin routes
 
 ```
@@ -220,39 +307,48 @@ GET    /admin/providers          — list all providers
 POST   /admin/providers          — create a provider
 PATCH  /admin/providers/:id      — update provider fields
 POST   /admin/providers/:id/test — test provider connectivity
-POST   /admin/providers/:id/reset — reset circuit breaker state
+POST   /admin/providers/test     — test provider connectivity without saving
+POST   /admin/providers/:id/reset — reset circuit breaker state (all models)
 DELETE /admin/providers/:id      — delete provider (also removes usage logs)
+GET    /admin/model-priorities   — list model-level provider priorities
+POST   /admin/model-priorities   — create model-level provider priority
+PATCH  /admin/model-priorities/:id — update model-level provider priority
+DELETE /admin/model-priorities/:id — delete model-level provider priority
 POST   /admin/providers/health   — run a health check for all providers
 GET    /admin/failure-stats      — get error type distribution for recent requests
-GET    /admin/circuit-breakers   — list open circuit breakers
+GET    /admin/circuit-breakers   — list open circuit breakers (per model)
 GET    /admin/usage              — query usage logs
 GET    /admin/usage/summary      — usage + cost summary by API key and route
-GET    /admin/usage/stats        — trend + provider/model distribution
+GET    /admin/usage/stats        — token summary + trend + provider/model distribution
 GET    /admin/request-logs       — query request-level logs
 GET    /admin/active-requests     — inspect current in-flight requests
 GET    /admin/config/export      — export providers + settings
 POST   /admin/config/import      — import providers + settings
 ```
 
-`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). `codexTransform` defaults to `false`. When it stays `false`, the provider remains eligible for raw `/codex/responses` passthrough routing. When it is `true`, the provider is reserved for a future transformed Codex flow and is excluded from `/codex/*` routing for now. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted.
+`POST /admin/providers` accepts `name`, `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, optional `healthCheckModel`, plus optional `balance`, `inputPrice`, `outputPrice`, `isActive`, `priority`. `protocol` supports `openai`, `anthropic`, `google`, and `new-api`. For OpenAI-compatible providers, set `apiMode` to `responses` (default) or `chat` (Chat Completions). The gateway normalizes OpenAI-compatible `baseUrl` values that accidentally include endpoint suffixes like `/responses` or `/chat/completions` so the upstream request still targets `/v1`. `codexTransform` defaults to `false` and is reserved for future Codex flows; it currently has no runtime effect. `healthCheckModel` overrides the model used for provider health checks when no model is provided. `balance` is informational only and does not affect routing. `inputPrice` and `outputPrice` are USD per 1M tokens and fall back to `DEFAULT_INPUT_PRICE` / `DEFAULT_OUTPUT_PRICE` when omitted. Provider payloads also accept `health_check_model` as an alias for `healthCheckModel`.
 
-`POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug. If the provider is recovering, a successful manual test also clears the in-memory recovery gate and circuit breaker so the provider can re-enter routing immediately.
+`POST /admin/providers/:id/test` accepts an optional `model` query parameter (for example `?model=gpt-4o`) and returns the measured latency plus the selected model slug. When omitted, the gateway uses `healthCheckModel`, then `DEFAULT_HEALTHCHECK_MODEL`, and finally falls back to `gpt-4o`. A successful manual test updates the provider health status to `healthy` and clears the model-scoped recovery gate and circuit breaker so the provider can re-enter routing immediately for that model.
 
-`POST /admin/providers/:id/reset` clears the in-memory circuit breaker and recovery gate for the provider so it can re-enter routing immediately. `GET /admin/circuit-breakers` returns providers currently cooling down and/or recovering, including `state`, `remainingMs`, and recovery probe metadata when available.
+`POST /admin/providers/test` accepts `protocol`, `baseUrl`, `apiKey`, optional `apiMode`, optional `codexTransform`, optional `healthCheckModel`, plus optional `name`. It performs the same connectivity check as the saved-provider test but does not write anything to the database. It accepts the same optional `model` query parameter (for example `?model=gpt-4o`) and uses the same model fallback chain.
+
+`POST /admin/providers/:id/reset` clears all in-memory circuit breaker and recovery entries for the provider so it can re-enter routing immediately for every model. `GET /admin/circuit-breakers` returns model-scoped entries currently cooling down and/or recovering, including `modelSlug`, `state`, `remainingMs`, and recovery probe metadata when available.
 
 `POST /admin/providers/health` accepts an optional `model` query parameter and returns the health results for each provider. A successful probe also restores any recovering provider to routing immediately. `GET /admin/failure-stats` aggregates recent request failures by error type.
 
-When a provider hits a recoverable upstream failure (`quota`, `rate_limit`, `network`, or `server`), Lumina Gateway keeps it out of routing until a recovery probe succeeds. Automatic probes run every `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` plus a random `1-10s` delay to avoid fixed-interval patterns. `GET /admin/providers` includes a `recovery` object for providers currently in this state, with the trigger error type, probe model, next probe time, and the latest failed probe details.
+When a provider hits a recoverable upstream failure (`quota`, `rate_limit`, `network`, or `server`), Lumina Gateway keeps that provider-model pair out of routing until a recovery probe succeeds. Automatic probes back off on 10s/20s/30s/60s/120s/300s intervals (fixed interval when `PROVIDER_RECOVERY_CHECK_INTERVAL_MS` is set). `GET /admin/providers` includes a `recovery` object for providers currently in this state, with `triggerErrorType`, `probeModel`, `startedAt`, `nextProbeAt`, and the latest failed probe details in `lastProbeAt`, `lastProbeErrorType`, and `lastProbeMessage`.
 
 For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 
-`GET /admin/usage` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `limit`, and `offset`. The response includes `{ usage, limit, offset }` sorted by `createdAt` descending.
+`GET /admin/usage` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `limit`, and `offset`. The response includes `{ usage, limit, offset }` sorted by `createdAt` descending. Each usage row now includes `usageSource` (`actual` or `estimated`), `routePath`, and `requestId` so the admin UI can distinguish SDK-billed `/v1/*` traffic from estimated passthrough or convert HTTP traffic.
 
 `GET /admin/usage/summary` returns aggregated usage and estimated cost grouped by API key and route. The estimate uses `DEFAULT_INPUT_PRICE` and `DEFAULT_OUTPUT_PRICE` when they are set.
 
-`GET /admin/usage/stats` returns `{ trend, byProvider, byModel }` for the selected date range. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first. `GET /admin/active-requests` returns `{ activeRequests }` for the requests currently in flight, including the active provider and failover attempt details for each request. Historical request logs now also include `requestId` so current in-flight requests can be correlated with completed provider-attempt logs.
+`GET /admin/usage/stats` supports `providerId`, `modelSlug`, `startDate`, and `endDate`. It returns `{ summary, trend, byProvider, byModel }`, where every aggregate includes `requestCount`, `inputTokens`, `outputTokens`, `totalTokens`, and `totalCost`. `GET /admin/request-logs` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `errorType`, `limit`, and `offset`, and returns `{ requests, limit, offset }` sorted by newest first. `GET /admin/active-requests` returns `{ activeRequests }` for the requests currently in flight, including the active provider and failover attempt details for each request. Historical request logs now also include `requestId` so current in-flight requests can be correlated with completed provider-attempt logs.
 
-`GET /admin/config/export` returns `{ providers, models, settings }` and includes `codexTransform` in each provider entry. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode? }`, where `mode` is `replace` or `merge`.
+`GET /admin/config/export` returns `{ providers, models, settings }` and includes `codexTransform` in each provider entry. The `models` array contains `{ providerId, providerName, modelSlug, priority }`. `POST /admin/config/import` accepts `{ providers, models?, settings?, mode?, modelConflictPolicy? }`, where each model entry may use `providerId` or `providerName`. `mode` is `replace` or `merge`. `modelConflictPolicy` is `overwrite` (default) or `skip` for existing model priority rows.
+
+`modelSlug` in model priorities supports `*` wildcards (for example `gpt-5.4*` matches `gpt-5.4-xhigh`). Exact matches win over wildcard entries, and when multiple wildcard patterns match, the longest pattern (most specific) is selected.
 
 ### Admin dashboard
 
@@ -261,13 +357,21 @@ The admin dashboard provides a web UI for provider management and usage visibili
 **Capabilities**
 
 - Providers list with create and update flows.
-- Codex transform switch with explicit passthrough status badges in the provider roster.
+- Codex transform toggle (reserved) displayed in the provider roster.
 - Usage log querying with filters and pagination.
 - API key injected from `.env` when available, otherwise stored in the browser and sent as `Authorization: Bearer ...` on every request.
 - Provider connectivity tests can target a custom model slug from the UI.
 - Health status and failure mix visibility for providers.
 - Usage trends, current in-flight request visibility, and request log visibility.
 - Config export/import for provider portability.
+- Provider create/edit pricing panel now includes balance and health-check model inputs.
+- Provider pricing inputs are always visible within the pricing panel (no nested foldout).
+- Provider create/edit form layout is audited for accessibility and responsive quality.
+- Provider create/edit forms share a unified pricing + priority section layout.
+- Provider pricing + priority panel is collapsed by default in create/edit forms.
+- Requests view refreshes provider metadata to keep provider labels complete.
+- Requests view surfaces the latest 3 request logs as a quick detail panel.
+- Model priorities management page with responsive create/edit forms.
 
 **Setup**
 
@@ -295,15 +399,15 @@ Set `GATEWAY_API_KEY` or `VITE_GATEWAY_API_KEY` to inject the admin API key at b
 
 ## Provider selection and failover
 
-For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. It skips providers that are currently circuit-broken and forwards the requested model slug directly to the upstream provider.
+For the standard `/v1/*` routes, the gateway loads all active providers and sorts by `priority` descending (higher is preferred), then by `id` for deterministic tie-breaking. When `ROUTING_STRATEGY=priority` and model-level priorities are configured, the router uses the model priority for the requested model and falls back to the provider priority when a model priority is missing. Other strategies ignore model-level priorities and apply `round_robin` or `weighted` selection only within the highest provider-priority tier, then keep lower-priority providers ordered for failover. To distribute across all providers when using `round_robin` or `weighted`, set the same priority value for each provider. It skips providers that are circuit-broken for the requested model and forwards the requested model slug directly to the upstream provider.
 
-For `POST /codex/responses`, the gateway uses only `openai` and `new-api` providers with `codexTransform = false`. It forwards the raw request body to upstream `/responses`, preserves the upstream response as-is, and can fail over only before the first byte reaches the client.
+For passthrough routes (`/openai/v1/responses`, `/amp/v1/responses`, `/openai/v1/chat/completions`, `/google/v1beta/models/{model}:generateContent`, and `/claude/v1/messages`), the gateway forwards the raw request body to upstream, preserves the upstream response as-is, and can fail over only before the first byte reaches the client. The same "fail over before first byte" behavior applies to the `/convert/*` HTTP routes. Realtime WebSocket sessions stay pinned to a single provider and are not replayed.
 
-On upstream failures, the gateway reacts to the classified error type. Quota exhaustion opens a 5-minute circuit breaker, rate limits open a 60-second circuit breaker, and 5xx server errors open a 30-second circuit breaker before retrying the next provider. Authentication errors deactivate the provider immediately, model-not-found errors skip to the next provider, and unknown errors return a `500` without failover. Codex passthrough follows the same classification rules, but if every retryable upstream attempt fails before the first byte, it returns the last upstream error response instead of synthesizing a converted payload.
+On upstream failures, the gateway reacts to the classified error type. Quota exhaustion, rate limits, network failures, server errors, and model-not-found errors open a 60-second circuit breaker for that model before retrying the next provider. Authentication errors deactivate the provider immediately, and unknown errors return a `500` without failover. If every retryable upstream attempt fails before the first byte, passthrough routes return the last upstream error response instead of synthesizing a converted payload.
 
 ## Billing and usage
 
-Billing uses usage numbers from the Vercel AI SDK. Missing token counts are normalized to `0` before billing.
+Billing uses usage numbers from the Vercel AI SDK for `/v1/*` routes. Passthrough and convert HTTP routes persist request-based estimates into `usageLogs` with `usageSource: "estimated"` because upstream responses may not include billing metadata. Missing token counts are normalized to `0` before billing.
 
 ```text [Formula]
 inputCost  = (promptTokens / 1,000,000) × inputPrice
@@ -313,9 +417,7 @@ totalCost  = inputCost + outputCost
 
 Pricing resolves per provider. If `inputPrice` or `outputPrice` is missing, the gateway falls back to `DEFAULT_INPUT_PRICE` and `DEFAULT_OUTPUT_PRICE`. If both are unset, the cost is recorded as `0`.
 
-Streaming requests bill after the stream finishes and usage is resolved. Non-streaming requests bill immediately after the provider response completes. Billing records the computed cost in `usageLogs` without deducting provider balances.
-
-Codex passthrough requests do not write `usageLogs` and do not call the billing layer. They still write request logs and failure statistics so provider failover and health decisions remain observable.
+Streaming requests bill after the stream finishes and usage is resolved. Non-streaming requests bill immediately after the provider response completes. Billing records the computed cost in `usageLogs` without deducting provider balances. The `/usage` admin page now surfaces whether each row is `actual` or `estimated`, along with the originating route path and request ID.
 
 ## Error response format
 
@@ -360,7 +462,10 @@ src/
 │   └── seed.ts              # demo data seeder
 ├── routes/
 │   ├── openai.ts            # /v1/chat/completions + /v1/responses handlers
-│   ├── codex.ts             # /codex/responses raw passthrough handler
+│   ├── claude.ts            # /claude/v1/messages raw passthrough handler
+│   ├── openaiPassthrough.ts # /openai/v1/responses + /amp/v1/responses + /openai/v1/chat/completions raw passthrough handler
+│   ├── geminiPassthrough.ts # /google/v1beta/models/* raw passthrough handler
+│   ├── convert.ts           # /convert/* response normalization handlers
 │   ├── anthropic.ts         # /v1/messages handler
 │   └── admin.ts             # /admin/* management routes
 ├── services/
@@ -370,6 +475,8 @@ src/
 │   ├── gatewayService.ts    # orchestrator (route → call → bill → respond)
 │   ├── circuitBreaker.ts    # per-provider health tracking
 │   ├── protocolConverter.ts # OpenAI ↔ Anthropic format conversion
+│   ├── convertService.ts    # detect + convert response payloads
+│   ├── realtimeProxy.ts     # OpenAI Realtime WS proxy
 │   └── streamRelay.ts       # SSE stream re-framing
 ├── middleware/
 │   ├── auth.ts              # Bearer token verification
@@ -377,7 +484,8 @@ src/
 │   └── errorHandler.ts      # standardized error responses
 ├── types/
 │   ├── openai.ts            # OpenAI request/response types
-│   └── anthropic.ts         # Anthropic request/response types
+│   ├── anthropic.ts         # Anthropic request/response types
+│   └── gemini.ts            # Gemini request/response types
 └── utils/
     └── requestId.ts         # unique request ID generation
 docs/

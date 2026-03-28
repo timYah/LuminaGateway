@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { APICallError } from "ai";
 import { createApp } from "../../app";
@@ -11,6 +11,7 @@ import { configureTestDatabase } from "../../test/testDb";
 
 configureTestDatabase("admin-test-provider");
 process.env.GATEWAY_API_KEY = "test-key";
+const defaultHealthCheckModel = process.env.DEFAULT_HEALTHCHECK_MODEL;
 
 vi.mock("../../services/upstreamService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../services/upstreamService")>();
@@ -42,6 +43,14 @@ beforeEach(() => {
   providerRecoveryService.stop();
 });
 
+afterEach(() => {
+  if (defaultHealthCheckModel === undefined) {
+    delete process.env.DEFAULT_HEALTHCHECK_MODEL;
+  } else {
+    process.env.DEFAULT_HEALTHCHECK_MODEL = defaultHealthCheckModel;
+  }
+});
+
 describe("POST /admin/providers/:id/test", () => {
   it("returns success with latencyMs when upstream responds", async () => {
     const provider = await createProvider({
@@ -71,6 +80,35 @@ describe("POST /admin/providers/:id/test", () => {
     expect(body.model).toBe("gpt-4o");
   });
 
+  it("uses the configured health check model when provided", async () => {
+    process.env.DEFAULT_HEALTHCHECK_MODEL = "gpt-5.4";
+    const provider = await createProvider({
+      name: "Configured Model Provider",
+      protocol: "openai",
+      baseUrl: "https://api.example.com",
+      apiKey: "sk-test",
+      balance: 10,
+      isActive: true,
+      priority: 1,
+      healthCheckModel: "gpt-5.2-codex",
+    });
+
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request(`/admin/providers/${provider!.id}/test`, {
+      method: "POST",
+      headers: authHeader,
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-5.2-codex");
+  });
+
   it("honors custom model slug in query", async () => {
     const provider = await createProvider({
       name: "Custom Model Provider",
@@ -96,6 +134,38 @@ describe("POST /admin/providers/:id/test", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.model).toBe("claude-test");
+  });
+
+  it("normalizes prefixed openai model query values", async () => {
+    const provider = await createProvider({
+      name: "Prefixed Query Provider",
+      protocol: "openai",
+      baseUrl: "https://api.example.com",
+      apiKey: "sk-test",
+      balance: 10,
+      isActive: true,
+      priority: 1,
+    });
+
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request(`/admin/providers/${provider!.id}/test?model=openai/gpt-5.4`, {
+      method: "POST",
+      headers: authHeader,
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-5.4");
+    expect(mockedCall).toHaveBeenCalledWith(
+      expect.objectContaining({ id: provider!.id }),
+      "gpt-5.4",
+      expect.objectContaining({ messages: [{ role: "user", content: "ping" }] })
+    );
   });
 
   it("returns error classification on upstream failure", async () => {
@@ -138,7 +208,7 @@ describe("POST /admin/providers/:id/test", () => {
       errorType: "server",
       probeModel: "gpt-4o",
     });
-    gatewayCircuitBreaker.open(provider!.id, 30_000);
+    gatewayCircuitBreaker.open(provider!.id, 30_000, "gpt-4o");
     mockedCall.mockResolvedValue({
       result: {} as never,
       usage: { promptTokens: 1, completionTokens: 1 },
@@ -172,7 +242,7 @@ describe("POST /admin/providers/:id/test", () => {
       statusCode: 400,
     });
     Object.assign(error, {
-      responseBody: JSON.stringify({ error: "端点/codex未配置模型gpt-4o" }),
+      responseBody: JSON.stringify({ error: "端点/openai未配置模型gpt-4o" }),
     });
     mockedCall.mockRejectedValue(error);
 
@@ -185,7 +255,7 @@ describe("POST /admin/providers/:id/test", () => {
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(body.errorType).toBe("model_not_found");
-    expect(body.message).toBe("端点/codex未配置模型gpt-4o");
+    expect(body.message).toBe("端点/openai未配置模型gpt-4o");
   });
 
   it("returns 404 for missing provider", async () => {
@@ -195,5 +265,168 @@ describe("POST /admin/providers/:id/test", () => {
     });
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe("POST /admin/providers/test", () => {
+  it("returns success without persisting the provider", async () => {
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request("/admin/providers/test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        protocol: "openai",
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-test",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-4o");
+    const rows = await db.select().from(providers);
+    expect(rows.length).toBe(0);
+  });
+
+  it("uses healthCheckModel from the payload", async () => {
+    process.env.DEFAULT_HEALTHCHECK_MODEL = "gpt-5.4";
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request("/admin/providers/test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        protocol: "openai",
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-test",
+        healthCheckModel: "gpt-5.2-codex",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-5.2-codex");
+  });
+
+  it("accepts health_check_model as an alias", async () => {
+    process.env.DEFAULT_HEALTHCHECK_MODEL = "gpt-5.4";
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request("/admin/providers/test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        protocol: "openai",
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-test",
+        health_check_model: "gpt-5.2-codex",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-5.2-codex");
+  });
+
+  it("normalizes prefixed health check model inputs", async () => {
+    process.env.DEFAULT_HEALTHCHECK_MODEL = "openai/gpt-5.4";
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request("/admin/providers/test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        protocol: "openai",
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-test",
+        healthCheckModel: "openai/gpt-5.2-codex",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-5.2-codex");
+    expect(mockedCall).toHaveBeenCalledWith(
+      expect.objectContaining({ healthCheckModel: "gpt-5.2-codex" }),
+      "gpt-5.2-codex",
+      expect.any(Object)
+    );
+  });
+
+  it("normalizes prefixed default health check model values", async () => {
+    process.env.DEFAULT_HEALTHCHECK_MODEL = "openai/gpt-5.4";
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request("/admin/providers/test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        protocol: "openai",
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-test",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("gpt-5.4");
+    expect(mockedCall).toHaveBeenCalledWith(
+      expect.objectContaining({ healthCheckModel: null }),
+      "gpt-5.4",
+      expect.any(Object)
+    );
+  });
+
+  it("honors custom model slug in query", async () => {
+    mockedCall.mockResolvedValue({
+      result: {} as never,
+      usage: { promptTokens: 1, completionTokens: 1 },
+    });
+
+    const res = await app.request("/admin/providers/test?model=claude-test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({
+        protocol: "anthropic",
+        baseUrl: "https://api.anthropic.com",
+        apiKey: "sk-test",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.model).toBe("claude-test");
+  });
+
+  it("returns 400 for invalid payload", async () => {
+    const res = await app.request("/admin/providers/test", {
+      method: "POST",
+      headers: authHeader,
+      body: JSON.stringify({ protocol: "openai" }),
+    });
+
+    expect(res.status).toBe(400);
   });
 });

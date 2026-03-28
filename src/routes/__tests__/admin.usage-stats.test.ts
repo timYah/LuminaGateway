@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 describe("admin usage stats", () => {
-  it("aggregates trend and distributions", async () => {
+  it("aggregates token totals, trends, and distributions", async () => {
     const providerA = await createProvider({
       name: "Usage A",
       protocol: "openai",
@@ -60,20 +60,56 @@ describe("admin usage stats", () => {
         cost: 0.2,
         createdAt: new Date("2024-01-16T00:00:00Z"),
       },
+      {
+        providerId: providerA!.id,
+        modelSlug: "gpt-4.1",
+        inputTokens: 20,
+        outputTokens: 10,
+        cost: 0.4,
+        createdAt: new Date("2024-01-16T12:00:00Z"),
+      },
     ]);
 
     const res = await app.request(
-      "/admin/usage/stats?startDate=2024-01-01&endDate=2024-01-31",
+      `/admin/usage/stats?providerId=${providerA!.id}&modelSlug=gpt-4o&startDate=2024-01-01&endDate=2024-01-31`,
       { headers: authHeader }
     );
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.trend).toHaveLength(2);
-    expect(body.byProvider).toHaveLength(2);
+    expect(body.summary).toEqual({
+      requestCount: 1,
+      inputTokens: 10,
+      outputTokens: 5,
+      totalTokens: 15,
+      totalCost: 0.1,
+    });
+    expect(body.trend).toHaveLength(1);
+    expect(body.trend[0]).toMatchObject({
+      date: "2024-01-15",
+      requestCount: 1,
+      inputTokens: 10,
+      outputTokens: 5,
+      totalTokens: 15,
+      totalCost: 0.1,
+    });
+    expect(body.byProvider).toHaveLength(1);
     expect(body.byModel).toHaveLength(1);
-    const dates = body.trend.map((item: { date: string }) => item.date);
-    expect(dates).toContain("2024-01-15");
-    expect(dates).toContain("2024-01-16");
+    expect(body.byProvider[0]).toMatchObject({
+      providerId: providerA!.id,
+      requestCount: 1,
+      inputTokens: 10,
+      outputTokens: 5,
+      totalTokens: 15,
+      totalCost: 0.1,
+    });
+    expect(body.byModel[0]).toMatchObject({
+      modelSlug: "gpt-4o",
+      requestCount: 1,
+      inputTokens: 10,
+      outputTokens: 5,
+      totalTokens: 15,
+      totalCost: 0.1,
+    });
   });
 });

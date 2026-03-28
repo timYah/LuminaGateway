@@ -59,6 +59,7 @@ const providerA = {
   outputPrice: null,
   isActive: true,
   priority: 1,
+  healthCheckModel: null,
   healthStatus: "unknown" as const,
   lastHealthCheckAt: null,
   createdAt: new Date(),
@@ -78,6 +79,7 @@ const providerB = {
   outputPrice: null,
   isActive: true,
   priority: 2,
+  healthCheckModel: null,
   healthStatus: "unknown" as const,
   lastHealthCheckAt: null,
   createdAt: new Date(),
@@ -135,7 +137,8 @@ describe("gatewayService", () => {
     expect(billUsageMock).toHaveBeenCalledWith(
       providerA,
       "gpt-4o",
-      { promptTokens: 2, completionTokens: 3 }
+      { promptTokens: 2, completionTokens: 3 },
+      { requestId: undefined, routePath: undefined }
     );
   });
 
@@ -188,7 +191,8 @@ describe("gatewayService", () => {
     expect(response.status).toBe(200);
     expect(breakerOpenSpy).toHaveBeenCalledWith(
       providerA.id,
-      expect.any(Number)
+      expect.any(Number),
+      "gpt-4o"
     );
   });
 
@@ -203,6 +207,28 @@ describe("gatewayService", () => {
           statusCode: 404,
         })
       )
+      .mockResolvedValueOnce({
+        result: {
+          text: "Fallback",
+          finishReason: "stop",
+        },
+        usage: { promptTokens: 1, completionTokens: 1 },
+      } as unknown as Awaited<ReturnType<typeof callUpstreamNonStreaming>>);
+
+    const response = await handleRequest(
+      { model: "gpt-4o", messages: [] },
+      "openai"
+    );
+
+    expect(response.status).toBe(200);
+    expect(callUpstreamMock.mock.calls[0][0].id).toBe(providerA.id);
+    expect(callUpstreamMock.mock.calls[1][0].id).toBe(providerB.id);
+  });
+
+  it("falls back on unknown errors", async () => {
+    getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
+    callUpstreamMock
+      .mockRejectedValueOnce(new Error("boom"))
       .mockResolvedValueOnce({
         result: {
           text: "Fallback",
@@ -315,7 +341,8 @@ describe("gatewayService", () => {
     expect(billUsageMock).toHaveBeenCalledWith(
       providerA,
       "gpt-4o",
-      { promptTokens: 1, completionTokens: 2 }
+      { promptTokens: 1, completionTokens: 2 },
+      { requestId: undefined, routePath: undefined }
     );
   });
 
@@ -373,8 +400,30 @@ describe("gatewayService", () => {
     expect(response.status).toBe(200);
     expect(breakerOpenSpy).toHaveBeenCalledWith(
       providerA.id,
-      expect.any(Number)
+      expect.any(Number),
+      "gpt-4o"
     );
+  });
+
+  it("falls back on unknown streaming errors before start", async () => {
+    getAllCandidatesSpy.mockResolvedValue([providerA, providerB]);
+    callUpstreamStreamingMock
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockReturnValueOnce({
+        stream:
+          (async function* () {
+            yield { type: "text-delta", id: "1", text: "ok" };
+          })() as unknown as AsyncIterableStream<TextStreamPart<ToolSet>>,
+        usagePromise: Promise.resolve({ promptTokens: 1, completionTokens: 1 }),
+      });
+
+    const response = await handleStreamingRequest(
+      { model: "gpt-4o", messages: [] },
+      "openai"
+    );
+
+    expect(response.status).toBe(200);
+    expect(callUpstreamStreamingMock).toHaveBeenCalledTimes(2);
   });
 
   it("marks provider recovering when a streaming request fails mid-flight", async () => {
@@ -405,8 +454,10 @@ describe("gatewayService", () => {
     await Promise.resolve();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(providerRecoveryService.isRecovering(providerA.id)).toBe(true);
-    expect(providerRecoveryService.getEntry(providerA.id)?.probeModel).toBe("gpt-4o");
-    expect(breakerOpenSpy).toHaveBeenCalledWith(providerA.id, 60_000);
+    expect(providerRecoveryService.isRecovering(providerA.id, "gpt-4o")).toBe(true);
+    expect(providerRecoveryService.getEntry(providerA.id, "gpt-4o")?.probeModel).toBe(
+      "gpt-4o"
+    );
+    expect(breakerOpenSpy).toHaveBeenCalledWith(providerA.id, 60_000, "gpt-4o");
   });
 });

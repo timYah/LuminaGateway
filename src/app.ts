@@ -9,8 +9,11 @@ import { rateLimitMiddleware } from "./middleware/rateLimit";
 import { adminRoutes } from "./routes/admin";
 import { anthropicRoutes } from "./routes/anthropic";
 import { openaiRoutes } from "./routes/openai";
-import { codexRoutes } from "./routes/codex";
+import { openaiPassthroughRoutes } from "./routes/openaiPassthrough";
+import { claudeRoutes } from "./routes/claude";
 import { renderMetrics } from "./services/metricsService";
+import { geminiPassthroughRoutes } from "./routes/geminiPassthrough";
+import { convertRoutes } from "./routes/convert";
 
 function registerAdminUi(app: Hono) {
   const adminDistRoot = process.env.ADMIN_DIST_ROOT || "./apps/admin/dist";
@@ -47,6 +50,7 @@ function registerAdminUi(app: Hono) {
 
   app.get("/", serveAdminIndex);
   app.get("/providers", serveAdminIndex);
+  app.get("/model-priorities", serveAdminIndex);
   app.get("/usage", serveAdminIndex);
   app.notFound((c) => {
     const accept = c.req.header("accept") || "";
@@ -76,16 +80,31 @@ export function createApp() {
   };
 
   app.use("/v1/*", cors(corsOptions));
-  app.use("/codex/*", cors(corsOptions));
+  app.use("/claude/*", cors(corsOptions));
+  app.use("/openai/*", cors(corsOptions));
+  app.use("/amp/*", cors(corsOptions));
+  app.use("/google/*", cors(corsOptions));
+  app.use("/convert/*", cors(corsOptions));
   app.use("/admin/*", cors(corsOptions));
   app.use("/v1/*", rateLimitMiddleware());
-  app.use("/codex/*", rateLimitMiddleware());
+  app.use("/claude/*", rateLimitMiddleware());
+  app.use("/openai/*", rateLimitMiddleware());
+  app.use("/amp/*", rateLimitMiddleware());
+  app.use("/google/*", rateLimitMiddleware());
+  app.use("/convert/*", rateLimitMiddleware());
   app.use("/admin/*", rateLimitMiddleware());
   app.use("/v1/*", authMiddleware());
-  app.use("/codex/*", authMiddleware());
+  app.use("/claude/*", authMiddleware());
+  app.use("/openai/*", authMiddleware());
+  app.use("/amp/*", authMiddleware());
+  app.use("/google/*", authMiddleware());
+  app.use("/convert/*", authMiddleware());
   app.use("/admin/*", authMiddleware());
   app.route("/", openaiRoutes);
-  app.route("/", codexRoutes);
+  app.route("/", openaiPassthroughRoutes);
+  app.route("/", claudeRoutes);
+  app.route("/", geminiPassthroughRoutes);
+  app.route("/", convertRoutes);
   app.route("/", anthropicRoutes);
   app.route("/", adminRoutes);
   registerAdminUi(app);

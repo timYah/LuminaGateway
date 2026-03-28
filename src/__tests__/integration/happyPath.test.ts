@@ -77,5 +77,8 @@ describe("integration happy path", () => {
     const logs = await db.select().from(usageLogs);
     expect(logs).toHaveLength(1);
     expect(logs[0].modelSlug).toBe("gpt-4o");
+    expect(logs[0].usageSource).toBe("actual");
+    expect(logs[0].routePath).toBe("/v1/chat/completions");
+    expect(logs[0].requestId).toBeTruthy();
   });
 });

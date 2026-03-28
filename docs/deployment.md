@@ -12,7 +12,7 @@ Lumina Gateway runs on Node.js LTS and supports SQLite or PostgreSQL. Use persis
 |---|---|---|
 | `DATABASE_TYPE` | `sqlite` | Database driver: `sqlite` or `postgres`. |
 | `DATABASE_URL` | `file:./.runtime/lumina.db` | Connection string. Required when `DATABASE_TYPE=postgres`. |
-| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/codex/*`, and `/admin/*` routes. |
+| `GATEWAY_API_KEY` | *(required)* | Bearer token used by `/v1/*`, `/claude/*`, `/openai/*`, `/amp/*`, `/google/*`, `/convert/*`, and `/admin/*` routes. |
 | `GATEWAY_API_KEYS` | *(optional)* | Comma-separated list of additional gateway API keys. |
 | `MODEL_ALLOWLIST` | *(optional)* | Comma/newline-separated list of allowed model slugs. |
 | `MODEL_BLOCKLIST` | *(optional)* | Comma/newline-separated list of blocked model slugs. |
@@ -50,7 +50,8 @@ Lumina Gateway runs on Node.js LTS and supports SQLite or PostgreSQL. Use persis
 | `CACHE_TTL_MS` | *(optional)* | Cache TTL for non-streaming `/v1/*` responses; override with `x-cache-ttl-ms`. |
 | `UPSTREAM_RETRY_ATTEMPTS` | *(optional)* | Number of retry attempts for retryable upstream errors. |
 | `UPSTREAM_RETRY_BASE_MS` | `200` | Base backoff delay (ms) for upstream retries. |
-| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for `/codex/responses` upstream requests before failover. |
+| `CODEX_UPSTREAM_TIMEOUT_MS` | *(optional)* | Timeout in milliseconds for passthrough `/openai/v1/responses`, `/amp/v1/responses`, `/openai/v1/chat/completions`, and `/google/v1beta/models/{model}:generateContent` upstream requests before failover (also used by convert routes). |
+| `DEFAULT_HEALTHCHECK_MODEL` | *(optional)* | Default model slug used for provider health checks when no per-provider override or query parameter is supplied. |
 | `GATEWAY_BASE_URL` | *(optional)* | Gateway base URL used by the admin dev server proxy. |
 | `PORT` | `3000` | Server listen port. |
 | `HOST` | `127.0.0.1` | Dev host binding for gateway/admin startup. Set `0.0.0.0` to expose on LAN or Docker host networking. |
@@ -146,7 +147,7 @@ The admin UI can load credentials from the root `.env` file. Set `GATEWAY_API_KE
 
 ## Usage examples
 
-All `/v1/*`, `/codex/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Set `JWT_SECRET` to require a user JWT in the header defined by `JWT_HEADER` (default `X-User-Token`).
+All `/v1/*`, `/claude/*`, `/openai/*`, `/amp/*`, `/google/*`, `/convert/*`, and `/admin/*` routes require `Authorization: Bearer <GATEWAY_API_KEY>`. Set `JWT_SECRET` to require a user JWT in the header defined by `JWT_HEADER` (default `X-User-Token`).
 
 The `/metrics` endpoint exposes Prometheus-compatible counters for request volume and latency.
 
@@ -165,14 +166,23 @@ curl http://localhost:3000/v1/responses \
 ```
 
 ```bash [Terminal]
+curl http://localhost:3000/amp/v1/responses \
+  -H "Authorization: Bearer dev-token" \
+  -H "Content-Type: application/json" \
+  -d '{"input":"Hello"}'
+```
+
+`POST /amp/v1/responses` proxies to the same upstream `/responses` endpoint as `/openai/v1/responses`, but injects `model: "gpt-5.4"` when the request omits `model` or sends a blank string.
+
+```bash [Terminal]
 codex exec \
   -c model_provider='gateway' \
   -c model='gpt-5.3-codex' \
-  -c 'model_providers.gateway={name="gateway",base_url="http://localhost:3000/codex",wire_api="responses",requires_openai_auth=true}' \
+  -c 'model_providers.gateway={name="gateway",base_url="http://localhost:3000/openai",wire_api="responses",requires_openai_auth=true}' \
   'Say hello in one word.'
 ```
 
-Keep `Codex transform` disabled on the target provider when you want `/codex/responses` to proxy the request body and response body without conversion. The gateway only retries another provider before the first byte is sent back to the client.
+The Codex transform toggle is reserved for future flows and currently has no runtime effect.
 
 ```bash [Terminal]
 curl http://localhost:3000/admin/providers \
@@ -194,6 +204,23 @@ curl "http://localhost:3000/admin/failure-stats" \
 ```bash [Terminal]
 curl "http://localhost:3000/admin/circuit-breakers" \
   -H "Authorization: Bearer dev-token"
+```
+
+Response entries are model-scoped and include the model slug:
+
+```json
+{
+  "breakers": [
+    {
+      "providerId": 1,
+      "name": "OpenAI Main",
+      "protocol": "openai",
+      "modelSlug": "gpt-4o",
+      "state": "cooldown",
+      "remainingMs": 42000
+    }
+  ]
+}
 ```
 
 ```bash [Terminal]

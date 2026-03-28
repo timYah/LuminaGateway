@@ -1,5 +1,5 @@
 import { APICallError } from "ai";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import type { Provider } from "../db/schema/providers";
 import { normalizeOpenAiBaseUrl } from "../services/aiSdkFactory";
 import { isContentBlocked } from "../services/contentSafetyService";
@@ -10,14 +10,22 @@ import { extractJwtIdentity, resolveJwtConfig, verifyJwt } from "../services/jwt
 import { applyProviderFailurePolicy } from "../services/providerFailurePolicy";
 import { createRequestLog } from "../services/requestLogService";
 import { wrapStreamWithFinalizer } from "../services/streamUtils";
-import { estimateUsage } from "../services/requestEstimator";
+import {
+  collectEstimatedOutputTokensFromStream,
+  estimateUsage,
+} from "../services/requestEstimator";
 import { tokenRateLimiter } from "../services/tokenRateLimiter";
 import { groupQuotaTracker, keyQuotaTracker, userQuotaTracker } from "../services/quotaService";
+import {
+  persistEstimatedUsageLog,
+  resolveUsageCost,
+} from "../services/usageLogService";
 import { recordUsage } from "../services/usageSummaryService";
 import { classifyUpstreamError, getUpstreamErrorMessage } from "../services/upstreamService";
 import { normalizeAuthToken } from "../utils/auth";
 import { resolveRequestId } from "../utils/requestContext";
 import { activeRequestService } from "../services/activeRequestService";
+import { normalizeOpenAiCompatibleModelSlug } from "../services/modelSlug";
 
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
@@ -42,6 +50,15 @@ type StoredFailureResponse = {
   headers: Headers;
 };
 
+type OpenAiPassthroughFormat = "openai" | "openai-responses";
+
+type OpenAiPassthroughOptions = {
+  routePath: string;
+  upstreamPath: string;
+  clientFormat: OpenAiPassthroughFormat;
+  defaultModel?: string;
+};
+
 function buildGatewayError(message: string): GatewayErrorResponse {
   return {
     error: {
@@ -64,7 +81,7 @@ function parseJson(text: string) {
   }
 }
 
-function resolveCodexTimeoutMs() {
+function resolveOpenAiPassthroughTimeoutMs() {
   const raw = process.env.CODEX_UPSTREAM_TIMEOUT_MS;
   if (!raw) return null;
   const parsed = Number(raw);
@@ -82,15 +99,14 @@ function buildTimeoutError() {
   return error;
 }
 
-function isCodexPassthroughCandidate(provider: Provider) {
-  return (
-    (provider.protocol === "openai" || provider.protocol === "new-api") &&
-    !provider.codexTransform
-  );
+function isOpenAiPassthroughCandidate(provider: Provider) {
+  return provider.protocol === "openai" || provider.protocol === "new-api";
 }
 
-function buildUpstreamUrl(provider: Provider, requestUrl: string) {
-  const upstreamUrl = new URL(`${normalizeOpenAiBaseUrl(provider.baseUrl)}/responses`);
+function buildUpstreamUrl(provider: Provider, requestUrl: string, upstreamPath: string) {
+  const upstreamUrl = new URL(
+    `${normalizeOpenAiBaseUrl(provider.baseUrl)}${upstreamPath}`
+  );
   upstreamUrl.search = new URL(requestUrl).search;
   return upstreamUrl.toString();
 }
@@ -128,8 +144,40 @@ async function recordRequestLogSafe(input: Parameters<typeof createRequestLog>[0
   try {
     await createRequestLog(input);
   } catch (error) {
-    console.error("[codex] request log failed", error);
+    console.error("[openai] request log failed", error);
   }
+}
+
+async function persistEstimatedUsageSafe(
+  input: Parameters<typeof persistEstimatedUsageLog>[0]
+) {
+  try {
+    await persistEstimatedUsageLog(input);
+  } catch (error) {
+    console.error("[openai] usage log failed", error);
+  }
+}
+
+function buildEstimatedUsageInput(
+  provider: Provider,
+  modelSlug: string,
+  inputTokens: number,
+  outputTokens: number,
+  routePath: string,
+  requestId: string
+): Parameters<typeof persistEstimatedUsageLog>[0] {
+  return {
+    provider,
+    modelSlug,
+    inputTokens,
+    outputTokens,
+    routePath,
+    requestId,
+    costUsd: resolveUsageCost(provider, {
+      inputTokens,
+      outputTokens,
+    }),
+  };
 }
 
 function buildApiCallError(
@@ -154,22 +202,73 @@ function buildApiCallError(
   });
 }
 
-export const codexRoutes = new Hono();
+function resolveEffectiveRequest(
+  parsedBody: Record<string, unknown>,
+  rawBody: string,
+  defaultModel?: string
+) {
+  const hasModel = Object.prototype.hasOwnProperty.call(parsedBody, "model");
+  const modelValue = parsedBody.model;
 
-codexRoutes.post("/codex/responses", async (c) => {
+  if (hasModel && modelValue !== undefined && typeof modelValue !== "string") {
+    return null;
+  }
+
+  const explicitModel =
+    typeof modelValue === "string" ? normalizeOpenAiCompatibleModelSlug(modelValue) : "";
+  if (explicitModel) {
+    const effectiveBody =
+      modelValue === explicitModel ? parsedBody : { ...parsedBody, model: explicitModel };
+    return {
+      parsedBody: effectiveBody,
+      rawBody: effectiveBody === parsedBody ? rawBody : JSON.stringify(effectiveBody),
+      modelSlug: explicitModel,
+    };
+  }
+
+  const fallbackModel = normalizeOpenAiCompatibleModelSlug(defaultModel);
+  if (!fallbackModel) {
+    return null;
+  }
+
+  const effectiveBody = {
+    ...parsedBody,
+    model: fallbackModel,
+  };
+
+  return {
+    parsedBody: effectiveBody,
+    rawBody: JSON.stringify(effectiveBody),
+    modelSlug: fallbackModel,
+  };
+}
+
+export const openaiPassthroughRoutes = new Hono();
+
+async function handleOpenAiPassthroughRequest(
+  c: Context,
+  options: OpenAiPassthroughOptions
+) {
   const rawBody = await c.req.text();
   const parsedBody = parseJson(rawBody);
   if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
     return buildGatewayErrorResponse("Invalid request", 400);
   }
 
-  const modelValue = (parsedBody as { model?: unknown }).model;
-  const modelSlug = typeof modelValue === "string" ? modelValue.trim() : "";
-  if (!modelSlug) {
+  const effectiveRequest = resolveEffectiveRequest(
+    parsedBody as Record<string, unknown>,
+    rawBody,
+    options.defaultModel
+  );
+  if (!effectiveRequest) {
     return buildGatewayErrorResponse("Invalid request", 400);
   }
+  const { parsedBody: effectiveParsedBody, rawBody: effectiveRawBody, modelSlug } = effectiveRequest;
 
-  const usageEstimate = estimateUsage("openai-responses", parsedBody as Record<string, unknown>);
+  const usageEstimate = estimateUsage(
+    options.clientFormat,
+    effectiveParsedBody
+  );
 
   const jwtConfig = resolveJwtConfig();
   const jwtHeaderValue = jwtConfig.enabled ? c.req.header(jwtConfig.header) : undefined;
@@ -238,10 +337,12 @@ codexRoutes.post("/codex/responses", async (c) => {
     }
   }
 
+  const routePath = c.req.path;
+
   if (authToken) {
     recordUsage({
       apiKey: authToken,
-      route: "/codex/responses",
+      route: routePath,
       totalTokens: usageEstimate.totalTokens,
       estimatedCostUsd: usageEstimate.estimatedCostUsd,
     });
@@ -250,12 +351,12 @@ codexRoutes.post("/codex/responses", async (c) => {
   const requestId = resolveRequestId(c);
   activeRequestService.startRequest({
     requestId,
-    path: "/codex/responses",
+    path: routePath,
     modelSlug,
   });
 
   const candidates = (await gatewayRouter.getAllCandidates(modelSlug)).filter(
-    isCodexPassthroughCandidate
+    isOpenAiPassthroughCandidate
   );
   if (candidates.length === 0) {
     activeRequestService.finishRequest(requestId);
@@ -264,7 +365,7 @@ codexRoutes.post("/codex/responses", async (c) => {
 
   let lastFailureResponse: StoredFailureResponse | null = null;
 
-  const timeoutMs = resolveCodexTimeoutMs();
+  const timeoutMs = resolveOpenAiPassthroughTimeoutMs();
 
   for (const provider of candidates) {
     if (!gatewayInflightLimiter.tryAcquire(provider.id, provider.name)) {
@@ -276,7 +377,7 @@ codexRoutes.post("/codex/responses", async (c) => {
       providerName: provider.name,
     });
     const start = Date.now();
-    const upstreamUrl = buildUpstreamUrl(provider, c.req.url);
+    const upstreamUrl = buildUpstreamUrl(provider, c.req.url, options.upstreamPath);
     const abortController = timeoutMs ? new AbortController() : null;
     const timeoutId =
       timeoutMs && abortController
@@ -289,7 +390,7 @@ codexRoutes.post("/codex/responses", async (c) => {
       const upstreamResponse = await fetch(upstreamUrl, {
         method: c.req.method,
         headers: buildUpstreamHeaders(c.req.raw.headers, provider.apiKey),
-        body: rawBody,
+        body: effectiveRawBody,
         signal: abortController?.signal,
       });
       if (timeoutId) clearTimeout(timeoutId);
@@ -298,6 +399,16 @@ codexRoutes.post("/codex/responses", async (c) => {
         const responseBody = upstreamResponse.body;
         const headers = filterResponseHeaders(upstreamResponse.headers);
         if (!responseBody) {
+          await persistEstimatedUsageSafe(
+            buildEstimatedUsageInput(
+              provider,
+              modelSlug,
+              usageEstimate.inputTokens,
+              0,
+              routePath,
+              requestId
+            )
+          );
           await recordRequestLogSafe({
             providerId: provider.id,
             requestId,
@@ -312,16 +423,34 @@ codexRoutes.post("/codex/responses", async (c) => {
             headers,
           });
         }
+        const [clientBody, captureBody] = responseBody.tee();
+        const outputTokensPromise = collectEstimatedOutputTokensFromStream(
+          options.clientFormat,
+          captureBody,
+          upstreamResponse.headers.get("content-type")
+        );
         return new Response(
-          wrapStreamWithFinalizer(responseBody, {
-            onComplete: () =>
-              recordRequestLogSafe({
+          wrapStreamWithFinalizer(clientBody, {
+            onComplete: async () => {
+              const outputTokens = await outputTokensPromise;
+              await persistEstimatedUsageSafe(
+                buildEstimatedUsageInput(
+                  provider,
+                  modelSlug,
+                  usageEstimate.inputTokens,
+                  outputTokens,
+                  routePath,
+                  requestId
+                )
+              );
+              await recordRequestLogSafe({
                 providerId: provider.id,
                 requestId,
                 modelSlug,
                 result: "success",
                 latencyMs: Date.now() - start,
-              }),
+              });
+            },
             onError: async (streamError) => {
               const errorType = classifyUpstreamError(streamError);
               const message = getUpstreamErrorMessage(streamError);
@@ -339,7 +468,7 @@ codexRoutes.post("/codex/responses", async (c) => {
                 latencyMs: Date.now() - start,
               });
               recordFailure(provider.id, errorType);
-              console.warn("[codex] upstream stream failed after first byte", {
+              console.warn("[openai] upstream stream failed after first byte", {
                 providerId: provider.id,
                 providerName: provider.name,
                 errorType,
@@ -365,7 +494,12 @@ codexRoutes.post("/codex/responses", async (c) => {
       }
 
       const responseBody = await upstreamResponse.text();
-      const error = buildApiCallError(upstreamResponse, upstreamUrl, parsedBody, responseBody);
+      const error = buildApiCallError(
+        upstreamResponse,
+        upstreamUrl,
+        effectiveParsedBody,
+        responseBody
+      );
       const errorType = classifyUpstreamError(error);
       const message = getUpstreamErrorMessage(error);
 
@@ -383,7 +517,7 @@ codexRoutes.post("/codex/responses", async (c) => {
         latencyMs: Date.now() - start,
       });
       recordFailure(provider.id, errorType);
-      console.warn("[codex] upstream response failed before first byte", {
+      console.warn("[openai] upstream response failed before first byte", {
         providerId: provider.id,
         providerName: provider.name,
         status: upstreamResponse.status,
@@ -432,7 +566,7 @@ codexRoutes.post("/codex/responses", async (c) => {
         latencyMs: Date.now() - start,
       });
       recordFailure(provider.id, errorType);
-      console.warn("[codex] upstream request failed before first byte", {
+      console.warn("[openai] upstream request failed before first byte", {
         providerId: provider.id,
         providerName: provider.name,
         errorType,
@@ -463,4 +597,29 @@ codexRoutes.post("/codex/responses", async (c) => {
 
   activeRequestService.finishRequest(requestId);
   return buildGatewayErrorResponse("No provider available", 503);
-});
+}
+
+openaiPassthroughRoutes.post("/openai/v1/responses", (c) =>
+  handleOpenAiPassthroughRequest(c, {
+    routePath: "/openai/v1/responses",
+    upstreamPath: "/responses",
+    clientFormat: "openai-responses",
+  })
+);
+
+openaiPassthroughRoutes.post("/amp/v1/responses", (c) =>
+  handleOpenAiPassthroughRequest(c, {
+    routePath: "/amp/v1/responses",
+    upstreamPath: "/responses",
+    clientFormat: "openai-responses",
+    defaultModel: "gpt-5.4",
+  })
+);
+
+openaiPassthroughRoutes.post("/openai/v1/chat/completions", (c) =>
+  handleOpenAiPassthroughRequest(c, {
+    routePath: "/openai/v1/chat/completions",
+    upstreamPath: "/chat/completions",
+    clientFormat: "openai",
+  })
+);

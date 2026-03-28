@@ -7,10 +7,34 @@ import type { Provider } from "../db/schema/providers";
 
 const decoder = new TextDecoder();
 
+const OPENAI_ENDPOINT_SUFFIXES = ["/responses", "/chat/completions", "/completions"];
+
+const normalizeOpenAiPath = (path: string) => {
+  let normalized = path.trim().replace(/\/+$/, "");
+  for (const suffix of OPENAI_ENDPOINT_SUFFIXES) {
+    if (normalized.endsWith(suffix)) {
+      normalized = normalized.slice(0, -suffix.length);
+      normalized = normalized.replace(/\/+$/, "");
+      break;
+    }
+  }
+  if (!normalized) return "/v1";
+  return normalized.endsWith("/v1") ? normalized : `${normalized}/v1`;
+};
+
 export const normalizeOpenAiBaseUrl = (baseUrl: string) => {
   const trimmed = baseUrl.trim().replace(/\/+$/, "");
   if (!trimmed) return trimmed;
-  return trimmed.endsWith("/v1") ? trimmed : `${trimmed}/v1`;
+  try {
+    const url = new URL(trimmed);
+    url.pathname = normalizeOpenAiPath(url.pathname);
+    url.search = "";
+    url.hash = "";
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    const normalized = normalizeOpenAiPath(trimmed);
+    return normalized.startsWith("http") ? normalized.replace(/\/+$/, "") : normalized;
+  }
 };
 
 const decodeBody = (body: unknown) => {

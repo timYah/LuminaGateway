@@ -1,102 +1,125 @@
-# Lumina Gateway — Agent Instructions
+# Agent Workflow — Instructions
 
-## What this project is
+## Bootstrap vs. Continue
 
-Lumina Gateway is a TypeScript-based LLM aggregation gateway. It unifies multiple AI providers (OpenAI, Anthropic, Google, third-party proxies) behind a single API endpoint with balance-aware routing and automatic failover.
+**If `agent-docs/tasks.md` already exists** — the project has already been bootstrapped. Skip bootstrap entirely and go to the **Workflow** section below. If the user provides a new requirement (e.g., "添加用户登录功能", "优化首页加载速度", "修复 XXX bug"), follow the **Handling new requirements** process.
 
-## Key documents (read these first)
+**If `agent-docs/tasks.md` does not exist** — run bootstrap:
 
-- `docs/prompt.md` — Full project specification and requirements (the target)
-- `docs/plans.md` — Milestone plan, architecture overview, risk register, and decision log
-- `docs/tasks.md` — Granular task list (152 tasks across 36 phases) — source of truth for execution order
-- `docs/implement.md` — Execution runbook with rules and completion criteria
-- `docs/documentation.md` — Living documentation updated as milestones complete
+When the user says something like "参考 PRD，实现这个产品" or "Start execution":
 
-## Tech stack
+1. **Read the PRD** file the user specifies (or find it in the project root / `docs/` directory).
+2. **Analyze existing codebase** (if any) — Scan the project for existing source code, config files (`package.json`, `Cargo.toml`, etc.), directory structure, and conventions. Identify what has already been built, the tech stack in use, and the current project state. If the project is empty, skip this step.
+3. **Generate `agent-docs/spec.md`** — Extract and restructure the PRD into a formal project specification following the template in `agent-docs/spec.md.template`. Fill in all sections: core goals, non-goals, hard requirements, deliverables, product spec, etc. If an existing codebase was found, note the current state and what remains to be built.
+4. **Generate `agent-docs/plan.md`** — Create a milestone plan with architecture overview, risk register, and Decision log. At least 10 milestones, each with scope, key files, acceptance criteria, and verification commands. For existing projects, mark already-completed work and plan only the remaining milestones.
+5. **Generate `agent-docs/tasks.md`** — Break every milestone into granular Tasks. Each Phase ends with a ✅ verification task. For existing projects, pre-mark completed Tasks as `[x]` based on the codebase analysis.
+6. **Update this `AGENTS.md` file** — Fill in the "Project info" section below with the project name, description, tech stack, verification commands, and code conventions derived from the PRD and existing codebase.
+7. **Generate `agent-docs/runbook.md`** — Copy from `agent-docs/runbook.md.template` and fill in the completion criteria.
+8. **Delete all template files** — Remove `agent-docs/spec.md.template` and `agent-docs/runbook.md.template`. They are no longer needed after bootstrap.
+9. **Commit** all generated files and template deletions: `docs(T-00.0): bootstrap project from PRD`.
+10. **Present plan to user for review** — Summarize the generated architecture, milestones, and task breakdown. For existing projects, clearly highlight what was detected as already done vs. what will be built. Then **stop and wait for user confirmation**. Do NOT start coding until the user explicitly approves (e.g., "确认", "开始执行", "LGTM", "go").
+   - If the user requests changes verbally (e.g., adjust milestones, modify tech stack, add/remove features), apply **all** requested changes to the relevant files at once, commit, and present the updated plan again. Do NOT stop after each individual change to ask — complete everything the user asked for in one pass, then re-present.
+   - If the user directly edits project files themselves, re-read the modified files, adapt the plan accordingly, commit, and re-present.
+   - Repeat this review loop until the user confirms.
+11. **Begin execution** — Start from the first incomplete Task.
 
-- **Language**: TypeScript (strict mode)
-- **API framework**: Hono
-- **AI interaction**: Vercel AI SDK
-- **ORM**: Drizzle ORM
-- **Database**: SQLite (default, via better-sqlite3) / PostgreSQL (optional)
-- **Testing**: Vitest
-- **Linting**: ESLint
+---
+
+## Project info
+
+> The agent fills in this section during bootstrap. Before bootstrap, these are blank.
+
+**Project name**: (auto-filled from PRD)
+
+**Description**: TypeScript Hono LLM gateway adding newapi-style passthrough + convert routes for OpenAI Responses/Realtime, Claude Messages, and Gemini generateContent.
+
+**Tech stack**: TypeScript (ESM), Node.js 18+, Hono, Zod, Drizzle ORM, Vitest, ESLint, Vite/Nuxt UI (admin).
+
+**Verification commands**:
+```bash
+npm run lint
+npm run typecheck
+npm run test
+```
+
+**Code conventions**: TypeScript ESM; Hono route modules in `src/routes`; business logic in `src/services`; Zod validators in `src/types/validators.ts`; errors use `gateway_error` shape; passthrough filters hop-by-hop headers.
+
+---
+
+## Key documents
+
+- `agent-docs/spec.md` — Full project specification and requirements (the target)
+- `agent-docs/plan.md` — Milestone plan, architecture overview, risk register, and decision log
+- `agent-docs/tasks.md` — Granular task list — source of truth for execution order
+- `agent-docs/runbook.md` — Execution runbook with rules and completion criteria
+- `agent-docs/documentation.md` — Living documentation updated as milestones complete
+
+> **Only agent workflow documents** (spec, plan, tasks, runbook, documentation) belong in `agent-docs/`. All other project documents (PRD, API docs, guides, changelogs, etc.) go in `docs/`.
+
+## Language
+
+- Respond to users in **Chinese** unless the user explicitly requests another language.
+- Code, comments, commit messages, and documentation files are written in **English**.
 
 ## Workflow
 
-1. Read `docs/tasks.md` 找到下一个未完成的 Task。
-2. **预检**：读取相关文件上下文，分析依赖关系和潜在副作用。
-3. **执行**：实现该 Task，保持最小化改动。
-4. **自测**：运行 `npm run lint && npm run typecheck && npm run test`。如果失败，自行分析并修复，不要等待人类干预。
-5. **提交**：`git add` 相关文件并 `git commit`（格式见下方 Git commit rules）。
-6. 在 `docs/tasks.md` 中勾选 `[x]`，继续下一个 Task。
+1. Read `agent-docs/tasks.md` and find the next incomplete Task (marked `[ ]`).
+2. **Pre-check**: Read related file context, analyze dependencies and potential side effects.
+3. **Implement**: Complete the Task with minimal changes.
+4. **Self-test**: Run verification commands. If they fail, analyze the error and fix it autonomously — do not wait for human intervention.
+5. Mark the Task as `[x]` in `agent-docs/tasks.md`.
+6. **Commit**: `git add` the relevant files (including the updated `tasks.md`) and `git commit` (format described below in Git commit rules), then continue to the next Task.
 
-### 自动化测试规则
+### Handling new requirements
 
-- **每次任务都必须进行自动化测试验证**：运行 `npm run lint && npm run typecheck && npm run test`，全部通过后才能提交。
+When the user requests something not already listed in `agent-docs/tasks.md`:
 
-### 自我修复原则
+1. Append a new Phase at the end of `agent-docs/tasks.md` (incrementing the phase number).
+2. Break the requirement into Tasks at a consistent granularity. The first Task should be `T-XX.0 Update task list and documentation`.
+3. The last Task in each Phase must be a ✅ verification task.
+4. Once appended, execute them following the standard workflow.
 
-- 报错时读取完整日志，分析根因后再修复，不要盲目重试。
-- 同一错误连续修复 3 次仍失败 → 标记 `[!]` 阻塞，记录到 `docs/plans.md`，跳到下一个 Task。
-- 任何改动不得破坏 `npm run dev` 的可运行状态。如果破坏了，立即回滚。
+### Self-correction principles
 
-### 超时策略
+- When an error occurs, read the full log, analyze the root cause, then fix. Do not blindly retry.
+- If the same error persists after 3 consecutive fix attempts → mark the Task as `[!]` (blocked), record the issue in `agent-docs/plan.md` under the Decision log section, and skip to the next Task.
+- No change may break the project's runnable state. If it does, roll back immediately.
 
-- 工具调用（test/build/lint）超过 2 分钟无响应 → 中断进程，分析是否引入死循环或资源泄漏，修复后再重试。
+### Timeout policy
 
-## Verification commands
-
-```bash
-npm run dev          # start dev server
-npm run build        # compile
-npm run lint         # lint check
-npm run typecheck    # type check
-npm run test         # run tests
-npm run db:migrate   # run migrations
-npm run db:seed      # seed demo data
-```
+- If a tool invocation (test/build/lint) produces no response for over **2 minutes** → kill the process, analyze whether the change introduced an infinite loop or resource leak, fix the root cause, then retry.
 
 ## Git commit rules
 
-- **每完成一个 Task（如 T-01.1）必须立即 `git add` 相关文件并 `git commit`。** 不要将多个 Task 合并为一次提交。
-- 验证任务（如 T-01.11）在所有测试通过后也需单独提交。
-- 只 stage 当前 Task 涉及的文件，禁止 `git add -A` 或 `git add .`。
+- **Never commit before verification passes.** Run all relevant verification commands first; only commit after they succeed. If tests fail, fix first, then commit.
+- **One Task, one commit.** After a Task passes verification, commit it immediately. Do not batch multiple Tasks into a single commit.
+- Only stage files related to the current Task. Never use `git add -A` or `git add .`.
+- **Auto-commit by default.** Unless the user explicitly says otherwise, commit changes automatically after verification passes.
 
-### Commit message 格式
-
-```
-<type>(T-<phase>.<seq>): <简要描述>
-```
-
-**type** 取值：
-
-| type | 用途 |
-|------|------|
-| `feat` | 新增功能、文件、模块 |
-| `test` | 新增或修改测试 |
-| `fix` | 修复 bug |
-| `refactor` | 重构（不改变行为） |
-| `chore` | 依赖安装、脚本配置、工具链 |
-| `docs` | 文档更新 |
-
-**示例：**
+### Commit message format
 
 ```
-chore(T-01.1): initialize package.json with type module
-chore(T-01.2): install hono and @hono/node-server
-feat(T-01.8): create Hono app factory with /health endpoint
-test(T-01.11): verify scaffold — lint, typecheck, test all pass
-feat(T-05.6): implement atomic balance deduction in providerService
-test(T-05.7): add providerService unit tests
-fix(T-05.7): fix deductBalance race condition found during testing
-docs(T-36.1): update documentation.md to reflect final implementation
+<type>(T-<phase>.<seq>): <short description>
 ```
 
-## Code conventions
+**type** values:
 
-- Use Hono's standard patterns for routes and middleware.
-- Use Drizzle's query builder (not raw SQL).
-- All services are plain functions or classes — no dependency injection framework.
-- Tests go in `__tests__/` directories adjacent to the code they test.
-- Error responses match the format expected by the client (OpenAI or Anthropic).
+| type | usage |
+|------|-------|
+| `feat` | New feature, file, or module |
+| `test` | New or updated tests |
+| `fix` | Bug fix |
+| `refactor` | Refactor (no behavior change) |
+| `chore` | Dependency install, script config, tooling |
+| `docs` | Documentation update |
+
+**Examples:**
+
+```
+docs(T-00.0): bootstrap project from PRD
+chore(T-01.1): initialize project with package manager
+feat(T-03.2): implement user authentication service
+test(T-03.3): add auth service unit tests
+fix(T-03.3): fix token validation edge case found during testing
+docs(T-10.1): update documentation to reflect final implementation
+```

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  convertAnthropicResponseToUniversal,
   convertAnthropicToUniversal,
   convertUniversalToAnthropicResponse,
 } from "../protocolConverter";
@@ -32,5 +33,23 @@ describe("protocolConverter (Anthropic)", () => {
     expect(response.content[0].text).toBe("Hello");
     expect(response.usage?.input_tokens).toBe(2);
     expect(response.usage?.output_tokens).toBe(1);
+  });
+
+  it("converts Anthropic response to universal format", () => {
+    const universal = convertAnthropicResponseToUniversal({
+      id: "msg_1",
+      type: "message",
+      role: "assistant",
+      content: [{ type: "text", text: "Hello" }],
+      model: "claude-sonnet-4-20250514",
+      stop_reason: "end_turn",
+      usage: { input_tokens: 3, output_tokens: 4 },
+    });
+
+    expect(universal.model).toBe("claude-sonnet-4-20250514");
+    expect(universal.text).toBe("Hello");
+    expect(universal.finishReason).toBe("end_turn");
+    expect(universal.usage?.promptTokens).toBe(3);
+    expect(universal.usage?.completionTokens).toBe(4);
   });
 });

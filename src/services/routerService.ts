@@ -79,28 +79,47 @@ export class RouterService {
     return [selected, ...remaining];
   }
 
-  private applyPriority<T extends { id: number; priority: number }>(providers: T[]) {
+  private applyPriority<T extends { id: number; priority: number; modelPriority?: number | null }>(
+    providers: T[]
+  ) {
     if (providers.length <= 1) return providers;
     return providers
       .slice()
-      .sort((a, b) => b.priority - a.priority || a.id - b.id);
+      .sort((a, b) => {
+        const effectiveA = a.modelPriority ?? a.priority;
+        const effectiveB = b.modelPriority ?? b.priority;
+        if (effectiveB !== effectiveA) {
+          return effectiveB - effectiveA;
+        }
+        if (b.priority !== a.priority) {
+          return b.priority - a.priority;
+        }
+        return a.id - b.id;
+      });
   }
 
   async getAllCandidates(modelSlug: string) {
     const providers = await getActiveProvidersByModel(modelSlug);
     const candidates = providers.filter(
       (provider) =>
-        !this.breaker.isOpen(provider.id) && !this.recovery.isRecovering(provider.id)
+        !this.breaker.isOpen(provider.id, modelSlug) &&
+        !this.recovery.isRecovering(provider.id, modelSlug)
     );
     if (candidates.length <= 1) return candidates;
     const strategy = this.resolveStrategy();
-    if (strategy === "round_robin") {
-      return this.applyRoundRobin(modelSlug, candidates);
+    if (strategy === "priority") {
+      return this.applyPriority(candidates);
     }
-    if (strategy === "weighted") {
-      return this.applyWeighted(candidates);
-    }
-    return this.applyPriority(candidates);
+    const topPriority = candidates[0]?.priority ?? 0;
+    let splitIndex = candidates.findIndex((provider) => provider.priority !== topPriority);
+    if (splitIndex === -1) splitIndex = candidates.length;
+    const topTier = candidates.slice(0, splitIndex);
+    const rest = candidates.slice(splitIndex);
+    const orderedTop =
+      strategy === "round_robin"
+        ? this.applyRoundRobin(modelSlug, topTier)
+        : this.applyWeighted(topTier);
+    return orderedTop.concat(rest);
   }
 
   async selectProvider(modelSlug: string) {

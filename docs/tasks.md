@@ -703,10 +703,20 @@
 - [x] **T-70.1** 网关注入运行时 API key / baseUrl 到 admin，并在前端读取以避免 `/admin` 面板 401/404
 - [x] **T-70.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，并使用 agent-browser 验证 `/usage` 不再报 Dashboard failed
 
-## Phase 71 — Provider Modal Consistency
+## Phase 71 — Dedicated Claude Endpoint
 
-- [x] **T-71.1** 统一 Providers 页面“新增/编辑提供商”弹窗高度与滚动行为，并将价格字段改为默认折叠
-- [x] **T-71.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build:admin`
+- [x] **T-71.1** 新增 Claude 透传端点：支持 `POST /claude/v1/messages`（以及 `/claude/messages` alias），仅选用 `protocol=anthropic` Provider，并原样透传请求体与响应体（首字节前可 failover），补充自动化测试
+- [x] **T-71.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`，确认 `/claude/*` 中间件、透传与 failover 行为正常
+
+## Phase 72 — Provider Modal Consistency
+
+- [x] **T-72.1** 统一 Providers 页面“新增/编辑提供商”弹窗高度与滚动行为，并将价格字段改为默认折叠
+- [x] **T-72.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test && npm run build:admin`
+
+## Phase 73 — OpenAI Chat Passthrough
+
+- [x] **T-73.1** 新增 OpenAI 透传端点 `POST /openai/v1/chat/completions`，仅选用 `protocol=openai|new-api` Provider，原样透传请求体与响应体（首字节前可 failover），补充自动化测试
+- [x] **T-73.2** ✅ **验证**：运行 `npm run lint && npm run typecheck && npm run test`
 
 ## 任务统计
 
@@ -777,5 +787,7 @@
 | Phase 68 | 2 | Admin Nav Fix |
 | Phase 69 | 2 | Usage Layout & Paging |
 | Phase 70 | 2 | Admin Runtime Config |
-| Phase 71 | 2 | Provider Modal Consistency |
-| **合计** | **287** | |
+| Phase 71 | 2 | Dedicated Claude Endpoint |
+| Phase 72 | 2 | Provider Modal Consistency |
+| Phase 73 | 2 | OpenAI Chat Passthrough |
+| **合计** | **291** | |

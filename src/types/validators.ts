@@ -134,6 +134,61 @@ const openaiResponsesFunctionCallOutputSchema = z.object({
   output: z.union([z.string(), z.array(openaiResponsesTextPartSchema)]),
 });
 
+const openaiResponsesOutputTextPartSchema = z.object({
+  type: z.literal("output_text"),
+  text: z.string(),
+  annotations: z.array(z.unknown()).optional(),
+});
+
+const openaiResponsesMessageOutputSchema = z.object({
+  id: z.string(),
+  type: z.literal("message"),
+  role: z.literal("assistant"),
+  status: z.literal("completed"),
+  phase: z.enum(["commentary", "final_answer"]).nullable().optional(),
+  content: z.array(openaiResponsesOutputTextPartSchema),
+});
+
+const openaiResponsesOutputItemSchema = z.union([
+  openaiResponsesMessageOutputSchema,
+  z
+    .object({
+      id: z.string(),
+      type: z.literal("function_call"),
+      call_id: z.string(),
+      name: z.string(),
+      arguments: z.string(),
+      status: z.literal("completed"),
+    })
+    .passthrough(),
+  z
+    .object({
+      id: z.string(),
+      type: z.literal("custom_tool_call"),
+      call_id: z.string(),
+      name: z.string(),
+      input: z.string(),
+      status: z.literal("completed"),
+    })
+    .passthrough(),
+]);
+
+const openaiResponsesUsageSchema = z.object({
+  input_tokens: z.number().int(),
+  output_tokens: z.number().int(),
+  total_tokens: z.number().int(),
+  input_tokens_details: z
+    .object({
+      cached_tokens: z.number().int().optional(),
+    })
+    .optional(),
+  output_tokens_details: z
+    .object({
+      reasoning_tokens: z.number().int().optional(),
+    })
+    .optional(),
+});
+
 export const openaiChatCompletionSchema = z.object({
   model: z.string(),
   messages: z.array(openaiMessageSchema),
@@ -163,6 +218,21 @@ export const openaiResponsesSchema = z.object({
   tool_choice: openaiResponsesToolChoiceSchema.optional(),
 });
 
+export const openaiResponsesResponseSchema = z
+  .object({
+    id: z.string(),
+    object: z.literal("response"),
+    created_at: z.number().int().optional(),
+    status: z.string().optional(),
+    model: z.string().optional(),
+    error: z.null().optional(),
+    incomplete_details: z.null().optional(),
+    output: z.array(openaiResponsesOutputItemSchema).optional(),
+    output_text: z.string(),
+    usage: openaiResponsesUsageSchema.optional(),
+  })
+  .passthrough();
+
 const anthropicMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string(),
@@ -183,3 +253,73 @@ export const anthropicMessagesSchema = z.object({
   temperature: z.number().optional(),
   tools: z.array(anthropicToolSchema).optional(),
 });
+
+const anthropicContentBlockSchema = z
+  .object({
+    type: z.string(),
+    text: z.string().optional(),
+  })
+  .passthrough();
+
+export const anthropicMessagesResponseSchema = z
+  .object({
+    id: z.string(),
+    type: z.literal("message"),
+    role: z.literal("assistant"),
+    content: z.array(anthropicContentBlockSchema),
+    model: z.string(),
+    stop_reason: z.string().nullable().optional(),
+    usage: z
+      .object({
+        input_tokens: z.number().int(),
+        output_tokens: z.number().int(),
+      })
+      .optional(),
+  })
+  .passthrough();
+
+const geminiPartSchema = z.object({
+  text: z.string().optional(),
+});
+
+const geminiContentSchema = z
+  .object({
+    role: z.enum(["user", "model", "system"]).optional(),
+    parts: z.array(geminiPartSchema),
+  })
+  .passthrough();
+
+export const geminiGenerateContentSchema = z
+  .object({
+    contents: z.array(geminiContentSchema),
+    systemInstruction: z
+      .union([geminiContentSchema, z.object({ parts: z.array(geminiPartSchema) })])
+      .optional(),
+    tools: z.array(z.record(z.string(), z.unknown())).optional(),
+    toolConfig: z.record(z.string(), z.unknown()).optional(),
+    safetySettings: z.array(z.record(z.string(), z.unknown())).optional(),
+    generationConfig: z.record(z.string(), z.unknown()).optional(),
+  })
+  .passthrough();
+
+const geminiCandidateSchema = z
+  .object({
+    content: geminiContentSchema,
+    finishReason: z.string().optional(),
+    index: z.number().int().optional(),
+  })
+  .passthrough();
+
+export const geminiGenerateContentResponseSchema = z
+  .object({
+    candidates: z.array(geminiCandidateSchema),
+    usageMetadata: z
+      .object({
+        promptTokenCount: z.number().int().optional(),
+        candidatesTokenCount: z.number().int().optional(),
+        totalTokenCount: z.number().int().optional(),
+      })
+      .optional(),
+    modelVersion: z.string().optional(),
+  })
+  .passthrough();

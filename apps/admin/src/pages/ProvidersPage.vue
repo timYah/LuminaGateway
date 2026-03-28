@@ -14,6 +14,7 @@ type Provider = {
   apiKey: string;
   apiMode: "responses" | "chat";
   codexTransform: boolean;
+  healthCheckModel?: string | null;
   balance: number;
   inputPrice: number | null;
   outputPrice: number | null;
@@ -102,8 +103,12 @@ const apiModeOptions = computed(() => [
 const supportsApiMode = (protocol: Provider["protocol"]) =>
   protocol === "openai" || protocol === "new-api";
 
+const canTestCreate = computed(
+  () => createForm.baseUrl.trim().length > 0 && createForm.apiKey.trim().length > 0
+);
+
 const testModelStorageKey = "lumina-admin-test-model";
-const testModel = ref("gpt-4o");
+const testModel = ref("");
 if (typeof window !== "undefined") {
   const stored = globalThis.localStorage?.getItem(testModelStorageKey);
   if (stored && stored.trim().length > 0) {
@@ -125,7 +130,9 @@ const editOpen = ref(false);
 const createAdvancedOpen = ref(false);
 const createPricingOpen = ref(false);
 const editPricingOpen = ref(false);
+const editAdvancedOpen = ref(false);
 const createWorking = ref(false);
+const createTestWorking = ref(false);
 const editWorking = ref(false);
 const createError = ref("");
 const editError = ref("");
@@ -136,6 +143,7 @@ const importWorking = ref(false);
 const importError = ref("");
 const importPayload = ref("");
 const importReplace = ref(true);
+const importModelOverwrite = ref(true);
 const editingId = ref<number | null>(null);
 const deleteOpen = ref(false);
 const deleteWorking = ref(false);
@@ -144,6 +152,9 @@ const deleteTarget = ref<Provider | null>(null);
 
 const testingId = ref<number | null>(null);
 const healthWorking = ref(false);
+const createTestResult = ref<{ ok: boolean; latencyMs?: number; errorType?: string } | null>(
+  null
+);
 const testResults = reactive<
   Map<number, { ok: boolean; latencyMs?: number; errorType?: string; message?: string }>
 >(new Map());
@@ -155,6 +166,7 @@ const createForm = reactive({
   apiKey: "",
   apiMode: "responses" as Provider["apiMode"],
   codexTransform: false,
+  healthCheckModel: "",
   balance: "",
   inputPrice: "",
   outputPrice: "",
@@ -169,6 +181,7 @@ const editForm = reactive({
   apiKey: "",
   apiMode: "responses" as Provider["apiMode"],
   codexTransform: false,
+  healthCheckModel: "",
   balance: "",
   inputPrice: "",
   outputPrice: "",
@@ -183,11 +196,14 @@ const resetCreate = () => {
   createForm.apiKey = "";
   createForm.apiMode = "responses";
   createForm.codexTransform = false;
+  createForm.healthCheckModel = "";
   createForm.balance = "";
   createForm.inputPrice = "";
   createForm.outputPrice = "";
   createForm.isActive = true;
   createForm.priority = "1";
+  createTestWorking.value = false;
+  createTestResult.value = null;
   createAdvancedOpen.value = false;
   createPricingOpen.value = false;
 };
@@ -200,6 +216,7 @@ const openEdit = (provider: Provider) => {
   editForm.apiKey = provider.apiKey;
   editForm.apiMode = provider.apiMode ?? "responses";
   editForm.codexTransform = provider.codexTransform ?? false;
+  editForm.healthCheckModel = provider.healthCheckModel ?? "";
   editForm.balance = Number.isFinite(provider.balance)
     ? provider.balance.toString()
     : "";
@@ -215,6 +232,7 @@ const openEdit = (provider: Provider) => {
   editForm.priority = provider.priority.toString();
   editError.value = "";
   editPricingOpen.value = false;
+  editAdvancedOpen.value = false;
   editOpen.value = true;
 };
 
@@ -241,6 +259,11 @@ const normalizeOptionalNumber = (value: string) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+const normalizeOptionalText = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
 const normalizeNullableNumber = (value: string) => {
   if (!value.trim()) return null;
   const parsed = Number(value);
@@ -265,6 +288,7 @@ watch(editOpen, (open) => {
   editWorking.value = false;
   editError.value = "";
   editPricingOpen.value = false;
+  editAdvancedOpen.value = false;
   editingId.value = null;
 });
 
@@ -277,6 +301,7 @@ watch(importOpen, (open) => {
   importError.value = "";
   importPayload.value = "";
   importReplace.value = true;
+  importModelOverwrite.value = true;
 });
 
 const submitCreate = async () => {
@@ -299,6 +324,7 @@ const submitCreate = async () => {
         apiKey: createForm.apiKey.trim(),
         apiMode,
         codexTransform: createForm.codexTransform,
+        healthCheckModel: normalizeOptionalText(createForm.healthCheckModel),
         balance: normalizeOptionalNumber(createForm.balance),
         inputPrice: normalizeNullableNumber(createForm.inputPrice),
         outputPrice: normalizeNullableNumber(createForm.outputPrice),
@@ -313,6 +339,48 @@ const submitCreate = async () => {
     createError.value = t("providers.error.create");
   } finally {
     createWorking.value = false;
+  }
+};
+
+const testCreateProvider = async () => {
+  if (!canTestCreate.value) return;
+  createTestResult.value = null;
+  createTestWorking.value = true;
+  try {
+    const apiMode = supportsApiMode(createForm.protocol)
+      ? createForm.apiMode
+      : undefined;
+    const res = await gatewayFetch<{
+      ok: boolean;
+      latencyMs?: number;
+      model?: string;
+      errorType?: string;
+      message?: string;
+    }>("/admin/providers/test", {
+      method: "POST",
+      query: { model: testModel.value.trim() || undefined },
+      body: {
+        name: createForm.name.trim() || undefined,
+        protocol: createForm.protocol,
+        baseUrl: createForm.baseUrl.trim(),
+        apiKey: createForm.apiKey.trim(),
+        apiMode,
+        codexTransform: createForm.codexTransform,
+        healthCheckModel: normalizeOptionalText(createForm.healthCheckModel),
+      },
+    });
+    createTestResult.value = {
+      ok: res.ok,
+      latencyMs: res.latencyMs,
+      errorType: res.errorType,
+    };
+  } catch {
+    createTestResult.value = { ok: false, errorType: "unknown" };
+  } finally {
+    createTestWorking.value = false;
+    setTimeout(() => {
+      createTestResult.value = null;
+    }, 8000);
   }
 };
 
@@ -333,6 +401,7 @@ const submitEdit = async () => {
         apiKey: editForm.apiKey.trim(),
         apiMode,
         codexTransform: editForm.codexTransform,
+        healthCheckModel: normalizeOptionalText(editForm.healthCheckModel),
         balance: normalizeOptionalNumber(editForm.balance),
         inputPrice: normalizeNullableNumber(editForm.inputPrice),
         outputPrice: normalizeNullableNumber(editForm.outputPrice),
@@ -406,6 +475,7 @@ const submitImport = async () => {
       body: {
         ...(payload as Record<string, unknown>),
         mode: importReplace.value ? "replace" : "merge",
+        modelConflictPolicy: importModelOverwrite.value ? "overwrite" : "skip",
       },
     });
     importOpen.value = false;
@@ -420,6 +490,7 @@ const submitImport = async () => {
 const testProvider = async (provider: Provider) => {
   testingId.value = provider.id;
   testResults.delete(provider.id);
+  let shouldRefresh = false;
   try {
     const res = await gatewayFetch<{
       ok: boolean;
@@ -432,10 +503,14 @@ const testProvider = async (provider: Provider) => {
       query: { model: testModel.value.trim() || undefined },
     });
     testResults.set(provider.id, res);
+    shouldRefresh = res.ok;
   } catch {
     testResults.set(provider.id, { ok: false, errorType: "unknown" });
   } finally {
     testingId.value = null;
+    if (shouldRefresh) {
+      await refresh();
+    }
     setTimeout(() => testResults.delete(provider.id), 8000);
   }
 };
@@ -501,9 +576,24 @@ const recoverySummary = (provider: Provider) => {
 const recoveryLastResult = (provider: Provider) => {
   const recovery = provider.recovery;
   if (!recovery?.lastProbeAt) return "";
+  const message = recovery.lastProbeMessage?.trim();
+  if (message) {
+    return t("providers.recovery.lastResultWithMessage", {
+      message,
+      time: formatTimestamp(recovery.lastProbeAt),
+    });
+  }
   return t("providers.recovery.lastResult", {
     reason: recoveryReasonLabel(recovery.lastProbeErrorType),
     time: formatTimestamp(recovery.lastProbeAt),
+  });
+};
+
+const recoveryLastReason = (provider: Provider) => {
+  const recovery = provider.recovery;
+  if (!recovery?.lastProbeAt || !recovery.lastProbeMessage?.trim()) return "";
+  return t("providers.recovery.lastReason", {
+    reason: recoveryReasonLabel(recovery.lastProbeErrorType),
   });
 };
 
@@ -696,79 +786,66 @@ const refreshAll = async () => {
               </tr>
             </thead>
           <tbody class="[&_tr+tr_td]:pt-1 md:[&_tr+tr_td]:pt-1.5">
-              <tr
-                v-for="(provider, index) in providers"
-                :key="provider.id"
-                class="group border-b border-slate-200/50 staggered hover:bg-slate-50/70"
-                :style="{ '--index': index }"
-              >
-                <td class="py-2 pr-4 align-middle">
-                  <div class="flex min-h-[3.25rem] flex-col justify-center">
-                  <div class="font-medium text-slate-900">
-                    {{ provider.name }}
-                  </div>
-                  <div class="mt-0.5 flex max-w-[30rem] items-end gap-2 text-xs text-slate-500">
-                    <span class="min-w-0 break-all">{{ provider.baseUrl }}</span>
-                    <span
-                      :title="codexModeTooltip(provider)"
-                      :aria-label="codexModeTooltip(provider)"
-                      class="inline-flex h-5 w-5 shrink-0 self-end cursor-help items-center justify-center rounded-md border"
-                      :class="codexModeIconTone(provider)"
-                    >
-                      <svg viewBox="0 0 20 20" fill="none" class="h-3.5 w-3.5" aria-hidden="true">
-                        <path
-                          d="M7.25 6.5 4.5 10l2.75 3.5M12.75 6.5 15.5 10l-2.75 3.5M11 4.5 9 15.5"
-                          stroke="currentColor"
-                          stroke-width="1.6"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                  <div class="mt-1 hidden flex-wrap gap-1.5 md:flex">
-                    <span v-if="provider.recovery" class="summary-pill" :class="recoveryTone()">
-                      <span class="summary-pill__label">{{ $t("providers.recovery.badge") }}</span>
-                    </span>
-                  </div>
-                  <div class="mt-1 flex flex-wrap gap-1.5 md:hidden">
-                    <span class="summary-pill">
-                      <span class="summary-pill__label">{{ provider.protocol }}</span>
-                    </span>
-                    <span class="summary-pill">
-                      <span class="summary-pill__label">P{{ provider.priority }}</span>
-                    </span>
-                    <span class="summary-pill" :class="healthTone(provider)">
-                      <span class="summary-pill__label">{{ healthLabel(provider) }}</span>
-                    </span>
-                    <span v-if="provider.recovery" class="summary-pill" :class="recoveryTone()">
-                      <span class="summary-pill__label">{{ $t("providers.recovery.badge") }}</span>
-                    </span>
-                    <span
-                      class="summary-pill"
-                      :class="provider.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
-                    >
-                      <span class="summary-pill__label">
-                        {{ provider.isActive ? $t("providers.status.active") : $t("providers.status.paused") }}
-                      </span>
-                    </span>
-                  </div>
-                  <div
-                    v-if="testResults.has(provider.id)"
-                    class="mt-1 text-xs font-medium"
-                    :class="testResults.get(provider.id)?.ok ? 'text-emerald-600' : 'text-rose-600'"
-                  >
-                    {{ testResultLabel(testResults.get(provider.id)!) }}
-                  </div>
-                  <div v-if="provider.recovery" class="mt-1 space-y-0.5 text-xs text-slate-500">
-                    <div>{{ recoverySummary(provider) }}</div>
-                    <div v-if="provider.recovery.lastProbeAt">{{ recoveryLastResult(provider) }}</div>
-                    <div v-if="provider.recovery.lastProbeMessage" class="break-all text-[11px] text-slate-400">
-                      {{ provider.recovery.lastProbeMessage }}
+              <template v-for="(provider, index) in providers" :key="provider.id">
+                <tr
+                  class="group border-b border-slate-200/50 staggered hover:bg-slate-50/70"
+                  :style="{ '--index': index }"
+                >
+                  <td class="py-2 pr-4 align-middle">
+                    <div class="flex min-h-[3.25rem] flex-col justify-center">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <div class="font-medium text-slate-900">{{ provider.name }}</div>
+                        <span
+                          v-if="testResults.has(provider.id)"
+                          class="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium whitespace-nowrap"
+                          :class="testResults.get(provider.id)?.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                        >
+                          {{ testResultLabel(testResults.get(provider.id)!) }}
+                        </span>
+                      </div>
+                      <div class="mt-0.5 flex max-w-[30rem] items-end gap-2 text-xs text-slate-500">
+                        <span class="min-w-0 break-all">{{ provider.baseUrl }}</span>
+                        <span
+                          :title="codexModeTooltip(provider)"
+                          :aria-label="codexModeTooltip(provider)"
+                          class="inline-flex h-5 w-5 shrink-0 self-end cursor-help items-center justify-center rounded-md border"
+                          :class="codexModeIconTone(provider)"
+                        >
+                          <svg viewBox="0 0 20 20" fill="none" class="h-3.5 w-3.5" aria-hidden="true">
+                            <path
+                              d="M7.25 6.5 4.5 10l2.75 3.5M12.75 6.5 15.5 10l-2.75 3.5M11 4.5 9 15.5"
+                              stroke="currentColor"
+                              stroke-width="1.6"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          </svg>
+                        </span>
+                      </div>
+                      <div class="mt-1 flex flex-wrap gap-1.5 md:hidden">
+                        <span class="summary-pill">
+                          <span class="summary-pill__label">{{ provider.protocol }}</span>
+                        </span>
+                        <span class="summary-pill">
+                          <span class="summary-pill__label">P{{ provider.priority }}</span>
+                        </span>
+                        <span class="summary-pill" :class="healthTone(provider)">
+                          <span class="summary-pill__label">{{ healthLabel(provider) }}</span>
+                        </span>
+                        <span v-if="provider.recovery" class="summary-pill" :class="recoveryTone()">
+                          <span class="summary-pill__label">{{ $t("providers.recovery.badge") }}</span>
+                        </span>
+                        <span
+                          class="summary-pill"
+                          :class="provider.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
+                        >
+                          <span class="summary-pill__label">
+                            {{ provider.isActive ? $t("providers.status.active") : $t("providers.status.paused") }}
+                          </span>
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  </div>
-                </td>
+                  </td>
                 <td class="hidden py-2 pr-4 align-middle text-slate-600 capitalize md:table-cell">
                   {{ provider.protocol }}
                 </td>
@@ -840,7 +917,29 @@ const refreshAll = async () => {
                     </UButton>
                   </div>
                 </td>
-              </tr>
+                </tr>
+                <tr v-if="provider.recovery" class="border-b border-slate-200/50">
+                  <td colspan="7" class="pb-3 pt-0">
+                    <div class="rounded-2xl border border-amber-200/70 bg-amber-50/70 px-3 py-2.5 text-xs text-amber-800">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-700">
+                          {{ $t("providers.recovery.badge") }}
+                        </span>
+                        <span class="text-amber-900">{{ recoverySummary(provider) }}</span>
+                      </div>
+                      <div v-if="provider.recovery.lastProbeAt" class="mt-1 text-amber-700">
+                        {{ recoveryLastResult(provider) }}
+                      </div>
+                      <div
+                        v-if="recoveryLastReason(provider)"
+                        class="mt-1 text-[11px] text-amber-700/70"
+                      >
+                        {{ recoveryLastReason(provider) }}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -924,6 +1023,8 @@ const refreshAll = async () => {
             <button
               type="button"
               class="flex w-full items-center justify-between gap-3 text-left"
+              :aria-expanded="createAdvancedOpen"
+              aria-controls="create-advanced-panel"
               @click="createAdvancedOpen = !createAdvancedOpen"
             >
               <div>
@@ -945,8 +1046,21 @@ const refreshAll = async () => {
 
             <div
               v-if="createAdvancedOpen"
+              id="create-advanced-panel"
               class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
             >
+              <UFormGroup
+                :label="$t('providers.form.priority')"
+                :help="$t('providers.form.help.priority')"
+              >
+                <UInput
+                  v-model="createForm.priority"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full"
+                />
+              </UFormGroup>
               <UFormGroup
                 :label="$t('providers.form.balance')"
                 :help="$t('providers.form.help.balanceCreate')"
@@ -960,14 +1074,13 @@ const refreshAll = async () => {
                 />
               </UFormGroup>
               <UFormGroup
-                :label="$t('providers.form.priority')"
-                :help="$t('providers.form.help.priority')"
+                :label="$t('providers.form.healthCheckModel')"
+                :help="$t('providers.form.help.healthCheckModel')"
+                class="md:col-span-2"
               >
                 <UInput
-                  v-model="createForm.priority"
-                  type="number"
-                  min="1"
-                  step="1"
+                  v-model="createForm.healthCheckModel"
+                  :placeholder="$t('providers.form.placeholder.healthCheckModel')"
                   class="w-full"
                 />
               </UFormGroup>
@@ -1027,6 +1140,13 @@ const refreshAll = async () => {
             </div>
           </div>
 
+          <p
+            v-if="createTestResult"
+            class="text-sm"
+            :class="createTestResult.ok ? 'text-emerald-600' : 'text-rose-600'"
+          >
+            {{ testResultLabel(createTestResult) }}
+          </p>
           <p v-if="createError" class="text-sm text-rose-600">
             {{ createError }}
           </p>
@@ -1034,6 +1154,15 @@ const refreshAll = async () => {
           <div class="flex flex-wrap items-center justify-end gap-3">
             <UButton class="action-press" variant="outline" @click="createOpen = false">
               {{ $t("providers.cancel") }}
+            </UButton>
+            <UButton
+              class="action-press"
+              variant="outline"
+              :loading="createTestWorking"
+              :disabled="!canTestCreate || createWorking"
+              @click="testCreateProvider"
+            >
+              {{ $t("providers.action.test") }}
             </UButton>
             <UButton
               class="action-press"
@@ -1120,35 +1249,79 @@ const refreshAll = async () => {
               />
             </UFormGroup>
             <UFormGroup
-              :label="$t('providers.form.balance')"
-              :help="$t('providers.form.help.balanceEdit')"
-            >
-              <UInput
-                v-model="editForm.balance"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
-              :label="$t('providers.form.priority')"
-              :help="$t('providers.form.help.priority')"
-            >
-              <UInput
-                v-model="editForm.priority"
-                type="number"
-                min="1"
-                step="1"
-                class="w-full"
-              />
-            </UFormGroup>
-            <UFormGroup
               :label="$t('providers.form.active')"
               :help="$t('providers.form.help.active')"
             >
               <USwitch v-model="editForm.isActive" />
             </UFormGroup>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 md:p-4">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-3 text-left"
+              :aria-expanded="editAdvancedOpen"
+              aria-controls="edit-advanced-panel"
+              @click="editAdvancedOpen = !editAdvancedOpen"
+            >
+              <div>
+                <div class="text-sm font-medium text-slate-900">
+                  {{ $t("providers.advanced.title") }}
+                </div>
+                <p class="mt-1 text-xs text-slate-500">
+                  {{ $t("providers.advanced.hint") }}
+                </p>
+              </div>
+              <span class="text-xs font-medium text-slate-500">
+                {{
+                  editAdvancedOpen
+                    ? $t("providers.advanced.hide")
+                    : $t("providers.advanced.show")
+                }}
+              </span>
+            </button>
+
+            <div
+              v-if="editAdvancedOpen"
+              id="edit-advanced-panel"
+              class="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-3 md:grid-cols-2 md:gap-4"
+            >
+              <UFormGroup
+                :label="$t('providers.form.priority')"
+                :help="$t('providers.form.help.priority')"
+              >
+                <UInput
+                  v-model="editForm.priority"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.balance')"
+                :help="$t('providers.form.help.balanceEdit')"
+              >
+                <UInput
+                  v-model="editForm.balance"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full"
+                />
+              </UFormGroup>
+              <UFormGroup
+                :label="$t('providers.form.healthCheckModel')"
+                :help="$t('providers.form.help.healthCheckModel')"
+                class="md:col-span-2"
+              >
+                <UInput
+                  v-model="editForm.healthCheckModel"
+                  :placeholder="$t('providers.form.placeholder.healthCheckModel')"
+                  class="w-full"
+                />
+              </UFormGroup>
+            </div>
           </div>
 
           <div class="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 md:p-4">
@@ -1306,6 +1479,14 @@ const refreshAll = async () => {
               class="h-4 w-4 rounded border-slate-300 text-slate-900"
             />
             <span>{{ $t("providers.config.replace") }}</span>
+          </label>
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              v-model="importModelOverwrite"
+              type="checkbox"
+              class="h-4 w-4 rounded border-slate-300 text-slate-900"
+            />
+            <span>{{ $t("providers.config.modelOverwrite") }}</span>
           </label>
 
           <p v-if="importError" class="text-sm text-rose-600">
