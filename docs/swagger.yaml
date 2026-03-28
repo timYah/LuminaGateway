@@ -293,6 +293,46 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UsageStatsModelPoint'
+    UsageLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        providerId:
+          type: integer
+        modelSlug:
+          type: string
+        usageSource:
+          type: string
+          enum:
+            - actual
+            - estimated
+        routePath:
+          type: string
+          nullable: true
+        requestId:
+          type: string
+          nullable: true
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        cost:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+    UsageListResponse:
+      type: object
+      properties:
+        usage:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageLogEntry'
+        limit:
+          type: integer
+        offset:
+          type: integer
     ModelPriorityUpdate:
       type: object
       properties:
@@ -1021,6 +1061,7 @@ paths:
   /admin/usage:
     get:
       summary: Usage logs
+      description: Returns persisted usage rows, including `usageSource` (`actual` or `estimated`), `routePath`, and `requestId`.
       parameters:
         - name: providerId
           in: query
@@ -1049,6 +1090,10 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageListResponse'
   /admin/usage/summary:
     get:
       summary: Usage summary by API key and route
@@ -1058,6 +1103,7 @@ paths:
   /admin/usage/stats:
     get:
       summary: Usage trend and distribution
+      description: Aggregates persisted `usageLogs`, combining actual `/v1/*` billing rows and estimated passthrough or convert HTTP rows.
       parameters:
         - name: providerId
           in: query

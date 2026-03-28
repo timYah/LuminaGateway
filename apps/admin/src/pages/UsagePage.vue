@@ -16,6 +16,9 @@ type UsageRow = {
   id: number;
   providerId: number;
   modelSlug: string;
+  usageSource: "actual" | "estimated";
+  routePath: string | null;
+  requestId: string | null;
   inputTokens: number;
   outputTokens: number;
   cost: number;
@@ -249,6 +252,11 @@ const formatShortDate = (value: string) => {
 
 const formatCost = (value: number) => value.toFixed(4);
 const formatInteger = (value: number) => new Intl.NumberFormat("en-US").format(value);
+const formatUsageSource = (value: UsageRow["usageSource"]) => t(`usage.source.${value}`);
+const usageSourceBadgeClass = (value: UsageRow["usageSource"]) =>
+  value === "actual"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    : "border-amber-200 bg-amber-50 text-amber-700";
 
 const refreshAll = async () => {
   await execute();
@@ -651,6 +659,12 @@ watch(
                 <th class="py-2 text-left font-medium">
                   {{ $t("usage.table.model") }}
                 </th>
+                <th class="hidden py-2 text-left font-medium md:table-cell">
+                  {{ $t("usage.table.source") }}
+                </th>
+                <th class="hidden py-2 text-left font-medium xl:table-cell">
+                  {{ $t("usage.table.route") }}
+                </th>
                 <th class="hidden py-2 text-left font-medium lg:table-cell">
                   {{ $t("usage.table.input") }}
                 </th>
@@ -675,8 +689,40 @@ watch(
                     {{ providerNameMap.get(row.providerId) ?? row.providerId }}
                   </div>
                 </td>
-                <td class="hidden py-2.5 pr-4 align-top text-slate-700 md:table-cell">{{ row.providerId }}</td>
-                <td class="py-2.5 pr-4 align-top text-slate-900">{{ row.modelSlug }}</td>
+                <td class="hidden py-2.5 pr-4 align-top text-slate-700 md:table-cell">
+                  {{ providerNameMap.get(row.providerId) ?? row.providerId }}
+                </td>
+                <td class="py-2.5 pr-4 align-top text-slate-900">
+                  <div>{{ row.modelSlug }}</div>
+                  <div class="mt-1 flex flex-wrap items-center gap-2 text-xs md:hidden">
+                    <span
+                      class="inline-flex items-center rounded-full border px-2 py-0.5 font-medium"
+                      :class="usageSourceBadgeClass(row.usageSource)"
+                    >
+                      {{ formatUsageSource(row.usageSource) }}
+                    </span>
+                    <span class="text-slate-500">{{ row.routePath ?? "-" }}</span>
+                  </div>
+                  <div class="mt-1 text-xs text-slate-500 md:hidden">
+                    {{ $t("usage.table.requestId") }}: {{ row.requestId ?? "-" }}
+                  </div>
+                </td>
+                <td class="hidden py-2.5 pr-4 align-top md:table-cell">
+                  <span
+                    class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
+                    :class="usageSourceBadgeClass(row.usageSource)"
+                  >
+                    {{ formatUsageSource(row.usageSource) }}
+                  </span>
+                </td>
+                <td class="hidden py-2.5 pr-4 align-top text-slate-700 xl:table-cell">
+                  <div class="font-mono text-xs text-slate-700">
+                    {{ row.routePath ?? "-" }}
+                  </div>
+                  <div class="mt-1 text-xs text-slate-500">
+                    {{ $t("usage.table.requestId") }}: {{ row.requestId ?? "-" }}
+                  </div>
+                </td>
                 <td class="hidden py-2.5 pr-4 align-top mono-numbers text-slate-900 lg:table-cell">
                   {{ row.inputTokens }}
                 </td>

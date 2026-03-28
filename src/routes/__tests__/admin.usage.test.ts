@@ -47,6 +47,9 @@ describe("admin usage list", () => {
       {
         providerId: providerA!.id,
         modelSlug: "gpt-4o",
+        usageSource: "estimated",
+        routePath: "/openai/v1/responses",
+        requestId: "req_usage_a",
         inputTokens: 10,
         outputTokens: 5,
         cost: 0.1,
@@ -55,6 +58,9 @@ describe("admin usage list", () => {
       {
         providerId: providerB!.id,
         modelSlug: "gpt-4o-mini",
+        usageSource: "actual",
+        routePath: "/v1/responses",
+        requestId: "req_usage_b",
         inputTokens: 12,
         outputTokens: 6,
         cost: 0.2,
@@ -71,6 +77,9 @@ describe("admin usage list", () => {
     const body = await res.json();
     expect(body.usage).toHaveLength(1);
     expect(body.usage[0].modelSlug).toBe("gpt-4o");
+    expect(body.usage[0].usageSource).toBe("estimated");
+    expect(body.usage[0].routePath).toBe("/openai/v1/responses");
+    expect(body.usage[0].requestId).toBe("req_usage_a");
   });
 
   it("supports pagination with limit and offset", async () => {

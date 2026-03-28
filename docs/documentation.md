@@ -340,7 +340,7 @@ When a provider hits a recoverable upstream failure (`quota`, `rate_limit`, `net
 
 For `new-api`, use the OpenAI-compatible base URL (for example `https://your-newapi-host/v1`) and the `new-api` API key as the Bearer token.
 
-`GET /admin/usage` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `limit`, and `offset`. The response includes `{ usage, limit, offset }` sorted by `createdAt` descending.
+`GET /admin/usage` supports `providerId`, `modelSlug`, `startDate`, `endDate`, `limit`, and `offset`. The response includes `{ usage, limit, offset }` sorted by `createdAt` descending. Each usage row now includes `usageSource` (`actual` or `estimated`), `routePath`, and `requestId` so the admin UI can distinguish SDK-billed `/v1/*` traffic from estimated passthrough or convert HTTP traffic.
 
 `GET /admin/usage/summary` returns aggregated usage and estimated cost grouped by API key and route. The estimate uses `DEFAULT_INPUT_PRICE` and `DEFAULT_OUTPUT_PRICE` when they are set.
 
@@ -407,7 +407,7 @@ On upstream failures, the gateway reacts to the classified error type. Quota exh
 
 ## Billing and usage
 
-Billing uses usage numbers from the Vercel AI SDK for `/v1/*` routes. Passthrough and convert routes use request-based estimates for usage and cost because upstream responses may not include billing metadata. Missing token counts are normalized to `0` before billing.
+Billing uses usage numbers from the Vercel AI SDK for `/v1/*` routes. Passthrough and convert HTTP routes persist request-based estimates into `usageLogs` with `usageSource: "estimated"` because upstream responses may not include billing metadata. Missing token counts are normalized to `0` before billing.
 
 ```text [Formula]
 inputCost  = (promptTokens / 1,000,000) × inputPrice
@@ -417,7 +417,7 @@ totalCost  = inputCost + outputCost
 
 Pricing resolves per provider. If `inputPrice` or `outputPrice` is missing, the gateway falls back to `DEFAULT_INPUT_PRICE` and `DEFAULT_OUTPUT_PRICE`. If both are unset, the cost is recorded as `0`.
 
-Streaming requests bill after the stream finishes and usage is resolved. Non-streaming requests bill immediately after the provider response completes. Billing records the computed cost in `usageLogs` without deducting provider balances.
+Streaming requests bill after the stream finishes and usage is resolved. Non-streaming requests bill immediately after the provider response completes. Billing records the computed cost in `usageLogs` without deducting provider balances. The `/usage` admin page now surfaces whether each row is `actual` or `estimated`, along with the originating route path and request ID.
 
 ## Error response format
 
