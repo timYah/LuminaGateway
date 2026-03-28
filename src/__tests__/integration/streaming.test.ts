@@ -139,6 +139,9 @@ describe("integration streaming", () => {
     const usageRows = await db.select().from(usageLogs);
     expect(usageRows).toHaveLength(1);
     expect(usageRows[0].cost).toBeCloseTo(0.0015);
+    expect(usageRows[0].usageSource).toBe("actual");
+    expect(usageRows[0].routePath).toBe("/v1/chat/completions");
+    expect(usageRows[0].requestId).toBeTruthy();
   });
 
   it("fails over when upstream errors before stream starts", async () => {

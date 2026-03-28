@@ -41,6 +41,7 @@ export type GatewayRequestParams = UpstreamRequestParams & {
 
 type GatewayRequestContext = {
   requestId?: string | null;
+  routePath?: string | null;
 };
 
 type OpenAIErrorResponse = {
@@ -238,7 +239,10 @@ export async function handleRequest(
         retryConfig.attempts,
         retryConfig.baseMs
       );
-      await billUsage(provider, modelSlug, usage);
+      await billUsage(provider, modelSlug, usage, {
+        requestId: requestContext.requestId,
+        routePath: requestContext.routePath,
+      });
       await recordRequestLogSafe({
         providerId: provider.id,
         requestId: requestContext.requestId,
@@ -340,7 +344,10 @@ export async function handleStreamingRequest(
             latencyMs: Date.now() - start,
           });
           try {
-            await billUsage(provider, modelSlug, usage);
+            await billUsage(provider, modelSlug, usage, {
+              requestId: requestContext.requestId,
+              routePath: requestContext.routePath,
+            });
           } catch (err: unknown) {
             console.error("Billing failed", err);
           }

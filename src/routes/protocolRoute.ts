@@ -196,7 +196,7 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
         const response = await handleStreamingRequest(
           options.converter(merged),
           options.clientFormat,
-          { requestId }
+          { requestId, routePath: options.path }
         );
         if ("stream" in response) {
           return new Response(response.stream, {
@@ -236,7 +236,7 @@ export function createProtocolRoute<T extends z.ZodTypeAny>(
       const response = await handleRequest(
         options.converter(merged),
         options.clientFormat,
-        { requestId }
+        { requestId, routePath: options.path }
       );
       if (cacheTtlMs && cacheKey && response.status === 200) {
         responseCache.set(cacheKey, {

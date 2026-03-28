@@ -56,6 +56,7 @@ describe("billingService", () => {
     const logs = await db.select().from(usageLogs);
     expect(logs).toHaveLength(1);
     expect(logs[0].cost).toBeCloseTo(5);
+    expect(logs[0].usageSource).toBe("actual");
   });
 
   it("billUsage falls back to default env pricing", async () => {
@@ -86,6 +87,23 @@ describe("billingService", () => {
     const logs = await db.select().from(usageLogs);
     expect(logs).toHaveLength(1);
     expect(logs[0].cost).toBe(0);
+  });
+
+  it("billUsage stores route and request metadata when provided", async () => {
+    const provider = await createProvider(baseProvider);
+
+    await billUsage(
+      provider!,
+      "gpt-4o",
+      { promptTokens: 10, completionTokens: 20 },
+      { routePath: "/v1/chat/completions", requestId: "req_usage_1" }
+    );
+
+    const logs = await db.select().from(usageLogs);
+    expect(logs).toHaveLength(1);
+    expect(logs[0].routePath).toBe("/v1/chat/completions");
+    expect(logs[0].requestId).toBe("req_usage_1");
+    expect(logs[0].usageSource).toBe("actual");
   });
 
   it("billUsage skips when usage is missing", async () => {
